@@ -28,7 +28,7 @@ const ViewinCover = ({ fileId }) => {
         const { status } = meta.data;
 
         const res = await axios.get(
-          `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/stream/${fileId}`,
+          `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/streampublic/${fileId}`,
           {
             responseType: "blob",
           }

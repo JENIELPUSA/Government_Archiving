@@ -8,6 +8,7 @@ export default function PdfViewerTab({ pdf, downloadPdf, sharePdf }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [zoom] = useState(3.0); // Auto zoom-in (150%)
 
   const handleExpand = (item) => {
     navigate("/expand-PDF", {
@@ -75,25 +76,27 @@ export default function PdfViewerTab({ pdf, downloadPdf, sharePdf }) {
         </div>
       </div>
 
+      {/* 📄 Small preview frame */}
       {pdf.fileUrl ? (
-        <div className={`relative flex-grow overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm ${isExpanded ? 'h-[70vh]' : ''}`}>
-          <ViewOnly fileId={pdf.id} />
-          
+        <div className="relative h-[400px] overflow-hidden rounded-lg border border-gray-200 bg-gray-50 shadow-sm">
+          <ViewOnly fileId={pdf.id} zoom={zoom} />
+
+          {/* Overlay expand action */}
           <div
             onClick={() => handleExpand(pdf)}
             className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 opacity-0 transition-all duration-300 hover:opacity-100 cursor-pointer group"
           >
-            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-5 flex flex-col items-center shadow-lg transform transition-transform duration-300 group-hover:scale-105">
-              <div className="bg-blue-100 p-3 rounded-full mb-3">
-                <Eye className="h-8 w-8 text-blue-600" />
+            <div className="bg-white/90 backdrop-blur-sm rounded-lg p-4 flex flex-col items-center shadow-md transform transition-transform duration-300 group-hover:scale-105">
+              <div className="bg-blue-100 p-2 rounded-full mb-2">
+                <Eye className="h-6 w-6 text-blue-600" />
               </div>
-              <p className="font-semibold text-gray-800">Expand to Full Screen</p>
-              <p className="text-sm text-gray-600 mt-1">Click to view document in full view</p>
+              <p className="font-medium text-gray-800 text-sm">Expand to Full Screen</p>
+              <p className="text-xs text-gray-600 mt-1">Click to view document in full view</p>
             </div>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center flex-grow bg-gray-50 rounded-xl border border-dashed border-gray-300 p-8">
+        <div className="flex flex-col items-center justify-center flex-grow bg-gray-50 rounded-lg border border-dashed border-gray-300 p-8">
           <div className="bg-red-100 p-4 rounded-full mb-4">
             <ExternalLink className="h-10 w-10 text-red-500" />
           </div>
@@ -104,91 +107,62 @@ export default function PdfViewerTab({ pdf, downloadPdf, sharePdf }) {
         </div>
       )}
 
-      <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <button
-          onClick={handleDownload}
-          disabled={isDownloading || !pdf.fileUrl}
-          className={`flex items-center justify-center rounded-xl px-4 py-3 font-medium shadow-md transition-all duration-200 ${
-            isDownloading 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-              : !pdf.fileUrl 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700'
-          }`}
-        >
-          {isDownloading ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Downloading...
-            </>
-          ) : (
-            <>
-              <Download className="h-5 w-5 mr-2" /> 
-              Download PDF
-            </>
-          )}
-        </button>
-        
+
+<div className="mt-5 flex flex-wrap justify-end gap-3">
+
         <button
           onClick={() => handleExpand(pdf)}
           disabled={!pdf.fileUrl}
-          className={`flex items-center justify-center rounded-xl px-4 py-3 font-medium shadow-md transition-all duration-200 ${
-            !pdf.fileUrl 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700'
+          className={`flex items-center justify-center rounded-lg px-4 py-3 font-medium shadow-md transition-all duration-200 ${
+            !pdf.fileUrl
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700"
           }`}
         >
-          <Expand className="h-5 w-5 mr-2" /> 
+          <Expand className="h-5 w-5 mr-2" />
           Full Screen
         </button>
-        
+
         <button
           onClick={handleShare}
           disabled={isSharing || !pdf.fileUrl}
-          className={`flex items-center justify-center rounded-xl px-4 py-3 font-medium shadow-md transition-all duration-200 ${
-            isSharing 
-              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-              : !pdf.fileUrl 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                : 'bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:from-purple-600 hover:to-violet-700'
+          className={`flex items-center justify-center rounded-lg px-4 py-3 font-medium shadow-md transition-all duration-200 ${
+            isSharing || !pdf.fileUrl
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-gradient-to-r from-purple-500 to-violet-600 text-white hover:from-purple-600 hover:to-violet-700"
           }`}
         >
           {isSharing ? (
             <>
-              <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Sharing...
             </>
           ) : (
             <>
-              <Share2 className="h-5 w-5 mr-2" /> 
+              <Share2 className="h-5 w-5 mr-2" />
               Share Document
             </>
           )}
         </button>
-      </div>
-
-      <div className="mt-6 bg-blue-50 rounded-xl p-4 border border-blue-100">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <h3 className="text-sm font-medium text-blue-800">Document Information</h3>
-            <div className="mt-2 text-sm text-blue-700">
-              <p>• File Size: {pdf.fileSize || 'N/A'}</p>
-              <p>• Pages: {pdf.pageCount || 'N/A'}</p>
-              <p>• Last Updated: {pdf.lastModified || 'N/A'}</p>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

@@ -174,7 +174,7 @@ const Sidebar = ({
                                 <Send className="h-5 w-5" />
                             </button>
                         )}
-                        {role !== "admin" && fileData.status !== "Approved" && fileData.status !== "Rejected" &&  (
+                        {role !== "admin" && fileData.status !== "Approved" && fileData.status !== "Rejected" && (
                             <button
                                 onClick={() => setShowSignatureOptions((prev) => !prev)}
                                 className="flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-700"
@@ -223,7 +223,7 @@ const Sidebar = ({
                                 </button>
                             </div>
                         )}
-                        {role !== "admin" && fileData.status !== "Approved" && fileData.status !== "Rejected" &&  (
+                        {role !== "admin" && fileData.status !== "Approved" && fileData.status !== "Rejected" && (
                             <button
                                 onClick={onAddText}
                                 className="col-span-2 flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
@@ -241,15 +241,18 @@ const Sidebar = ({
                 >
                     <Download className="h-5 w-5" />
                 </button>
-                {role !== "admin" && (role === "officer" || fileData.status === "Pending")&& fileData.status !== "Rejected"  && (
-                    <button
-                        onClick={ApprovedReview}
-                        className="flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                        title="Done Review"
-                    >
-                        <CheckCircle className="h-5 w-5" />
-                    </button>
-                )}
+                {role !== "admin" &&
+                    (role === "officer" || fileData.status === "Pending") &&
+                    fileData.status !== "Rejected" &&
+                    fileData.status !== "Approved" && (
+                        <button
+                            onClick={ApprovedReview}
+                            className="flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                            title="Done Review"
+                        >
+                            <CheckCircle className="h-5 w-5" />
+                        </button>
+                    )}
             </div>
 
             {/* Font Size Controls */}
