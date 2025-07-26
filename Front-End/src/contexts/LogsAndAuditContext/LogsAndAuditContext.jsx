@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const LogsAndAuditContext = createContext();
 
 export const LogsDisplayProvider = ({ children }) => {
@@ -20,7 +20,7 @@ export const LogsDisplayProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/LogsAudit`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/LogsAudit`, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` },
             });

@@ -18,6 +18,7 @@ exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   res.status(200).json({
     status: "success",
     data: adminResults,
+    totalAdmin:adminResults.length
   });
 });
 

@@ -9,26 +9,53 @@ exports.createComment = AsyncErrorHandler(async (req, res) => {
   try {
     const { pdfId, commentText } = req.body;
 
-    // 1. Create comment
+    const isGuest = !req.user;
+    const ip = req.ip;
+
+    // ✅ Check if guest already commented on this file today
+    if (isGuest) {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
+      const existingGuestComment = await Comment.findOne({
+        pdfId,
+        ipAddress: ip,
+        createdAt: { $gte: todayStart },
+      });
+
+      if (existingGuestComment) {
+        return res.status(429).json({
+          status: "fail",
+          message: "Guest users can only comment once per file per day.",
+        });
+      }
+    }
+
+    // ✅ Create and save comment
     const newComment = new Comment({
       pdfId,
       commentText,
+      user: req.user?.linkedId || null,
+      ipAddress: isGuest ? ip : null, // Only store IP if guest
     });
 
     await newComment.save();
+
+    // ✅ Send notifications only if comment was saved
     const adminUsers = await UserLoginSchema.find({ role: "admin" });
     const io = req.app.get("io");
+
     const viewersArray = adminUsers.map((adminUser) => ({
       user: new mongoose.Types.ObjectId(adminUser.linkedId),
       isRead: false,
       viewedAt: null,
     }));
+
     const messageText = `📄 A new comment was added on a file.`;
     const SendMessage = {
       message: messageText,
       data: newComment,
     };
-
 
     await Notification.create({
       message: messageText,
@@ -36,22 +63,17 @@ exports.createComment = AsyncErrorHandler(async (req, res) => {
     });
 
     adminUsers.forEach((adminUser) => {
-      const adminId = adminUser.linkedId?.toString(); 
+      const adminId = adminUser.linkedId?.toString();
       const targetUser = global.connectedUsers?.[adminId];
-
-      console.log(`👤 Admin linkedId: ${adminId}, Email: ${adminUser.username}`);
 
       if (targetUser) {
         io.to(targetUser.socketId).emit("SentDocumentNotification", SendMessage);
-        console.log(`📨 Sent document notification to online admin (${adminId})`);
-      } else {
-        console.log(`📭 Admin (${adminId}) is offline. Notification saved.`);
       }
     });
 
     res.status(201).json({
       status: "success",
-      message: "Comment created and notification sent",
+      message: "Comment created.",
       data: newComment,
     });
   } catch (error) {
@@ -60,14 +82,15 @@ exports.createComment = AsyncErrorHandler(async (req, res) => {
   }
 });
 
+
 exports.getCommentsByPdfId = AsyncErrorHandler(async (req, res) => {
   try {
-    const { pdfId } = req.body; // ✅ galing sa body
+    const { pdfId } = req.body; // galing sa body
     console.log("PDF ID from body:", pdfId);
 
     const comments = await Comment.find({ 
       pdfId, 
-      status: "Approved" // ✅ filtering only approved comments 
+      status: "Approved" // filtering only approved comments 
     }).sort({ timestamp: -1 });
 
     console.log("Approved comments found:", comments);

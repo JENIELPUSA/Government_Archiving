@@ -1,5 +1,17 @@
-import { FolderArchive ,MessageCircleMore ,FolderOpen , Home, SquarePen , FolderClock , PackagePlus, Settings, Logs , View , Upload , Users } from "lucide-react";
-
+import {
+    FolderArchive,
+    MessageCircleMore,
+    FolderOpen,
+    Home,
+    SquarePen,
+    FolderClock,
+    PackagePlus,
+    Settings,
+    Logs,
+    View,
+    Upload,
+    Users,
+} from "lucide-react";
 
 export const navbarLinks = [
     {
@@ -17,31 +29,29 @@ export const navbarLinks = [
         links: [
             {
                 label: "Upload Document",
-                icon: Upload ,
+                icon: Upload,
                 path: "/dashboard/upload-documents",
             },
             {
                 label: "Archive File",
-                icon: FolderArchive ,
+                icon: FolderArchive,
                 path: "/dashboard/search-archiving",
             },
             {
                 label: "View Documents",
-                icon: View ,
+                icon: View,
                 path: "/dashboard/view-documents",
             },
             {
                 label: "Recent Documents",
-                icon: FolderClock ,
+                icon: FolderClock,
                 path: "/dashboard/recent",
             },
-             {
+            {
                 label: "Manage Comments",
-                icon: MessageCircleMore ,
+                icon: MessageCircleMore,
                 path: "/dashboard/comments",
             },
-
-            
         ],
     },
     {
@@ -54,11 +64,12 @@ export const navbarLinks = [
             },
             {
                 label: "Audit Logs",
-                icon: Logs ,
+                icon: Logs,
                 path: "/dashboard/logs",
-            },      {
+            },
+            {
                 label: "Draft",
-                icon: SquarePen ,
+                icon: SquarePen,
                 path: "/dashboard/draft",
             },
         ],
@@ -68,19 +79,20 @@ export const navbarLinks = [
         links: [
             {
                 label: "Categories/Folders",
-                icon: FolderOpen ,
+                icon: FolderOpen,
                 path: "/dashboard/category",
-            }
+            },
         ],
     },
     {
-        title: "Settings",
+        title: "System Settings",
         links: [
             {
                 label: "Settings",
                 icon: Settings,
                 path: "dashboard/settings",
-            },
+            }
+ 
         ],
     },
 ];

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const OfficerDisplayContext = createContext();
 
 export const OfficerDisplayProvider = ({ children }) => {
@@ -12,6 +13,7 @@ export const OfficerDisplayProvider = ({ children }) => {
     const [modalStatus, setModalStatus] = useState("success");
     const [isOfficer, setOfficer] = useState([]);
     const [isOfficerData, setOfficerData] = useState([]);
+    const [isTotalOfficer, setTotalOfficer] = useState([]);
     useEffect(() => {
         if (!authToken) return;
         FetchOfficer();
@@ -30,15 +32,16 @@ export const OfficerDisplayProvider = ({ children }) => {
         if (!authToken) return;
         setLoading(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient`, {
                 withCredentials: true,
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Cache-Control": "no-cache",
                 },
             });
-
+            const TotalOfficer = res.data.totalUsers;
             const officerData = res.data.data;
+            setTotalOfficer(TotalOfficer);
             setOfficer(officerData);
             console.log("data", officerData);
         } catch (error) {
@@ -52,7 +55,7 @@ export const OfficerDisplayProvider = ({ children }) => {
         if (!authToken || !linkId) return;
         setLoading(true);
         try {
-            const res = await axios.post(
+            const res = await axiosInstance.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetOfficerData`,
                 { linkId },
                 {
@@ -75,7 +78,7 @@ export const OfficerDisplayProvider = ({ children }) => {
 
     const AddPatient = async (values) => {
         try {
-            const res = await axios.post(
+            const res = await axiosInstance.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`,
                 {
                     first_name: values.first_name || "",
@@ -114,7 +117,7 @@ export const OfficerDisplayProvider = ({ children }) => {
 
     const DeleteOfficer = async (officerID) => {
         try {
-            const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${officerID}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${officerID}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -143,7 +146,7 @@ export const OfficerDisplayProvider = ({ children }) => {
                 email: values.email || "",
             };
 
-            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${dataID}`, dataToSend, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${dataID}`, dataToSend, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -177,6 +180,8 @@ export const OfficerDisplayProvider = ({ children }) => {
                 AddPatient,
                 DeleteOfficer,
                 UpdateOfficer,
+                setOfficerData,
+                isTotalOfficer,
             }}
         >
             {children}

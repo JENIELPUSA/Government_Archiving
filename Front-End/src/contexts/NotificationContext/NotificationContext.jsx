@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
 import { useAuth } from "../AuthContext";
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const NotificationDisplayContext = createContext();
 
 export const NotificationDisplayProvider = ({ children }) => {
@@ -10,7 +11,7 @@ export const NotificationDisplayProvider = ({ children }) => {
     const fetchNotifications = async () => {
         if (!linkId || !authToken) return;
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/getByLink/${linkId}`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/getByLink/${linkId}`, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                 },
@@ -29,7 +30,7 @@ export const NotificationDisplayProvider = ({ children }) => {
         if (!authToken || !linkId) return;
 
         try {
-            await axios.patch(
+            await axiosInstance.patch(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/${notifId}/mark-read`,
                 { linkId },
                 {

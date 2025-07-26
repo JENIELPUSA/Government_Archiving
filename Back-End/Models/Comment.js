@@ -20,6 +20,7 @@ const commentSchema = new mongoose.Schema({
     enum:["Pending","Approved", "Rejected"],
     default:"Pending"
   },
+  ipAddress: { type: String, default: null },
   timestamp: {
     type: Date,
     default: Date.now,

@@ -16,7 +16,7 @@ import approvedImage from "../../assets/approved-logo.png";
 import Notes from "../../component/PdfViewer/notecomponents";
 import LoadingOverlay from "../../ReusableFolder/LoadingOverlay";
 pdfjs.GlobalWorkerOptions.workerPort = new pdfWorker();
-
+import SuccessFailed from "../../ReusableFolder/SuccessandField";
 const PdfViewer = () => {
     const location = useLocation();
     const { isCategory } = useContext(DepartmentContext);
@@ -39,7 +39,8 @@ const PdfViewer = () => {
     const [placedTexts, setPlacedTexts] = useState([]);
     const nextTextId = useRef(0);
     const [isRecieveForm, setRecieveForm] = useState(false);
-
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState("success");
     const draggingSignatureId = useRef(null);
     const [activeSignatureId, setActiveSignatureId] = useState(null);
     const [activeTextId, setActiveTextId] = useState(null);
@@ -322,7 +323,8 @@ const PdfViewer = () => {
             });
 
             if (response.data.status === "success") {
-                alert("✅ Bagong PDF na-upload at na-update ang database!");
+                setModalStatus("success");
+                setShowModal(true);
             } else {
                 alert("⚠️ Update failed. Please try again.");
             }
@@ -383,6 +385,7 @@ const PdfViewer = () => {
     const handleCloseModal = () => {
         setRecieveForm(false);
         setApproved(false);
+        setShowNoteModal(false);
     };
 
     const hanndlepreview = () => {
@@ -913,9 +916,15 @@ const PdfViewer = () => {
                             </Document>
                         </div>
                     ) : (
-                       <LoadingOverlay  message="Loading PDF..." />
+                        <LoadingOverlay message="Loading PDF..." />
                     )}
                 </div>
+
+                <SuccessFailed
+                    isOpen={showModal}
+                    onClose={() => setShowModal(false)}
+                    status={modalStatus}
+                />
 
                 <Sidebar
                     onZoomIn={handleZoomIn}
@@ -937,7 +946,11 @@ const PdfViewer = () => {
                     onPreview={hanndlepreview}
                     ApprovedReview={handleApprovedReject}
                 />
-                <Notes data={noteData} isOpen={showNoteModal} onClose={handleCloseModal} />
+                <Notes
+                    data={noteData}
+                    isOpen={showNoteModal}
+                    onClose={handleCloseModal}
+                />
                 <RecieverForm
                     isOpen={isRecieveForm}
                     onClose={handleCloseModal}
@@ -950,8 +963,6 @@ const PdfViewer = () => {
                     handleApprove={handleSave}
                     handleRejects={handleRejects}
                 />
-                
-
             </div>
         </>
     );

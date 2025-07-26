@@ -36,22 +36,14 @@ export default function AppModal({ isOpen, onClose, fileData, handleApprove, han
             setShowContent(true);
         }
     };
+const handleRejectClick = async () => {
+  try {
+    await handleRejects(fileData._id, { status: "Rejected" });
+  } catch (error) {
+    console.error("Error rejecting file:", error);
+  }
+};
 
-    const handleRejectClick = async () => {
-        setIsLoading(true);
-        setShowContent(false);
-        try {
-            await handleRejects(fileData._id, { status: "Rejected" });
-            setAnimationType("rejected");
-            setTimeout(() => {
-                onClose();
-            }, 1000);
-        } catch (error) {
-            console.error("Error rejecting file:", error);
-            setIsLoading(false);
-            setShowContent(true);
-        }
-    };
 
     return (
         <AnimatePresence>
@@ -60,7 +52,7 @@ export default function AppModal({ isOpen, onClose, fileData, handleApprove, han
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="font-inter fixed inset-0 z-[999] flex items-center justify-center bg-black bg-opacity-50 p-4"
+                    className="font-inter fixed inset-0 z-[50] flex items-center justify-center bg-black bg-opacity-50 p-4"
                 >
                     <motion.div
                         initial={{ scale: 0.9, opacity: 0, y: 50 }}
@@ -147,19 +139,6 @@ export default function AppModal({ isOpen, onClose, fileData, handleApprove, han
                                     className="absolute inset-0 flex items-center justify-center"
                                 >
                                     <Check className="h-24 w-24 stroke-2 text-green-500" />
-                                </motion.div>
-                            )}
-
-                            {animationType === "rejected" && (
-                                <motion.div
-                                    key="rejectedAnimation"
-                                    initial={{ scale: 0, opacity: 0 }}
-                                    animate={{ scale: 1, opacity: 1 }}
-                                    exit={{ scale: 0, opacity: 0 }}
-                                    transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                                    className="absolute inset-0 flex items-center justify-center"
-                                >
-                                    <X className="h-24 w-24 stroke-2 text-red-500" />
                                 </motion.div>
                             )}
                         </AnimatePresence>

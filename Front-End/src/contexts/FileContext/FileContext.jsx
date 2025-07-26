@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const FilesDisplayContext = createContext();
 
 export const FilesDisplayProvider = ({ children }) => {
@@ -33,7 +34,7 @@ export const FilesDisplayProvider = ({ children }) => {
 
     const AddFiles = async (formData) => {
         try {
-            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, formData, {
+            const res = await axiosInstance.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
@@ -89,7 +90,7 @@ export const FilesDisplayProvider = ({ children }) => {
         if (!authToken) return;
         setLoading(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, {
                 withCredentials: true,
                 headers: {
                     Authorization: `Bearer ${authToken}`,
@@ -112,9 +113,7 @@ export const FilesDisplayProvider = ({ children }) => {
             const dataToSend = {
                 officer: values.officer,
             };
-            console.log("officer to send:", dataToSend.officer);
-
-            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/OfficerUpdate/${dataId}`, dataToSend, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/OfficerUpdate/${dataId}`, dataToSend, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -144,7 +143,7 @@ export const FilesDisplayProvider = ({ children }) => {
 
     const DeleteFiles = async (ID) => {
         try {
-            const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${ID}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${ID}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -172,7 +171,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 author: values.author || "",
             };
 
-            const response = await axios.patch(
+            const response = await axiosInstance.patch(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/UpdateFileDocument/${bornID}`,
                 dataToSend,
                 {
@@ -209,7 +208,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 ArchivedStatus: value,
             };
 
-            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${bornID}`, dataToSend, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${bornID}`, dataToSend, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -252,13 +251,16 @@ export const FilesDisplayProvider = ({ children }) => {
                 dataToSend.suggestion = values.note;
             }
 
-            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${bornID}`, dataToSend, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${bornID}`, dataToSend, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
             if (response.data && response.data.status === "success") {
+                console.log("Status Data");
+                const newFile=response.data.data;
+                return { success: true, data: newFile };
                 setFiles((prevUsers) => prevUsers.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
-                setModalStatus("success");
+                setModalStatus("success", response.data.status);
                 setShowModal(true);
             } else {
                 setModalStatus("failed");

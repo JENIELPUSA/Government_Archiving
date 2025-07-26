@@ -23,6 +23,7 @@ const SocketListener = () => {
         ],
     });
 
+    // Register user with socket
     useEffect(() => {
         if (!linkId || !role) return;
         socket.emit("register-user", linkId, role);
@@ -31,8 +32,9 @@ const SocketListener = () => {
     useEffect(() => {
         if (!linkId || !role) return;
 
+        // Notification when a document is updated
         const handleDocumentNotification = (notification) => {
-            const formatted = formatNotification(notification, "📄 New document submitted to you.");
+            const formatted = formatNotification(notification, "📄 Document updated.");
             setNotify((prev) => {
                 const exists = prev.some((n) => n._id === formatted._id);
                 if (exists) return prev;
@@ -41,10 +43,13 @@ const SocketListener = () => {
 
             const updatedDoc = notification.data;
             if (!updatedDoc?._id) return;
-            setFiles((prevFiles) => prevFiles.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
-            if (role === "officer") {
-                setOfficerData((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
-            }
+
+            setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
+
+            setOfficerData((prev) => {
+                const filtered = prev.filter((f) => f._id !== updatedDoc._id);
+                return [updatedDoc, ...filtered]; 
+            });
         };
 
         const handleNewDocumentNotification = (notification) => {
@@ -60,17 +65,14 @@ const SocketListener = () => {
 
             if (newDoc?._id) {
                 setFiles((prev) => [...prev, newDoc]);
-
-                if (role === "officer") {
-                    setOfficerData((prev) => [...prev.filter((f) => f._id !== oldDoc._id), newDoc]);
-                }
+                setOfficerData((prev) => {
+                    const filtered = prev.filter((f) => f._id !== (oldDoc?._id || newDoc._id));
+                    return [newDoc, ...filtered];
+                });
             }
-
-            console.log("✅ Added New Doc:", newDoc);
-            console.log("🗑️ Removed Old Doc:", oldDoc);
         };
 
-        socket.on("UpdateFileData", (updatedDoc) => {
+        const handleUpdateFileData = (updatedDoc) => {
             if (!updatedDoc?._id) return;
 
             setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
@@ -78,15 +80,18 @@ const SocketListener = () => {
             if (role === "officer") {
                 setOfficerData((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
             }
-        });
+        };
+
 
         socket.on("SentDocumentNotification", handleDocumentNotification);
         socket.on("SentNewDocuNotification", handleNewDocumentNotification);
+        socket.on("UpdateFileData", handleUpdateFileData);
+
 
         return () => {
             socket.off("SentDocumentNotification", handleDocumentNotification);
             socket.off("SentNewDocuNotification", handleNewDocumentNotification);
-            socket.off("UpdateFileData");
+            socket.off("UpdateFileData", handleUpdateFileData);
         };
     }, [linkId, role, setNotify, setFiles, setOfficerData]);
 

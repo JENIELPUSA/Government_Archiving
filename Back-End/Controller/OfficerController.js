@@ -12,14 +12,14 @@ exports.DisplayOfficer = AsyncErrorHandler(async (req, res) => {
         from: "departments",
         localField: "department",
         foreignField: "_id",
-        as: "departmentInfo"
-      }
+        as: "departmentInfo",
+      },
     },
     {
       $unwind: {
         path: "$departmentInfo",
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     },
     {
       $project: {
@@ -31,9 +31,9 @@ exports.DisplayOfficer = AsyncErrorHandler(async (req, res) => {
         avatar: 1,
         created_at: 1,
         dob: 1,
-        department: "$departmentInfo.department" // replace with actual field in department
-      }
-    }
+        department: "$departmentInfo.department", // replace with actual field in department
+      },
+    },
   ]);
 
   // Optional: Format `dob` if present
@@ -51,6 +51,7 @@ exports.DisplayOfficer = AsyncErrorHandler(async (req, res) => {
   res.status(200).json({
     status: "success",
     data: formattedOfficer,
+    totalUsers: formattedOfficer.length,
   });
 });
 
@@ -72,18 +73,14 @@ exports.deleteOfficer = AsyncErrorHandler(async (req, res, next) => {
   });
 });
 
-
-exports.UpdateOfficer =AsyncErrorHandler(async (req,res,next) =>{
-    const updateOfficer=await Officer.findByIdAndUpdate(req.params.id,req.body,{new: true});
-     res.status(200).json({
-        status:'success',
-        data:
-            updateOfficer
-        
-     }); 
-  })
-
-
-
-
-
+exports.UpdateOfficer = AsyncErrorHandler(async (req, res, next) => {
+  const updateOfficer = await Officer.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    { new: true }
+  );
+  res.status(200).json({
+    status: "success",
+    data: updateOfficer,
+  });
+});

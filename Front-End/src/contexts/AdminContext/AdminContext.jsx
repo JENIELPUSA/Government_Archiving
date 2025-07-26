@@ -11,33 +11,37 @@ export const AdminDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [isAdmin, setAdmin] = useState([]);
+    const [isTotalAdmin,setTotalAdmin]=useState([])
 
     useEffect(() => {
         if (!authToken) return;
         FetchAdminData();
     }, [authToken]);
 
-    const FetchAdminData = async () => {
-        if (!authToken) return;
-        setLoading(true);
-        try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
-                withCredentials: true,
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                    "Cache-Control": "no-cache",
-                },
-            });
+   const FetchAdminData = async () => {
+    if (!authToken) return;
+    setLoading(true);
+    try {
+        const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
+            withCredentials: true,
+            headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Cache-Control": "no-cache",
+            },
+        });
 
-            const AdminData = res.data.data;
-            setAdmin(AdminData);
-            console.log("data", AdminData);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+        const TotalAdmin = res.data.totalAdmin; 
+        const AdminData = res.data.data;
+        setAdmin(AdminData);
+        setTotalAdmin(TotalAdmin);
+        console.log("data", AdminData);
+    } catch (error) {
+        console.error("Error fetching data:", error);
+    } finally {
+        setLoading(false);
+    }
+};
+;
 
     const DeleteAdmin = async (officerID) => {
         try {
@@ -102,6 +106,7 @@ export const AdminDisplayProvider = ({ children }) => {
                 isAdmin,
                 DeleteAdmin,
                 UpdateAdmin,
+                isTotalAdmin
             }}
         >
             {children}

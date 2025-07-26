@@ -13,7 +13,7 @@ const sendEmail = async (options) => {
     });
 
     const mailOptions = {
-        from: `BrightSmile Dental Clinic <${process.env.EMAIL_USER}>`,
+        from: `National Archives Management System <${process.env.EMAIL_USER}>`,
         to: options.email,
         subject: options.subject,
         html: `
@@ -24,12 +24,12 @@ const sendEmail = async (options) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>${options.subject}</title>
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
                 
                 body {
                     margin: 0;
                     padding: 0;
-                    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     background-color: #f8fbfe;
                     color: #2d3748;
                 }
@@ -37,104 +37,104 @@ const sendEmail = async (options) => {
                 .container {
                     max-width: 600px;
                     margin: 20px auto;
-                    border-radius: 16px;
+                    border-radius: 4px;
                     overflow: hidden;
-                    box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+                    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+                    border: 1px solid #e2e8f0;
                 }
                 
                 .header {
-                    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+                    background: linear-gradient(135deg, #1d4e89, #0c3a6e);
                     padding: 30px 20px;
                     text-align: center;
                     position: relative;
                 }
                 
-                .clinic-name {
+                .agency-name {
                     color: white;
-                    font-size: 28px;
-                    font-weight: 700;
+                    font-size: 26px;
+                    font-weight: 600;
                     letter-spacing: 0.5px;
-                    margin: 0;
-                    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    margin: 10px 0 5px;
+                    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
                 }
                 
-                .tagline {
+                .system-name {
                     color: rgba(255,255,255,0.9);
-                    font-size: 16px;
-                    margin: 8px 0 0;
-                    font-weight: 300;
+                    font-size: 18px;
+                    margin: 5px 0 0;
+                    font-weight: 400;
                 }
                 
-                .dental-icon {
-                    font-size: 36px;
-                    margin-top: 15px;
+                .archive-icon {
+                    font-size: 42px;
                     display: inline-block;
+                    margin-bottom: 10px;
                 }
                 
                 .content {
-                    padding: 40px;
+                    padding: 35px;
                     background: white;
-                    line-height: 1.7;
+                    line-height: 1.6;
                 }
                 
                 .greeting {
-                    color: #0f172a;
-                    font-size: 24px;
+                    color: #1e293b;
+                    font-size: 22px;
                     margin-top: 0;
                     margin-bottom: 25px;
-                    font-weight: 600;
+                    font-weight: 500;
                 }
                 
                 .message {
                     font-size: 16px;
                     margin-bottom: 30px;
                     color: #475569;
-                    line-height: 1.8;
+                    line-height: 1.7;
                 }
                 
                 .info-card {
-                    background: #f0f9ff;
-                    border-radius: 12px;
+                    background: #f1f5f9;
+                    border-radius: 6px;
                     padding: 20px;
                     margin: 25px 0;
-                    border-left: 4px solid #0ea5e9;
+                    border-left: 4px solid #1d4e89;
                 }
                 
                 .info-label {
                     font-weight: 600;
-                    color: #0c4a6e;
+                    color: #1e40af;
                     display: block;
                     margin-bottom: 5px;
                     font-size: 14px;
+                    text-transform: uppercase;
                 }
                 
                 .info-value {
                     font-size: 18px;
-                    color: #0f172a;
+                    color: #1e293b;
                     font-weight: 500;
                 }
                 
-                .btn-container {
+                .action-container {
                     text-align: center;
                     margin: 35px 0 25px;
                 }
                 
-                .btn {
+                .action-btn {
                     display: inline-block;
-                    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+                    background: linear-gradient(135deg, #1d4e89, #0c3a6e);
                     color: white !important;
-                    padding: 14px 35px;
-                    border-radius: 50px;
+                    padding: 12px 32px;
+                    border-radius: 4px;
                     text-decoration: none;
-                    font-weight: 600;
+                    font-weight: 500;
                     font-size: 16px;
                     transition: all 0.3s ease;
-                    box-shadow: 0 4px 15px rgba(2, 132, 199, 0.25);
                 }
                 
-                .btn:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.35);
+                .action-btn:hover {
+                    background: linear-gradient(135deg, #0c3a6e, #1d4e89);
                 }
                 
                 .contact-info {
@@ -158,14 +158,15 @@ const sendEmail = async (options) => {
                 .auto-msg {
                     display: block;
                     margin-top: 8px;
+                    font-size: 12px;
                 }
                 
                 @media (max-width: 600px) {
                     .content {
-                        padding: 30px 20px;
+                        padding: 25px 20px;
                     }
                     .greeting {
-                        font-size: 22px;
+                        font-size: 20px;
                     }
                 }
             </style>
@@ -173,40 +174,40 @@ const sendEmail = async (options) => {
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="dental-icon">🦷</div>
-                    <h1 class="clinic-name">BrightSmile Dental Clinic</h1>
-                    <p class="tagline">Where Your Smile is Our Masterpiece</p>
+                    <div class="archive-icon">🏛️</div>
+                    <h1 class="agency-name">Governmemt File Archives System</h1>
+                    <p class="system-name">Document Archiving and Management System</p>
                 </div>
                 
                 <div class="content">
-                    <h2 class="greeting">Hello!</h2>
+                    <h2 class="greeting">Greetings,</h2>
                     <div class="message">
                         ${options.text}
                     </div>
                     
                     <div class="info-card">
-                        <span class="info-label">SUBJECT OF MESSAGE</span>
+                        <span class="info-label">Document Reference</span>
                         <span class="info-value">${options.subject}</span>
                     </div>
                     
                     <p class="message">
-                        For more information or assistance, please visit our website or contact our support.
+                        This is an automated notification regarding your document submission or request.
+                        For inquiries, please contact our support during office hours.
                     </p>
                     
-                    <div class="btn-container">
-                        <a href="https://brightsmileclinic.com" class="btn">Visit Our Website</a>
+                    <div class="action-container">
+                        <a href="https://archives.gov.ph" class="action-btn">Access Archive Portal</a>
                     </div>
                     
                     <div class="contact-info">
-                        📍 123 Dental Avenue, Manila, Philippines<br>
-                        📞 (02) 8123-4567 | 📱 0917 890 1234<br>
-                        ✉️ contact@brightsmileclinic.com
+                        📍 Biliran Province Philippines<br>
+                        📞 (02) 1234-5678 | 📱 0917 123 4567<br>
+                        ✉️ archives.support@gov.ph
                     </div>
                 </div>
                 
                 <div class="footer">
-                    <p>This is an automated message from the Dental Clinic Monitoring System. Please do not reply to this email.</p>
-                    <span class="auto-msg">© 2025 BrightSmile Dental Clinic. All rights reserved.</span>
+                    <span class="auto-msg">© ${new Date().getFullYear()} Government File Archiving Management System. All rights reserved.</span>
                 </div>
             </div>
         </body>

@@ -4,7 +4,8 @@ import StatisticsCard from "../AdminDashboard/dashboardcard";
 import LineGraph from "./LineGraph";
 import PieGraph from "./PieGraph";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
-
+import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
+import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 
 const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 2 }) => {
     const [currentValue, setCurrentValue] = useState(0);
@@ -41,6 +42,8 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
 
 function DashboardLayout() {
     const {isFile}=useContext(FilesDisplayContext)
+    const {isTotalAdmin}=useContext(AdminDisplayContext);
+    const {isTotalOfficer}=useContext(OfficerDisplayContext)
     const documents = isFile;
 
     const totalDocuments = documents.length;
@@ -52,7 +55,7 @@ function DashboardLayout() {
                docDate.getFullYear() === today.getFullYear();
     }).length;
 
-    const activeUsers = 12;
+    const activeUsers = isTotalAdmin  + isTotalOfficer;
     const totalStorageUsedBytes = documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
 
     const formatStorage = (bytes) => {

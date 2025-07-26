@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useCallback, useMemo } from "react";
 import axios from "axios";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const RatingDisplayContext = createContext();
 
 export const useComments = () => useContext(RatingDisplayContext);
@@ -18,7 +18,7 @@ export const RatingDisplayProvider = ({ children }) => {
                 return null;
             }
             try {
-                const response = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Ratings/${pdfId}`, {
+                const response = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Ratings/${pdfId}`, {
                     withCredentials: true,
                     headers: {
                         "Cache-Control": "no-cache",
@@ -52,7 +52,7 @@ export const RatingDisplayProvider = ({ children }) => {
         async ({ pdfId, rating }) => {
             console.log(pdfId);
             try {
-                const response = await axios.post(
+                const response = await axiosInstance.post(
                     `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Ratings`,
                     { documentId: pdfId, rating },
                     { withCredentials: true },

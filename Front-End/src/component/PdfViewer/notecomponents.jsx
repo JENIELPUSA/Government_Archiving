@@ -1,58 +1,52 @@
 import React, { useState, useEffect, useContext } from "react";
+import { toast } from "react-toastify";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
-const NotePopupModal = ({ isOpen,data,onClose }) => {
+import SuccessFailed from "../../ReusableFolder/SuccessandField";
+const NotePopupModal = ({ isOpen, data, onClose }) => {
     const { UpdateStatus } = useContext(FilesDisplayContext);
     const [noteContent, setNoteContent] = useState("");
-    const [message, setMessage] = useState({ text: "", type: "", visible: false });
-
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState("success");
     useEffect(() => {
         if (!isOpen) {
             setNoteContent("");
-            setMessage({ text: "", type: "", visible: false });
         }
     }, [isOpen]);
 
-    const showMessage = (text, type) => {
-        setMessage({ text, type, visible: true });
-        setTimeout(() => {
-            setMessage({ text: "", type: "", visible: false });
-        }, 3000);
-    };
-
     const handleCancel = () => {
         setNoteContent("");
+        onClose(); // Optional: Also close when cancel is clicked
     };
 
-  const handleSubmit = async () => {
-    if (noteContent.trim() === "") {
-        showMessage("Note content cannot be empty.", "error");
-        return;
-    }
+    const handleSubmit = async () => {
+        if (noteContent.trim() === "") {
+            toast.error("Note content cannot be empty.");
+            return;
+        }
 
-    const { status, ...rest } = data || {};
+        const { status, ...rest } = data || {};
 
-    const noteData = {
-        note: noteContent,
-        status: status?.status || "",
-        ...rest,
+        const noteData = {
+            note: noteContent,
+            status: status?.status || "",
+            ...rest,
+        };
+
+        try {
+            const result = await UpdateStatus(noteData.ID, noteData);
+            if (result.success) {
+                setModalStatus("success");
+                setShowModal(true);
+                setNoteContent("");
+                setTimeout(() => {
+                    onClose();
+                }, 1000); // 1 second delay
+            }
+        } catch (error) {
+            console.error("Error updating status:", error);
+            toast.error("Failed to submit note. Please try again.");
+        }
     };
-    try {
-        await UpdateStatus(noteData.ID, noteData);
-        setNoteContent("");
-        showMessage("Note submitted successfully!", "success");
-        onClose();
-    } catch (error) {
-        console.error("Error updating status:", error);
-        showMessage("Failed to submit note. Please try again.", "error");
-    }
-};
-
-    const messageBoxClasses = `
-        mt-4 p-3 rounded text-center text-sm
-        ${message.visible ? "" : "hidden"}
-        ${message.type === "success" ? "bg-green-100 text-green-800" : ""}
-        ${message.type === "error" ? "bg-red-100 text-red-800" : ""}
-    `;
 
     if (!isOpen) return null;
 
@@ -69,10 +63,6 @@ const NotePopupModal = ({ isOpen,data,onClose }) => {
                     onChange={(e) => setNoteContent(e.target.value)}
                 ></textarea>
 
-                <div className={messageBoxClasses}>
-                    <p>{message.text}</p>
-                </div>
-
                 <div className="mt-4 flex justify-end space-x-3">
                     <button
                         onClick={handleCancel}
@@ -88,6 +78,12 @@ const NotePopupModal = ({ isOpen,data,onClose }) => {
                     </button>
                 </div>
             </div>
+
+            <SuccessFailed
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                status={modalStatus}
+            />
         </div>
     );
 };

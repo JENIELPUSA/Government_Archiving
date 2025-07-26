@@ -1,17 +1,22 @@
 import { useState, useCallback, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import LoadingIntro from "../../ReusableFolder/loadingIntro";
 import ForgotPassword from "../Login/ForgotPassword";
 import { UserDisplayContext } from "../../contexts/UserContext/userContext";
 import logo from "@/assets/logo-login.png";
 import { FolderArchive, Lock, Mail } from "lucide-react";
-import { motion } from "framer-motion"; // Import motion for animations
+import { motion, AnimatePresence } from "framer-motion";
+import LoginStatusModal from "../../ReusableFolder/LogInStatusModal"; // Import the modal
 
 export default function AuthForm() {
     const [isForgotPassword, setForgotPassword] = useState(false);
+    const [loginStatus, setLoginStatus] = useState({
+        show: false,
+        status: "success",
+        message: "",
+    });
 
     const [values, setValues] = useState({
         email: "",
@@ -22,7 +27,7 @@ export default function AuthForm() {
 
     const navigate = useNavigate();
     const { login } = useAuth();
-    const { isUser } = useContext(UserDisplayContext); // Kept in case it's used elsewhere, but not directly for login form logic
+    const { isUser } = useContext(UserDisplayContext);
 
     const handleInput = useCallback((event) => {
         const { name, value } = event.target;
@@ -39,14 +44,26 @@ export default function AuthForm() {
         const response = await login(values.email, values.password);
 
         if (response.success) {
-            toast.success("Login successful!");
-            setTimeout(() => {
-                setIsLoading(false);
-                navigate("/dashboard");
-            }, 1000);
+            setLoginStatus({
+                show: true,
+                status: "success",
+                message: "Login successful!",
+            });
+            setIsLoading(false);
         } else {
             setIsLoading(false);
-            toast.error(response.message || "Login failed. Please check your credentials.");
+            setLoginStatus({
+                show: true,
+                status: "error",
+                message: response.message || "Login failed. Please check your credentials.",
+            });
+        }
+    };
+
+    const handleModalClose = () => {
+        setLoginStatus((prev) => ({ ...prev, show: false }));
+        if (loginStatus.status === "success") {
+            navigate("/dashboard");
         }
     };
 
@@ -63,6 +80,14 @@ export default function AuthForm() {
 
     return (
         <div className="font-inter flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-slate-900 dark:to-slate-800">
+            {/* Login Status Modal */}
+            <LoginStatusModal
+                isOpen={loginStatus.show}
+                onClose={handleModalClose}
+                status={loginStatus.status}
+                customMessage={loginStatus.message}
+            />
+
             {/* Subtle background animation */}
             <motion.div
                 className="absolute inset-0 z-0 opacity-20"
@@ -76,7 +101,7 @@ export default function AuthForm() {
             />
 
             <motion.div
-                className="relative z-10 flex w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl" // Changed to flex for two columns
+                className="relative z-10 flex w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl"
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
@@ -100,13 +125,9 @@ export default function AuthForm() {
                         animate="visible"
                         transition={{ delay: 0.2 }}
                     >
-                        {/* Increased size for the logo container and icon */}
                         <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white">
-                            {" "}
-                            {/* Increased size */}
-                            <FolderArchive className="h-16 w-16 text-blue-800" /> {/* Increased size */}
+                            <FolderArchive className="h-16 w-16 text-blue-800" />
                         </div>
-                        {/* Removed "YOUR LOGO" text */}
                     </motion.div>
 
                     <div className="relative z-10">
@@ -126,19 +147,17 @@ export default function AuthForm() {
                             animate="visible"
                             transition={{ delay: 0.5 }}
                         >
-                            This File Archiving System helps you securely organize, store, and retrieve important documents such as PDFs, Word, and
-                            Excel files — ensuring quick access, better document control, and long-term digital preservation.
+                            This File Archiving System securely organizes, stores, and retrieves PDF documents ensuring fast access, efficient
+                            control, and long-term digital preservation.
                         </motion.p>
                     </div>
-                    {/* FreePik watermark-like text, for demonstration */}
                     <div className="absolute bottom-4 left-4 text-xs text-blue-300 opacity-50">FREEPIK</div>
                 </div>
 
                 {/* Right Column - Login Form */}
                 <div className="flex w-full flex-col justify-center bg-white p-8 dark:bg-slate-800 md:w-3/5 md:p-12">
-                    {/* Logo and Title for File Archiving System */}
                     <motion.div
-                        className="mb-8 text-center" // Always show this section
+                        className="mb-8 text-center"
                         variants={itemVariants}
                         initial="hidden"
                         animate="visible"

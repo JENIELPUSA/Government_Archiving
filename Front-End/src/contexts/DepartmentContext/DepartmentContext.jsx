@@ -3,14 +3,14 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const DepartmentContext = createContext();
 
 export const DepartmentDisplayProvider = ({ children }) => {
-    const [isDepartment, setDepartment] = useState([]); 
+    const [isDepartment, setDepartment] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const { authToken } = useContext(AuthContext); 
+    const { authToken } = useContext(AuthContext);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [customError, setCustomError] = useState("");
@@ -20,7 +20,7 @@ export const DepartmentDisplayProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department`, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -40,7 +40,7 @@ export const DepartmentDisplayProvider = ({ children }) => {
 
     const AddDepartment = async (values) => {
         try {
-            const res = await axios.post(
+            const res = await axiosInstance.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department`,
                 {
                     department: values.department,
@@ -70,40 +70,33 @@ export const DepartmentDisplayProvider = ({ children }) => {
             }
         }
     };
-const UpdateDepartment = async ({ _id, department }) => {
-  try {
-    const response = await axios.patch(
-      `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department/${_id}`,
-      { department },
-      { headers: { Authorization: `Bearer ${authToken}` } }
-    );
+    const UpdateDepartment = async ({ _id, department }) => {
+        try {
+            const response = await axiosInstance.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department/${_id}`,
+                { department },
+                { headers: { Authorization: `Bearer ${authToken}` } },
+            );
 
-    if (response.data?.status === "success") {
-      setDepartment((prev) =>
-        prev.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u))
-      );
-      setModalStatus("success");
-      setShowModal(true);
-    } else {
-      setModalStatus("failed");
-      setShowModal(true);
-      return { success: false, error: "Unexpected response from server." };
-    }
-  } catch (error) {
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      "Unexpected error occurred.";
+            if (response.data?.status === "success") {
+                setDepartment((prev) => prev.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
+                setModalStatus("success");
+                setShowModal(true);
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Unexpected error occurred.";
 
-    setCustomError(message);
-  }
-};
-
+            setCustomError(message);
+        }
+    };
 
     const DeleteDepartment = async (BrandId) => {
         try {
-            const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department/${BrandId}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Department/${BrandId}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -130,7 +123,8 @@ const UpdateDepartment = async ({ _id, department }) => {
                 fetchDepartments,
                 loading,
                 error,
-                UpdateDepartment,DeleteDepartment
+                UpdateDepartment,
+                DeleteDepartment,
             }}
         >
             {children}

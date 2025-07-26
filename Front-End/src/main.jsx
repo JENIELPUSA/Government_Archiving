@@ -17,6 +17,7 @@ import { CategoryDisplayProvider } from "./contexts/CategoryContext/CategoryCont
 import { LogsDisplayProvider } from "./contexts/LogsAndAuditContext/LogsAndAuditContext.jsx";
 import { NotificationDisplayProvider } from "./contexts/NotificationContext/NotificationContext.jsx";
 import { AdminDisplayProvider } from "./contexts/AdminContext/AdminContext.jsx";
+import AxiosInterceptor from "./component/AxiosInterceptor.jsx";
 createRoot(document.getElementById("root")).render(
     // <StrictMode>
     <AuthProvider>
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")).render(
                                             <FilesDisplayProvider>
                                                 <SocketListener />
                                                 <App />
+                                                <AxiosInterceptor/>
                                                 <ToastContainer
                                                     position="top-right"
                                                     autoClose={3000}

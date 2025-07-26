@@ -7,8 +7,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-    }, optimizeDeps: {
-    include: ['pdfjs-dist/build/pdf.worker.min.js'],
+    },
+    optimizeDeps: {
+      include: ['pdfjs-dist/build/pdf.worker.min.js'],
+    },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          pdf: ['pdfjs-dist/build/pdf.worker.min.js'],
+          // You can add more groupings here
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000, // (optional) increase chunk size warning
   },
 });

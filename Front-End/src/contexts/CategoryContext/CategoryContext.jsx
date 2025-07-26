@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
+import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const CategoryContext = createContext();
 
 export const CategoryDisplayProvider = ({ children }) => {
@@ -20,7 +20,7 @@ export const CategoryDisplayProvider = ({ children }) => {
 
         setLoading(true);
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Category`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Category`, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -40,7 +40,7 @@ export const CategoryDisplayProvider = ({ children }) => {
 
     const AddCategory = async (values) => {
         try {
-            const res = await axios.post(
+            const res = await axiosInstance.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category`,
                 {
                     category: values.category,
@@ -72,7 +72,7 @@ export const CategoryDisplayProvider = ({ children }) => {
     };
 const UpdateCategory = async ({ _id, category }) => {
   try {
-    const response = await axios.patch(
+    const response = await axiosInstance.patch(
       `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${_id}`,
       { category },
       { headers: { Authorization: `Bearer ${authToken}` } }
@@ -103,7 +103,7 @@ const UpdateCategory = async ({ _id, category }) => {
 
     const DeleteCategory = async (BrandId) => {
         try {
-            const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${BrandId}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${BrandId}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
