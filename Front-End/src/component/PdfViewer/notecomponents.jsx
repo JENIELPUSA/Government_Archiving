@@ -2,10 +2,12 @@ import React, { useState, useEffect, useContext } from "react";
 import { toast } from "react-toastify";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
+import { useNavigate } from "react-router-dom";
 const NotePopupModal = ({ isOpen, data, onClose }) => {
     const { UpdateStatus } = useContext(FilesDisplayContext);
     const [noteContent, setNoteContent] = useState("");
     const [showModal, setShowModal] = useState(false);
+    const navigate = useNavigate();
     const [modalStatus, setModalStatus] = useState("success");
     useEffect(() => {
         if (!isOpen) {
@@ -40,7 +42,8 @@ const NotePopupModal = ({ isOpen, data, onClose }) => {
                 setNoteContent("");
                 setTimeout(() => {
                     onClose();
-                }, 1000); // 1 second delay
+                    navigate("/dashboard");
+                }, 1000);
             }
         } catch (error) {
             console.error("Error updating status:", error);

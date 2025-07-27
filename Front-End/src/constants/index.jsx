@@ -47,11 +47,6 @@ export const navbarLinks = [
                 icon: FolderClock,
                 path: "/dashboard/recent",
             },
-            {
-                label: "Manage Comments",
-                icon: MessageCircleMore,
-                path: "/dashboard/comments",
-            },
         ],
     },
     {

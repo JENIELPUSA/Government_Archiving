@@ -115,9 +115,7 @@ const DocumentFilter = ({ documents, onFilterChange }) => {
             <option value="">All Status</option>
             <option value="Approved">Approved</option>
             <option value="Pending">Pending</option>
-            <option value="Archived">Archived</option>
             <option value="Rejected">Rejected</option>
-            <option value="Draft">Draft</option>
           </select>
         </div>
         

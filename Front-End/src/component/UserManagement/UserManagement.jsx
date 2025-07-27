@@ -32,31 +32,35 @@ export default function UserManagement() {
         setShowTable(true);
     };
 
-    // 🧠 UseEffect to watch for selectedRole and data availability
-    useEffect(() => {
-        if (selectedRole === "Admin" && isAdmin.length > 0) {
-            const transformedAdminData = isAdmin.map((admin) => ({
-                id: admin._id,
-                first_name: admin.first_name,
-                middle_name: admin.middle_name,
-                last_name: admin.last_name,
-                email: admin.email,
-                gender: admin.gender,
-            }));
-            setTableData(transformedAdminData);
-        } else if (selectedRole === "Official" && isOfficer.length > 0) {
-            const transformedOfficerData = isOfficer.map((officer) => ({
-                id: officer._id,
-                first_name: officer.first_name,
-                middle_name: officer.middle_name,
-                last_name: officer.last_name,
-                email: officer.email,
-                department: officer.department,
-                gender: officer.gender,
-            }));
-            setTableData(transformedOfficerData);
-        }
-    }, [selectedRole, isAdmin, isOfficer]);
+  useEffect(() => {
+  if (selectedRole === "Admin" && isAdmin?.length > 0) {
+    const transformedAdminData = isAdmin
+      .filter((admin) => admin && admin._id)
+      .map((admin) => ({
+        id: admin._id,
+        first_name: admin.first_name,
+        middle_name: admin.middle_name,
+        last_name: admin.last_name,
+        email: admin.email,
+        gender: admin.gender,
+      }));
+    setTableData(transformedAdminData);
+  } else if (selectedRole === "Official" && isOfficer?.length > 0) {
+    const transformedOfficerData = isOfficer
+      .filter((officer) => officer && officer._id)
+      .map((officer) => ({
+        id: officer._id,
+        first_name: officer.first_name,
+        middle_name: officer.middle_name,
+        last_name: officer.last_name,
+        email: officer.email,
+        department: officer.department,
+        gender: officer.gender,
+      }));
+    setTableData(transformedOfficerData);
+  }
+}, [selectedRole, isAdmin, isOfficer]);
+
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;

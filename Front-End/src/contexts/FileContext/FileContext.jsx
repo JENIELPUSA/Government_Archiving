@@ -259,9 +259,6 @@ export const FilesDisplayProvider = ({ children }) => {
                 console.log("Status Data");
                 const newFile=response.data.data;
                 return { success: true, data: newFile };
-                setFiles((prevUsers) => prevUsers.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
-                setModalStatus("success", response.data.status);
-                setShowModal(true);
             } else {
                 setModalStatus("failed");
                 setShowModal(true);

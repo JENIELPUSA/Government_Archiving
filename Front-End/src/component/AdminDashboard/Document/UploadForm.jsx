@@ -28,17 +28,8 @@ const UploadForm = () => {
     const [isCategoryLoading, setCategoryLoading] = useState(true);
     const [isDepartmentLoading, setDepartmentLoading] = useState(true);
 
-    // Define allowed file types
-    const ALLOWED_FILE_TYPES = [
-        "application/pdf",
-        "application/msword", // .doc
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // .docx
-        "application/vnd.ms-excel", // .xls
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
-        "application/vnd.ms-powerpoint", // .ppt
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation", // .pptx
-        "text/plain", // .txt
-    ];
+    // Only allow PDF files
+    const ALLOWED_FILE_TYPES = ["application/pdf"];
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -56,9 +47,9 @@ const UploadForm = () => {
             setSelectedFile(null);
             return;
         }
-        // Check if the file type is allowed
+        // Check if the file is PDF
         if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            setFileError("Invalid file type. Only PDF, Word, Excel, and PowerPoint documents are allowed.");
+            setFileError("Invalid file type. Only PDF documents are allowed.");
             setSelectedFile(null);
             return;
         }
@@ -330,8 +321,9 @@ const UploadForm = () => {
                     <div>
                         <div className="mb-3 flex items-center justify-between">
                             <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200">Document File</h3>
+                            {/* Updated to show only PDF */}
                             <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                                PDF, Word, Excel, PPT, Text
+                                PDF Only
                             </span>
                         </div>
 
@@ -359,7 +351,7 @@ const UploadForm = () => {
                                     ref={fileInputRef}
                                     onChange={handleFileChange}
                                     className="hidden"
-                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                                    accept=".pdf" // Only accept PDF
                                 />
 
                                 <div className="pointer-events-none flex flex-col items-center justify-center py-8">

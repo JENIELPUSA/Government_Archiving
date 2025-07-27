@@ -236,11 +236,6 @@ const PdfViewer = () => {
     };
 
     const handleSave = async () => {
-        if (!originalPdfBytesRef.current) {
-            alert("❗Hindi pa na-load ang orihinal na PDF.");
-            return;
-        }
-
         try {
             const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
             const pages = pdfDoc.getPages();
@@ -306,15 +301,13 @@ const PdfViewer = () => {
             const pdfBytes = await pdfDoc.save();
             const blob = new Blob([pdfBytes], { type: "application/pdf" });
             const originalName = fileData?.fileName || "document.pdf";
-
-            // Match pattern like: "1753530996895_document_v1.pdf"
             const baseMatch = originalName.match(/^(.*?)(?:_v(\d+))?\.pdf$/i);
             let baseName = baseMatch?.[1] || "document"; // includes any prefix
             let currentVersion = baseMatch?.[2] ? parseInt(baseMatch[2]) : 0;
             const newVersion = currentVersion + 1;
             const newFilename = `${baseName}_v${newVersion}.pdf`;
             const formData = new FormData();
-            formData.append("file", blob, newFilename); // <- dynamic filename
+            formData.append("file", blob, newFilename);
             formData.append("fileId", fileData._id);
             formData.append("title", fileData.title);
             formData.append("category", fileData.categoryID);
@@ -324,7 +317,6 @@ const PdfViewer = () => {
             formData.append("admin", fileData.admin);
             formData.append("officer", fileData.officer);
             formData.append("status", "Approved");
-
             const response = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/UpdateCloudinary`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,

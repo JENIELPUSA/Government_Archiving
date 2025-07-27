@@ -114,13 +114,11 @@ const DocumentTable = ({ documents }) => {
                     <thead className="bg-gray-200 text-sm uppercase leading-normal text-gray-700 dark:bg-gray-700 dark:text-gray-200">
                         <tr>
                             <th className="px-6 py-3 text-left">Title</th>
-                            <th className="px-6 py-3 text-left">Summary</th>
                             <th className="px-6 py-3 text-left">Author</th>
                             <th className="px-6 py-3 text-left">Department</th>
                             <th className="px-6 py-3 text-left">Status</th>
                             <th className="px-6 py-3 text-left">Notes</th>
                             <th className="px-6 py-3 text-left">Uploaded</th>
-                            <th className="px-6 py-3 text-left">File Name</th>
                             <th className="px-6 py-3 text-left">Actions</th>
                         </tr>
                     </thead>
@@ -132,21 +130,8 @@ const DocumentTable = ({ documents }) => {
                             >
                                 <td className="whitespace-nowrap px-6 py-3 text-left">
                                     <span className="text-sm font-light text-gray-700 dark:text-gray-300">{document.title}</span>
-                                    {document.tags && document.tags.length > 0 && (
-                                        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                            {document.tags.map((tag) => (
-                                                <span
-                                                    key={tag}
-                                                    className="mr-2 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800 dark:bg-blue-800 dark:text-blue-100"
-                                                >
-                                                    #{tag}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
+            
                                 </td>
-                                <td className="px-6 py-3 text-left text-sm font-medium text-gray-900 dark:text-gray-100">{document.summary}</td>
-
                                 <td className="px-6 py-3 text-left">{document.author}</td>
                                 <td className="px-6 py-3 text-left">{document.department}</td>
                                 <td className="px-6 py-3 text-left">
@@ -168,7 +153,6 @@ const DocumentTable = ({ documents }) => {
                                 </td>
                                 <td className="px-6 py-3 text-left">{document.suggestion}</td>
                                 <td className="px-6 py-3 text-left">{new Date(document.createdAt).toLocaleDateString("en-US")}</td>
-                                <td className="px-6 py-3 text-left">{document.fileName}</td>
                                 <td className="px-6 py-3 text-left">
                                     <div className="flex gap-2">
                                         <button

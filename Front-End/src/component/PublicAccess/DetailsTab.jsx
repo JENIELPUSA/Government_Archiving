@@ -160,28 +160,6 @@ export default function DetailsTab({
                     <i className={`fas fa-bookmark mr-2 ${bookmarkedPdfs[pdf.id] ? 'text-yellow-500' : 'text-gray-400'}`}></i>
                     {bookmarkedPdfs[pdf.id] ? 'Bookmarked' : 'Bookmark'}
                 </button>
-
-                <div className="flex-1 max-w-md">
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                        <div className="flex flex-wrap items-center justify-between mb-3">
-                            <div className="flex items-center">
-                                <span className="text-gray-700 font-medium mr-2">Average Rating:</span>
-                                <span className="text-amber-600 font-bold text-lg">{averageRating.toFixed(1)}</span>
-                            </div>
-                            <div className="flex items-center text-amber-500">
-                                {renderStars(averageRating)}
-                            </div>
-                            <span className="text-gray-500 text-sm">({totalRatingsCount} ratings)</span>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between">
-                            <span className="text-gray-700 font-medium">Your Rating:</span>
-                            <div className="flex items-center" onMouseLeave={() => setHoverRating(0)}>
-                                {renderStars(userRating, true)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

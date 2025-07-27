@@ -195,32 +195,6 @@ const Sidebar = ({
                                         className="hidden"
                                     />
                                 </label>
-                                <button
-                                    onClick={() => {
-                                        const messageBox = document.createElement("div");
-                                        messageBox.style.cssText = `
-                      position: fixed;
-                      top: 50%;
-                      left: 50%;
-                      transform: translate(-50%, -50%);
-                      background-color: white;
-                      padding: 20px;
-                      border-radius: 8px;
-                      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                      z-index: 1000;
-                      text-align: center;
-                      color: black;
-                    `;
-                                        messageBox.innerHTML = `
-                      <p>Create Signature functionality not yet implemented</p>
-                      <button onclick="this.parentNode.remove()" style="margin-top: 15px; padding: 8px 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
-                    `;
-                                        document.body.appendChild(messageBox);
-                                    }}
-                                    className="flex items-center justify-center rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                                >
-                                    <PenLine className="h-4 w-4" />
-                                </button>
                             </div>
                         )}
                         {role !== "admin" && fileData.status !== "Approved" && fileData.status !== "Rejected" && (

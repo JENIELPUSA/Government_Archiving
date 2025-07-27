@@ -13,7 +13,7 @@ const sendEmail = async (options) => {
     });
 
     const mailOptions = {
-        from: `National Archives Management System <${process.env.EMAIL_USER}>`,
+        from: `Government File Archiving System <${process.env.EMAIL_USER}>`,
         to: options.email,
         subject: options.subject,
         html: `
@@ -175,7 +175,7 @@ const sendEmail = async (options) => {
             <div class="container">
                 <div class="header">
                     <div class="archive-icon">🏛️</div>
-                    <h1 class="agency-name">Governmemt File Archives System</h1>
+                    <h1 class="agency-name">Government File Archives System</h1>
                     <p class="system-name">Document Archiving and Management System</p>
                 </div>
                 
@@ -196,13 +196,12 @@ const sendEmail = async (options) => {
                     </p>
                     
                     <div class="action-container">
-                        <a href="https://archives.gov.ph" class="action-btn">Access Archive Portal</a>
+                        <a href="https://government-archiving-web.onrender.com" class="action-btn">Access Archive Portal</a>
                     </div>
                     
                     <div class="contact-info">
                         📍 Biliran Province Philippines<br>
                         📞 (02) 1234-5678 | 📱 0917 123 4567<br>
-                        ✉️ archives.support@gov.ph
                     </div>
                 </div>
                 

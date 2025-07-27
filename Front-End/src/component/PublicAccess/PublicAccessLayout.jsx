@@ -10,6 +10,7 @@ import { RatingDisplayContext } from "../../contexts/RatingContext/RatingContext
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
 import Footer from "./publicfooter";
+
 export const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
@@ -26,6 +27,31 @@ export const sidebarVariants = {
     hidden: { x: "100%" },
     visible: { x: 0, transition: { type: "spring", stiffness: 300, damping: 30 } },
     exit: { x: "100%", transition: { type: "spring", stiffness: 300, damping: 30 } },
+};
+
+// Pagination Component
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+  return (
+    <div className="flex items-center justify-center space-x-2 my-6">
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Previous
+      </button>
+      <span className="text-sm text-gray-700">
+        Page {currentPage} of {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="px-4 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Next
+      </button>
+    </div>
+  );
 };
 
 export default function PublicAccess() {
@@ -53,6 +79,8 @@ export default function PublicAccess() {
     const [showBookmarks, setShowBookmarks] = useState(false);
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
     const [hasNewApprovedFiles, setHasNewApprovedFiles] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(5);
 
     const lawData = useMemo(() => {
         return (
@@ -111,6 +139,11 @@ export default function PublicAccess() {
     useEffect(() => {
         setBookmarkedPdfs({});
     }, []);
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [currentCategory, searchTerm, advAuthor, advApprovalDate, advSelectedTags, showBookmarks]);
 
     useEffect(() => {
         let pdfsToDisplay = [];
@@ -196,6 +229,12 @@ export default function PublicAccess() {
 
         fetchRatings();
     }, [selectedPdfForComments, getRatingsByPdfId, isRatings, currentUserId]);
+
+    // Pagination calculations
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    const paginatedPdfs = filteredPdfs.slice(indexOfFirstItem, indexOfLastItem);
+    const totalPages = Math.ceil(filteredPdfs.length / itemsPerPage);
 
     const handleCategoryClick = useCallback((categoryId) => {
         setCurrentCategory(categoryId);
@@ -685,10 +724,19 @@ export default function PublicAccess() {
                                 showBookmarks={showBookmarks}
                                 currentCategory={currentCategory}
                                 categories={categories}
-                                filteredPdfs={filteredPdfs}
+                                filteredPdfs={paginatedPdfs} // Changed to paginated data
                                 showPdfDetails={showPdfDetails}
                                 cardVariants={cardVariants}
                             />
+                            
+                            {/* Pagination controls */}
+                            {filteredPdfs.length > itemsPerPage && (
+                                <Pagination
+                                    currentPage={currentPage}
+                                    totalPages={totalPages}
+                                    onPageChange={setCurrentPage}
+                                />
+                            )}
                         </>
                     )}
                 </div>
@@ -767,7 +815,6 @@ export default function PublicAccess() {
                 </div>
             )}
              <Footer />
-
         </div>
     );
 }

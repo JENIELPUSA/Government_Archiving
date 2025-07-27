@@ -73,12 +73,6 @@ export default function DocumentDetailsSidebar({
                         >
                             Details
                         </button>
-                        <button
-                            className={`flex-1 py-2 text-center text-lg font-medium ${activeSidebarTab === 'comments' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-blue-500'}`}
-                            onClick={() => setActiveSidebarTab('comments')}
-                        >
-                            Comments
-                        </button>
                     </div>
 
                     <div className="flex-grow overflow-y-auto">
@@ -101,15 +95,7 @@ export default function DocumentDetailsSidebar({
                                 handleRating={handleRating}
                             />
                         )}
-                        {activeSidebarTab === 'comments' && (
-                            <CommentsTab
-                                comments={commentsToPass}
-                                commentLoading={loadingToPass}
-                                newCommentText={newCommentText}
-                                setNewCommentText={setNewCommentText}
-                                addComment={addComment}
-                            />
-                        )}
+                    
                     </div>
                 </motion.aside>
             )}

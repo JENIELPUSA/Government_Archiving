@@ -102,6 +102,8 @@ const OfficerDashboard = () => {
         if (!selectedDocument) return;
         const fileId = selectedDocument._id;
         const fileData = selectedDocument;
+
+        console.log("JKKKJJKKJJKKJ",fileData)
         navigate(`/dashboard/pdf-viewer/${fileId}`, { state: { fileData } });
     };
 
@@ -444,7 +446,7 @@ const OfficerDashboard = () => {
                                                                 scope="col"
                                                                 className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300"
                                                             >
-                                                                Submitted By
+                                                                Title
                                                             </th>
                                                             <th
                                                                 scope="col"
@@ -485,7 +487,7 @@ const OfficerDashboard = () => {
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-6 py-4">
                                                                     <div className="text-sm text-gray-900 dark:text-white">
-                                                                        {doc.admin_first_name ?? "Unknown"} {doc.admin_last_name ?? ""}
+                                                                        {doc.title}
                                                                     </div>
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-6 py-4">
@@ -576,10 +578,6 @@ const OfficerDashboard = () => {
                                         </p>
                                         <p>
                                             <strong>Category:</strong> {selectedDocument.category}
-                                        </p>
-                                        <p>
-                                            <strong>Submitted By (Admin):</strong> {selectedDocument.admin_first_name}{" "}
-                                            {selectedDocument.admin_last_name}
                                         </p>
                                         <p>
                                             <strong>Officer In Charge:</strong> {selectedDocument.officer_first_name}{" "}

@@ -18,8 +18,12 @@ const initDefaultUser = async () => {
       theme: process.env.DEFAULT_ADMIN_THEME || "light",
     });
 
-    await defaultAdmin.save();
-    console.log("✅ Default admin account created!");
+    const savedAdmin = await defaultAdmin.save();
+
+    savedAdmin.linkedId = savedAdmin._id;
+    await savedAdmin.save();
+
+    console.log("✅ Default admin account created with linkedId!");
   } else {
     console.log("🔍 Admin account already exists.");
   }

@@ -217,14 +217,14 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
 
     let messageText = null;
     if (isRestored) {
-      messageText = `📂 A document has been restored. Title: "${fileTitle}" from ${departmentName} / ${categoryTitle}`;
+      messageText = `A document has been restored. Title: "${fileTitle}" from ${departmentName} / ${categoryTitle}`;
     } else if (statusChanged) {
       if (updatedFile.status === "Approved") {
-        messageText = `✅ Document approved: "${fileTitle}" from ${departmentName}`;
+        messageText = `Document approved: "${fileTitle}" from ${departmentName}`;
       } else if (updatedFile.status === "Rejected") {
-        messageText = `❌ Document rejected: "${fileTitle}" from ${departmentName}`;
+        messageText = `Document rejected: "${fileTitle}" from ${departmentName}`;
       } else if (updatedFile.status === "Pending") {
-        messageText = `🕓 Document pending review: "${fileTitle}" from ${departmentName}`;
+        messageText = `Document pending review: "${fileTitle}" from ${departmentName}`;
       }
     }
 
@@ -518,7 +518,15 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     },
     {
       $lookup: {
-        from: "officers", // Lookup for officer info
+        from: "admins",
+        localField: "admin",
+        foreignField: "_id",
+        as: "admin",
+      },
+    },
+    {
+      $lookup: {
+        from: "officers",
         localField: "officer",
         foreignField: "_id",
         as: "officerInfo",
@@ -534,9 +542,14 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     },
     { $unwind: { path: "$departmentInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
-    { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$admin", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+
+    // ✅ Sort by newest first
+    {
+      $sort: { createdAt: -1 }
+    },
 
     {
       $project: {
@@ -561,9 +574,9 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
         departmentID: "$departmentInfo._id",
         category: "$categoryInfo.category",
         categoryID: "$categoryInfo._id",
-        admin: "$adminInfo._id",
-        admin_first_name: "$adminInfo.first_name",
-        admin_last_name: "$adminInfo.last_name",
+        admin: "$admin._id",
+        admin_first_name: "$admin.first_name",
+        admin_last_name: "$admin.last_name",
         archivedBy_first_name: "$archiverInfo.first_name",
         archivedBy_last_name: "$archiverInfo.last_name",
         officer: "$officerInfo._id",
@@ -575,6 +588,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
   res.status(200).json({ status: "success", data: FilesData });
 });
+
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   try {
     const { id } = req.params;
@@ -959,6 +973,9 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     category,
   } = req.body;
 
+  console.log("📥 Body received:", req.body);
+
+
   if (!file) return res.status(400).json({ error: "No file uploaded" });
 
   if (!fileId || !mongoose.Types.ObjectId.isValid(fileId))
@@ -985,8 +1002,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 
   if (!oldFile)
     return res.status(404).json({ error: "Original file not found" });
-
-  // ✅ Prepare filename and upload to Cloudinary
   const ext = path.extname(file.originalname || ".pdf");
   const baseName = path.basename(file.originalname || "document.pdf", ext);
   const fileName = `${Date.now()}_${baseName}${ext}`;
@@ -1015,7 +1030,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     streamifier.createReadStream(file.buffer).pipe(stream);
   });
 
-  // ✅ Save new version of file
   const typeMap = { ".pdf": "PDF" };
   const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
 
@@ -1155,6 +1169,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
   const officerId = req.user.linkId;
+
   const FilesData = await Files.aggregate([
     {
       $match: {
@@ -1179,7 +1194,7 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
     },
     {
       $lookup: {
-        from: "officers", // Lookup for officer info
+        from: "officers",
         localField: "officer",
         foreignField: "_id",
         as: "officerInfo",
@@ -1207,6 +1222,11 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
     { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
 
+    // ✅ Add sort by newest file
+    {
+      $sort: { createdAt: -1 }
+    },
+
     {
       $project: {
         title: 1,
@@ -1216,6 +1236,7 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
         fileUrl: 1,
         fileName: 1,
         status: 1,
+        admin: 1,
         suggestion: 1,
         tags: 1,
         ArchivedStatus: 1,
@@ -1225,12 +1246,10 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
         "archivedMetadata.dateArchived": 1,
         "archivedMetadata.notes": 1,
         "archivedMetadata.archivedBy": 1,
-
         department: "$departmentInfo.department",
         departmentID: "$departmentInfo._id",
         category: "$categoryInfo.category",
         categoryID: "$categoryInfo._id",
-        admin: "$adminInfo._id",
         admin_first_name: "$adminInfo.first_name",
         admin_last_name: "$adminInfo.last_name",
         archivedBy_first_name: "$archiverInfo.first_name",
@@ -1247,6 +1266,7 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
     data: FilesData,
   });
 });
+
 
 exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
   try {

@@ -185,14 +185,6 @@ const RecentDocument = () => {
         ) : (
           <DocumentTable documents={currentDocuments} onPreview={openModal} />
         )}
-
-
-        {/* Viewed By List - Skeleton or Component */}
-        {loading ? (
-          <ViewedByListSkeleton />
-        ) : (
-          <ViewedByList documents={filteredDocuments} />
-        )}
       </div>
 
       {/* Document Modal */}
