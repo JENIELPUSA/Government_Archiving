@@ -7,6 +7,7 @@ import pdfWorker from "pdfjs-dist/build/pdf.worker.min?worker";
 import Sidebar from "./SidebarPDF"; // Siguraduhin na tama ang path
 import { ResizableBox } from "react-resizable";
 import { AuthContext } from "../../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
 import "react-resizable/css/styles.css";
 import { useLocation } from "react-router-dom";
 import RecieverForm from "../AdminDashboard/Document/RecieverForm";
@@ -15,9 +16,12 @@ import ApprovedRejectForm from "../PdfViewer/ApproveRejectForm";
 import approvedImage from "../../assets/approved-logo.png";
 import Notes from "../../component/PdfViewer/notecomponents";
 import LoadingOverlay from "../../ReusableFolder/LoadingOverlay";
+import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 pdfjs.GlobalWorkerOptions.workerPort = new pdfWorker();
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
 const PdfViewer = () => {
+    const {FetchOfficerFiles}=useContext(OfficerDisplayContext)
+    const navigate = useNavigate();
     const location = useLocation();
     const { isCategory } = useContext(DepartmentContext);
     const fileData = location.state?.fileData;
@@ -330,6 +334,10 @@ const PdfViewer = () => {
             if (response.data.status === "success") {
                 setModalStatus("success");
                 setShowModal(true);
+                FetchOfficerFiles();
+                setTimeout(() => {
+                    navigate("/dashboard");
+                }, 1500);
             } else {
                 alert("⚠️ Update failed. Please try again.");
             }

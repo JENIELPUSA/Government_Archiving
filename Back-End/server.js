@@ -5,8 +5,8 @@ const mongoose = require("mongoose");
 const http = require("http");
 const socketIo = require("socket.io");
 const app = require("./app");
-
-
+const scheduleRetentionJob = require("./Utils/CronJobs/retentionJob");
+const initDefaultUser = require("./Controller/initDefaultUser");
 //para pagkuha ng ipAddress
 app.set("trust proxy", true);
 
@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
       if (
         (doctor_id &&
           (role === "admin" || role === "officer" || linkId === doctor_id)) ||
-        (!doctor_id && ( role === "officer"))
+        (!doctor_id && role === "officer")
       ) {
         io.to(socketId).emit("adminNotification", message);
         io.to(socketId).emit("SMSNotification", message);
@@ -97,12 +97,16 @@ io.on("connection", (socket) => {
 
 mongoose
   .connect(process.env.CONN_STR)
-  .then(() => console.log("Database connected successfully"))
+  .then(async () => {
+    console.log("✅ Database connected successfully");
+
+    await initDefaultUser();
+  })
   .catch((err) => {
-    console.error("DB connection error:", err.message);
+    console.error("❌ DB connection error:", err.message);
     process.exit(1);
   });
-
+  
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
@@ -114,4 +118,4 @@ process.on("unhandledRejection", (err) => {
   server.close(() => process.exit(1));
 });
 
-
+scheduleRetentionJob();

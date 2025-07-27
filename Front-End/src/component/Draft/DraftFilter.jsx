@@ -108,7 +108,7 @@ const DraftFilter = ({ documents, onFilterChange }) => {
       <div className="relative mb-4">
         <button
           onClick={() => setShowTagsDropdown(!showTagsDropdown)}
-          className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md inline-flex items-center dark:bg-purple-700 dark:hover:bg-purple-800 transition-colors duration-200"
+          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md inline-flex items-center dark:bg-blue-700 dark:hover:bg-purple-800 transition-colors duration-200"
         >
           <i className="fas fa-tags mr-2"></i> Filter By Tags
           <svg className="fill-current h-4 w-4 ml-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">

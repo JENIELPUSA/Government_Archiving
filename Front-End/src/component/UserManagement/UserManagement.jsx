@@ -1,8 +1,9 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import RoleSelection from "./RoleSelection";
 import Dashboard from "./Dashboard";
+import LoadingOverlay from "../../ReusableFolder/LoadingOverlay";
 
 export default function UserManagement() {
     const [selectedRole, setSelectedRole] = useState(null);
@@ -29,7 +30,11 @@ export default function UserManagement() {
     const handleRoleSelect = (role) => {
         setSelectedRole(role);
         setShowTable(true);
-        if (role === "Admin") {
+    };
+
+    // 🧠 UseEffect to watch for selectedRole and data availability
+    useEffect(() => {
+        if (selectedRole === "Admin" && isAdmin.length > 0) {
             const transformedAdminData = isAdmin.map((admin) => ({
                 id: admin._id,
                 first_name: admin.first_name,
@@ -39,8 +44,8 @@ export default function UserManagement() {
                 gender: admin.gender,
             }));
             setTableData(transformedAdminData);
-        } else if (role === "Official") {
-            const transformedOfficerData = (isOfficer || []).map((officer) => ({
+        } else if (selectedRole === "Official" && isOfficer.length > 0) {
+            const transformedOfficerData = isOfficer.map((officer) => ({
                 id: officer._id,
                 first_name: officer.first_name,
                 middle_name: officer.middle_name,
@@ -51,7 +56,7 @@ export default function UserManagement() {
             }));
             setTableData(transformedOfficerData);
         }
-    };
+    }, [selectedRole, isAdmin, isOfficer]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -100,6 +105,7 @@ export default function UserManagement() {
     };
 
     const handleEditData = async (editedData) => {
+        setIsSubmitting(true);
         try {
             if (selectedRole === "Admin") {
                 await UpdateAdmin(editedData.id, editedData);
@@ -110,6 +116,8 @@ export default function UserManagement() {
             setShowAddUserModal(false);
         } catch (error) {
             console.error("Edit error:", error);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -147,7 +155,9 @@ export default function UserManagement() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 font-sans text-gray-800 dark:text-white transition-colors duration-300">
+        <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 font-sans text-gray-800 dark:text-white transition-colors duration-300">
+            {isSubmitting && <LoadingOverlay />}
+            
             {!showTable ? (
                 <RoleSelection
                     onSelectRole={handleRoleSelect}

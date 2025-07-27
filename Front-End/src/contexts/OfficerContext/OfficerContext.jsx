@@ -182,6 +182,7 @@ export const OfficerDisplayProvider = ({ children }) => {
                 UpdateOfficer,
                 setOfficerData,
                 isTotalOfficer,
+                FetchOfficerFiles,
             }}
         >
             {children}

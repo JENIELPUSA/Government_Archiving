@@ -6,15 +6,16 @@ const { type } = require("os");
 
 const UserLoginSchema = new mongoose.Schema({
   avatar: { type: String },
-  first_name:{type:String},
-  last_name:{type:String},
-  contact_number:{type:Number},
+  first_name: { type: String },
+  last_name: { type: String },
+  contact_number: { type: Number },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ["admin","officer"],
-    required: true, lowercase: true,
+    enum: ["admin", "officer"],
+    required: true,
+    lowercase: true,
   },
 
   otp: { type: String },
@@ -29,27 +30,31 @@ const UserLoginSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 
-  confirmPassword:{
+  confirmPassword: {
     type: String,
-    require:[true,'Please confirm your password'],
-    validate:{
-      validator:function(val){
-        return val=this.password;
+    require: [true, "Please confirm your password"],
+    validate: {
+      validator: function (val) {
+        return (val = this.password);
       },
-      message: 'Password & confirm Pasword does not match'
-    }
-
+      message: "Password & confirm Pasword does not match",
+    },
+  },
+  theme: {
+    type: String,
+    enum: ["light", "dark"],
+    default: "light",
   },
   passwordChangedAt: Date,
   passwordResetToken: String,
-  passwordResetTokenExpires: Date
+  passwordResetTokenExpires: Date,
 });
 // Mongoose pre-save middleware to hash the password and remove confirmPassword
 UserLoginSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 12);
-  this.confirmPassword=undefined;
+  this.confirmPassword = undefined;
 
   next();
 });
@@ -61,7 +66,8 @@ UserLoginSchema.methods.comparePasswordInDb = async function (pswd, pswdDB) {
 UserLoginSchema.methods.isPasswordChanged = async function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const pswdChangedTimestamp = parseInt(
-      this.passwordChangedAt.getTime() / 1000, 10
+      this.passwordChangedAt.getTime() / 1000,
+      10
     );
     return JWTTimestamp < pswdChangedTimestamp;
   }
@@ -74,7 +80,6 @@ UserLoginSchema.pre("save", function (next) {
   }
   next();
 });
-
 
 UserLoginSchema.methods.createResetTokenPassword = function () {
   const resetToken = crypto.randomBytes(32).toString("hex");

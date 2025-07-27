@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
 
-export default function CategoriesSidebar({ categories, currentCategory, showBookmarks, handleCategoryClick, handleShowBookmarks }) {
+export default function CategoriesSidebar({ 
+  categories, 
+  currentCategory, 
+  showBookmarks, 
+  handleCategoryClick, 
+  handleShowBookmarks,
+  hasNewApprovedFiles // Add this prop to indicate if there are new approved files
+}) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
+  };
+
+  const handleNewApprovedFiles = () => {
+    handleCategoryClick('new_approved_files');
   };
 
   return (
@@ -93,6 +104,35 @@ export default function CategoriesSidebar({ categories, currentCategory, showBoo
             </div>
           </button>
 
+          {/* NEW APPROVED FILES BUTTON WITH BADGE */}
+          <button
+            className={`w-full text-left p-4 rounded-xl transition-all duration-200 flex items-center gap-3 group
+              ${currentCategory === 'new_approved_files' && !showBookmarks
+                ? 'bg-blue-50 border-l-4 border-blue-500 shadow-sm' 
+                : 'hover:bg-gray-50'}`}
+            onClick={handleNewApprovedFiles}
+          >
+            <div className={`p-2 rounded-lg ${currentCategory === 'new_approved_files' && !showBookmarks ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-100'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center">
+                <span className={`font-medium ${currentCategory === 'new_approved_files' && !showBookmarks ? 'text-blue-700' : 'text-gray-700'}`}>
+                  New Approved Files
+                </span>
+                {hasNewApprovedFiles && (
+                  <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
+                )}
+              </div>
+              {currentCategory === 'new_approved_files' && !showBookmarks && (
+                <div className="text-xs text-blue-500 mt-1">Currently viewing</div>
+              )}
+            </div>
+          </button>
+
+          {/* Document Categories Section */}
           <div className="border-t border-gray-100 my-4 pt-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 pl-2">Document Categories</h3>
             {categories.map(category => (

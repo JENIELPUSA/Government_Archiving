@@ -3,39 +3,34 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
-
-export const UpdateDisplayContext = createContext();
-
-export const UpdateDisplayProvider = ({ children }) => {
+import axiosInstance from "../../ReusableFolder/axioxInstance";
+export const RetentionContext = createContext();
+export const RetentionDisplayProvider = ({ children }) => {
+    const [isRetention, setRetention] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const { authToken } = useContext(AuthContext);
-    const [customError, setCustomError] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
+    const [customError, setCustomError] = useState("");
 
     useEffect(() => {
-        if (customError) {
-            const timer = setTimeout(() => {
-                setCustomError(null);
-            }, 5000);
+        fetchRetention();
+    }, [authToken]);
 
-            return () => clearTimeout(timer);
-        }
-    }, [customError]);
-
-    const UpdatePasswordData = async (payload) => {
+    const AddRetention = async (values, enabled) => {
         try {
-            const response = await axios.patch(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/updatePassword`,
+            const res = await axios.post(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Retention`,
                 {
-                    currentPassword: payload.currentPassword,
-                    password: payload.password,
-                    confirmPassword: payload.confirmPassword,
+                    retentionDays: values,
+                    enabled,
                 },
-                { headers: { Authorization: `Bearer ${authToken}` } },
+                {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                },
             );
-
-            if (response.data && response.data.status === "success") {
+            if (res.data.status === "success") {
                 setModalStatus("success");
                 setShowModal(true);
             } else {
@@ -56,20 +51,38 @@ export const UpdateDisplayProvider = ({ children }) => {
         }
     };
 
+    const fetchRetention = async () => {
+        if (!authToken) return;
+
+        setLoading(true);
+        try {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Retention`, {
+                withCredentials: true,
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            setRetention(res.data.data);
+        } catch (error) {
+            console.error("Error fetching brands:", error);
+            setError("Failed to fetch data.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <UpdateDisplayContext.Provider
+        <RetentionContext.Provider
             value={{
-                customError,
-                setCustomError,
-                UpdatePasswordData,
+                AddRetention,
+                isRetention
             }}
         >
             {children}
+
             <SuccessFailed
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
                 status={modalStatus}
             />
-        </UpdateDisplayContext.Provider>
+        </RetentionContext.Provider>
     );
 };

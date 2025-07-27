@@ -32,23 +32,25 @@ export const Header = ({ collapsed, setCollapsed }) => {
                     >
                         <ChevronsLeft className={`transition-transform ${collapsed ? "rotate-180" : ""}`} />
                     </button>
-                    <h1 className="text-xl font-bold">Welcome back Admin!</h1>
+                    <h1 className="text-xl font-bold">Welcome back {role.charAt(0).toUpperCase() + role.slice(1)}!</h1>
                 </div>
 
                 <div className="flex items-center gap-x-3">
-                    <button
-                        className="btn-ghost size-10 rounded-full text-gray-800 transition-colors hover:bg-gray-800/10 dark:text-white dark:hover:bg-white/20"
-                        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                    >
-                        <Sun
-                            size={20}
-                            className="dark:hidden"
-                        />
-                        <Moon
-                            size={20}
-                            className="hidden dark:block"
-                        />
-                    </button>
+                    {role !== "admin" && (
+                        <button
+                            className="btn-ghost size-10 rounded-full text-gray-800 transition-colors hover:bg-gray-800/10 dark:text-white dark:hover:bg-white/20"
+                            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                        >
+                            <Sun
+                                size={20}
+                                className="dark:hidden"
+                            />
+                            <Moon
+                                size={20}
+                                className="hidden dark:block"
+                            />
+                        </button>
+                    )}
 
                     {/* Notification dropdown renders here */}
                     <NotificationDropdown

@@ -491,14 +491,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
-  const loggedInAdminId = req.user.linkId; // ← this should be set by auth middleware
-
   const FilesData = await Files.aggregate([
-    {
-      $match: {
-        admin: new mongoose.Types.ObjectId(loggedInAdminId),
-      },
-    },
     {
       $lookup: {
         from: "admins",
@@ -966,6 +959,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     category,
   } = req.body;
 
+  // ✅ Validate incoming data
   if (!file) return res.status(400).json({ error: "No file uploaded" });
 
   if (!fileId || !mongoose.Types.ObjectId.isValid(fileId))
@@ -977,7 +971,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(admin))
     return res.status(400).json({ error: "Invalid admin ID format" });
 
-  // Archive old version
+  // ✅ Archive old version
   const oldFile = await Files.findByIdAndUpdate(
     fileId,
     {
@@ -994,8 +988,9 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   if (!oldFile)
     return res.status(404).json({ error: "Original file not found" });
 
-  const ext = path.extname(file.originalname);
-  const baseName = path.basename(file.originalname, ext);
+  // ✅ Prepare filename and upload to Cloudinary
+  const ext = path.extname(file.originalname || ".pdf");
+  const baseName = path.basename(file.originalname || "document.pdf", ext);
   const fileName = `${Date.now()}_${baseName}${ext}`;
   const folderPath = `Government Archiving/${sanitizeFolderName(department)}`;
 
@@ -1014,7 +1009,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
           console.error("❌ Cloudinary error:", error);
           reject(error);
         } else {
-          console.log("✅ Cloudinary upload result:", result.secure_url);
+          console.log("✅ Cloudinary upload result:", result?.secure_url);
           resolve(result);
         }
       }
@@ -1022,9 +1017,8 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     streamifier.createReadStream(file.buffer).pipe(stream);
   });
 
-  const typeMap = {
-    ".pdf": "PDF",
-  };
+  // ✅ Save new version of file
+  const typeMap = { ".pdf": "PDF" };
   const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
 
   const newFile = await new Files({
@@ -1035,14 +1029,14 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     author,
     admin,
     officer,
-    fileUrl: result.secure_url,
+    fileUrl: result?.secure_url,
     fileName,
     folderPath,
     fullText: fullTextType,
     status,
   }).save();
 
-  // 🔍 Aggregate to populate the new file (flattened)
+  // ✅ Aggregate and populate new file
   const populatedFileResult = await Files.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(newFile._id) } },
     {
@@ -1111,15 +1105,17 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 
   const finalFile = populatedFileResult[0];
 
-  // 🔔 Notification
+  // ✅ Create & send notification
   const adminUsers = await UserLoginSchema.find({ role: "admin" });
   const io = req.app.get("io");
 
-  const viewersArray = adminUsers.map((adminUser) => ({
-    user: new mongoose.Types.ObjectId(adminUser.linkedId),
-    isRead: false,
-    viewedAt: null,
-  }));
+  const viewersArray = adminUsers
+    .filter((adminUser) => mongoose.Types.ObjectId.isValid(adminUser?.linkedId))
+    .map((adminUser) => ({
+      user: new mongoose.Types.ObjectId(adminUser.linkedId),
+      isRead: false,
+      viewedAt: null,
+    }));
 
   const messageText = `A new document has been submitted. Status: ${finalFile.status}`;
   const SendMessage = {
@@ -1134,8 +1130,14 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   });
 
   adminUsers.forEach((adminUser) => {
-    const adminId = adminUser.linkedId.toString();
+    if (!adminUser?.linkedId) {
+      console.warn("⚠️ Skipping admin with missing linkedId:", adminUser.username);
+      return;
+    }
+
+    const adminId = adminUser.linkedId.toString(); // now safe
     const targetUser = global.connectedUsers?.[adminId];
+
     console.log(`👤 Admin ID: ${adminId}, Email: ${adminUser.username}`);
 
     if (targetUser) {
@@ -1152,7 +1154,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     data: finalFile,
   });
 });
-
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
   const officerId = req.user.linkId;

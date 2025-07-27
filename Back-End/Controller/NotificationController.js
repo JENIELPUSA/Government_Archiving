@@ -3,7 +3,6 @@ const Notification = require("./../Models/NotificationSchema");
 const ApiFeatures = require("./../Utils/ApiFeatures");
 const mongoose = require("mongoose");
 
-// ✅ 1. Create Notification
 exports.createNotification = AsyncErrorHandler(async (req, res) => {
   const { message, userIds } = req.body; // userIds: [array of linkId]
 
@@ -20,7 +19,6 @@ exports.createNotification = AsyncErrorHandler(async (req, res) => {
   });
 });
 
-// ✅ 2. Get notifications by viewer linkId
 exports.getByLinkId = AsyncErrorHandler(async (req, res) => {
   const { linkId } = req.params;
 
@@ -34,7 +32,7 @@ exports.getByLinkId = AsyncErrorHandler(async (req, res) => {
   });
 });
 
-// ✅ 3. Mark a notification as read for a specific linkId
+
 exports.markAsRead = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
   const { linkId } = req.body;
@@ -65,7 +63,6 @@ exports.markAsRead = AsyncErrorHandler(async (req, res) => {
 });
 
 
-// ✅ 4. Display All Notifications (admin only usually)
 exports.DisplayNotification = AsyncErrorHandler(async (req, res) => {
   const features = new ApiFeatures(Notification.find(), req.query)
     .filter()
@@ -81,7 +78,7 @@ exports.DisplayNotification = AsyncErrorHandler(async (req, res) => {
   });
 });
 
-// ✅ 5. Delete a Notification
+
 exports.deleteNotification = AsyncErrorHandler(async (req, res) => {
   const deleted = await Notification.findByIdAndDelete(req.params.id);
 

@@ -163,7 +163,7 @@ exports.login = AsyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  // ✅ Generate token with role and linkId
+  //Generate token with role and linkId
   const token = signToken(user._id, user.role, linkId);
 
   req.session.userId = user._id;
@@ -175,6 +175,7 @@ exports.login = AsyncErrorHandler(async (req, res, next) => {
     role: user.role,
     Designatedzone: zone,
     linkId,
+    theme: user.theme,
   };
 
   return res.status(200).json({
@@ -187,6 +188,7 @@ exports.login = AsyncErrorHandler(async (req, res, next) => {
     Designatedzone: zone,
     first_name: user.first_name,
     last_name: user.last_name,
+    theme: user.theme,
   });
 });
 

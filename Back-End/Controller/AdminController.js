@@ -22,6 +22,25 @@ exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   });
 });
 
+
+exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
+  const loggedInAdminId = req.user.linkId;
+
+  const admin = await Admin.findById(loggedInAdminId);
+
+  if (!admin) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Admin not found",
+    });
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: admin,
+  });
+});
+
 exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   const AdminID = req.params.id;
   const deleteAdmin = await Admin.findByIdAndDelete(AdminID);

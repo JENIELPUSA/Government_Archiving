@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { motion } from "framer-motion";
 import { DepartmentContext } from "../../contexts/DepartmentContext/DepartmentContext";
-// Import Font Awesome icons
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
@@ -43,7 +42,7 @@ const AddUserModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+<div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur">
       <motion.div
         variants={dropIn}
         initial="hidden"

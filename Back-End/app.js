@@ -16,6 +16,8 @@ const PatientDentalRoute = require("./Routes/PatientDentalRoute");
 
 const Notification = require("./Routes/NotificationRoute");
 
+const Retention = require("./Routes/RetentionRoute")
+
 const Logs=require("./Routes/LogsRoute")
 
 const Comments = require("./Routes/CommentRoute")
@@ -29,6 +31,8 @@ const RatingRoute = require("./Routes/RatingRoute")
 const DepartmentRoute = require("./Routes/DepatmentRoute")
 
 const CategoryFileRouter = require("./Routes/CategoryFileRouter")
+
+const StorageOptimization = require("./Routes/StorageOptimizedRoute")
 
 let app = express();
 
@@ -85,6 +89,9 @@ app.use("/api/v1/Department", DepartmentRoute);
 app.use("/api/v1/Comments", Comments);
 app.use("/api/v1/Ratings", RatingRoute);
 app.use("/api/v1/Category", CategoryFileRouter);
+app.use("/api/v1/Retention", Retention);
+app.use("/api/v1/Retention", Retention);
+app.use("/api/v1/Optimization", StorageOptimization);
 
 
 

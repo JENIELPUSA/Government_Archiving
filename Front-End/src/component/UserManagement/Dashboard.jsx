@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import AddUserModal from "./AddUserModal";
-import { Database, UserPlus, Pencil, Trash2, ArrowLeft } from "lucide-react";
+import { Database, UserPlus, Pencil, Trash2, ArrowLeft, Search, RefreshCw } from "lucide-react"; // Import Search and RefreshCw icons
 import { motion } from "framer-motion";
 
 const Dashboard = ({
@@ -19,14 +19,27 @@ const Dashboard = ({
     formMessage,
     isSubmitting,
     setFormMessage,
+    onRefresh, // New prop for refresh functionality
 }) => {
+    const [searchTerm, setSearchTerm] = useState("");
+    const [filteredTableData, setFilteredTableData] = useState(tableData);
+
+    useEffect(() => {
+        const lowercasedSearchTerm = searchTerm.toLowerCase();
+        const filteredData = tableData.filter(item =>
+            (item.first_name && item.first_name.toLowerCase().includes(lowercasedSearchTerm)) ||
+            (item.last_name && item.last_name.toLowerCase().includes(lowercasedSearchTerm)) ||
+            (item.email && item.email.toLowerCase().includes(lowercasedSearchTerm)) ||
+            (selectedRole !== "Admin" && item.department && item.department.toLowerCase().includes(lowercasedSearchTerm)) ||
+            (item.gender && item.gender.toLowerCase().includes(lowercasedSearchTerm))
+        );
+        setFilteredTableData(filteredData);
+    }, [searchTerm, tableData, selectedRole]);
+
     const handleEditItem = (item) => {
         setEditUserData(item);
         setShowAddUserModal(true);
     };
-
-
-    console.log("Datattta",tableData)
 
     const handleCloseModal = () => {
         setShowAddUserModal(false);
@@ -51,16 +64,16 @@ const Dashboard = ({
                 <div className="flex flex-col items-center justify-between md:flex-row">
                     <div className="flex items-center">
                         <div className="mr-4 rounded-lg bg-white/20 p-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold">{selectedRole} Management</h1>
-            <p className="text-blue-200 dark:text-blue-300">
-              {tableData.length} user{tableData.length !== 1 ? 's' : ''} registered
-            </p>
-          </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold">{selectedRole} Management</h1>
+                            <p className="text-blue-200 dark:text-blue-300">
+                                {tableData.length} user{tableData.length !== 1 ? 's' : ''} registered
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={resetSelection}
@@ -81,16 +94,38 @@ const Dashboard = ({
                             Manage all {selectedRole.toLowerCase()} accounts in the system
                         </p>
                     </div>
-                    <button
-                        onClick={() => {
-                            setEditUserData(null);
-                            setShowAddUserModal(true);
-                        }}
-                        className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-white transition hover:bg-blue-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
-                    >
-                        <UserPlus className="h-5 w-5" />
-                        Add New User
-                    </button>
+                    <div className="flex items-center gap-4"> {/* Container for search, refresh, and add user buttons */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Search users..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="rounded-lg border border-gray-300 py-2 pl-10 pr-4 text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                            />
+                            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                        </div>
+                        {onRefresh && ( // Only show refresh button if onRefresh prop is provided
+                            <button
+                                onClick={onRefresh}
+                                className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 text-gray-700 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+                                title="Refresh Data"
+                            >
+                                <RefreshCw className="h-5 w-5" />
+                                <span className="sr-only md:not-sr-only">Refresh</span>
+                            </button>
+                        )}
+                        <button
+                            onClick={() => {
+                                setEditUserData(null);
+                                setShowAddUserModal(true);
+                            }}
+                            className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-white transition hover:bg-blue-700 dark:bg-indigo-600 dark:hover:bg-indigo-700"
+                        >
+                            <UserPlus className="h-5 w-5" />
+                            Add New User
+                        </button>
+                    </div>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
@@ -122,8 +157,8 @@ const Dashboard = ({
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
-                            {tableData.length > 0 ? (
-                                tableData.map((item) => (
+                            {filteredTableData.length > 0 ? (
+                                filteredTableData.map((item) => (
                                     <tr
                                         key={item.id}
                                         className="transition hover:bg-gray-50 dark:hover:bg-gray-800/50"
@@ -146,9 +181,9 @@ const Dashboard = ({
                                         )}
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
                                             <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold leading-5 
-                                                ${item.gender === 'Male' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' : 
-                                                  item.gender === 'Female' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200' : 
-                                                  'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200'}`}>
+                                                ${item.gender === 'Male' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' :
+                                                    item.gender === 'Female' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200' :
+                                                        'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200'}`}>
                                                 {item.gender}
                                             </span>
                                         </td>
@@ -203,8 +238,6 @@ const Dashboard = ({
                     </table>
                 </div>
             </div>
-
-            {/* Modal */}
             <AddUserModal
                 isOpen={showAddUserModal}
                 onClose={handleCloseModal}

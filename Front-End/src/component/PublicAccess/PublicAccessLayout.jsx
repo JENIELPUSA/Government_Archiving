@@ -9,7 +9,7 @@ import { CommentsDisplayContext } from "../../contexts/CommentsContext/CommentsC
 import { RatingDisplayContext } from "../../contexts/RatingContext/RatingContext";
 import Skeleton from "react-loading-skeleton";
 import "react-loading-skeleton/dist/skeleton.css";
-
+import Footer from "./publicfooter";
 export const cardVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
@@ -52,6 +52,7 @@ export default function PublicAccess() {
     const [bookmarkedPdfs, setBookmarkedPdfs] = useState({});
     const [showBookmarks, setShowBookmarks] = useState(false);
     const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+    const [hasNewApprovedFiles, setHasNewApprovedFiles] = useState(false);
 
     const lawData = useMemo(() => {
         return (
@@ -63,6 +64,7 @@ export default function PublicAccess() {
                 plainSummary: item.summary,
                 author: item.author,
                 approvalDate: new Date(item.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
+                createdAt: new Date(item.createdAt),
                 tags: item.tags,
                 category: item.category,
                 accessLevel: item.status === "Approved" ? "public" : "restricted",
@@ -72,6 +74,17 @@ export default function PublicAccess() {
             })) || []
         );
     }, [isPublicData]);
+
+    useEffect(() => {
+        if (lawData.length === 0) return;
+
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const hasNewFiles = lawData.some((pdf) => pdf.archivedStatus === "Active" && pdf.accessLevel === "public" && pdf.createdAt >= thirtyDaysAgo);
+
+        setHasNewApprovedFiles(hasNewFiles);
+    }, [lawData]);
 
     const categories = useMemo(() => {
         return Array.from(new Set(lawData.map((pdf) => pdf.category).filter(Boolean))).map((categoryName) => ({
@@ -101,9 +114,15 @@ export default function PublicAccess() {
 
     useEffect(() => {
         let pdfsToDisplay = [];
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
         if (showBookmarks) {
             pdfsToDisplay = lawData.filter((pdf) => pdf.accessLevel === "public" && bookmarkedPdfs[pdf.id]);
+        } else if (currentCategory === "new_approved_files") {
+            pdfsToDisplay = lawData.filter(
+                (pdf) => pdf.archivedStatus === "Active" && pdf.accessLevel === "public" && pdf.createdAt >= thirtyDaysAgo,
+            );
         } else if (currentCategory) {
             pdfsToDisplay = lawData.filter(
                 (pdf) => pdf.archivedStatus === "Active" && pdf.category === categories.find((cat) => cat.id === currentCategory)?.name,
@@ -505,7 +524,10 @@ export default function PublicAccess() {
 
                 <div className="max-w-xl flex-1">
                     <div className="relative">
-                        <Skeleton height={40} borderRadius={8} />
+                        <Skeleton
+                            height={40}
+                            borderRadius={8}
+                        />
                     </div>
                 </div>
 
@@ -558,28 +580,34 @@ export default function PublicAccess() {
             <main className="container mx-auto flex flex-grow items-start gap-8 p-4 md:p-6">
                 {/* Mobile sidebar toggle */}
                 <div className="fixed bottom-6 right-6 z-30 md:hidden">
-                    <button 
+                    <button
                         onClick={() => setShowMobileSidebar(!showMobileSidebar)}
                         className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 shadow-lg transition-all hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         aria-label="Toggle sidebar"
                     >
-                        <i className={`fas ${showMobileSidebar ? 'fa-times' : 'fa-filter'} text-white text-xl`}></i>
+                        <i className={`fas ${showMobileSidebar ? "fa-times" : "fa-filter"} text-xl text-white`}></i>
                     </button>
                 </div>
 
                 {/* Mobile Categories Sidebar */}
-                <div 
-                    className={`fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity md:hidden ${showMobileSidebar ? 'opacity-100 visible' : 'opacity-0 invisible'}`}
+                <div
+                    className={`fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity md:hidden ${showMobileSidebar ? "visible opacity-100" : "invisible opacity-0"}`}
                     onClick={() => setShowMobileSidebar(false)}
                 >
-                    <div 
+                    <div
                         className="absolute left-0 top-0 h-full w-4/5 max-w-xs bg-white p-6 shadow-xl transition-transform"
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                     >
                         {isLoading ? (
                             <div className="space-y-4">
-                                <Skeleton height={32} width="60%" className="mb-6" />
-                                {Array(5).fill().map((_, i) => renderCategorySkeleton(i))}
+                                <Skeleton
+                                    height={32}
+                                    width="60%"
+                                    className="mb-6"
+                                />
+                                {Array(5)
+                                    .fill()
+                                    .map((_, i) => renderCategorySkeleton(i))}
                             </div>
                         ) : (
                             <CategoriesSidebar
@@ -588,6 +616,7 @@ export default function PublicAccess() {
                                 showBookmarks={showBookmarks}
                                 handleCategoryClick={handleCategoryClick}
                                 handleShowBookmarks={handleShowBookmarks}
+                                hasNewApprovedFiles={hasNewApprovedFiles}
                             />
                         )}
                     </div>
@@ -597,10 +626,19 @@ export default function PublicAccess() {
                 <div className="hidden flex-[1] md:block lg:flex-[1.2]">
                     {isLoading ? (
                         <div className="space-y-4">
-                            <Skeleton height={32} width="60%" className="mb-6" />
-                            {Array(5).fill().map((_, i) => renderCategorySkeleton(i))}
+                            <Skeleton
+                                height={32}
+                                width="60%"
+                                className="mb-6"
+                            />
+                            {Array(5)
+                                .fill()
+                                .map((_, i) => renderCategorySkeleton(i))}
                             <div className="mt-8">
-                                <Skeleton height={32} width="80%" />
+                                <Skeleton
+                                    height={32}
+                                    width="80%"
+                                />
                             </div>
                         </div>
                     ) : (
@@ -610,15 +648,18 @@ export default function PublicAccess() {
                             showBookmarks={showBookmarks}
                             handleCategoryClick={handleCategoryClick}
                             handleShowBookmarks={handleShowBookmarks}
+                            hasNewApprovedFiles={hasNewApprovedFiles}
                         />
                     )}
                 </div>
 
                 {/* Document List */}
-                <div className={`${selectedPdfForComments ? 'flex-[5]' : 'flex-[6]'} w-full`}>
+                <div className={`${selectedPdfForComments ? "flex-[5]" : "flex-[6]"} w-full`}>
                     {isLoading ? (
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {Array(6).fill().map((_, i) => renderDocumentCardSkeleton(i))}
+                            {Array(6)
+                                .fill()
+                                .map((_, i) => renderDocumentCardSkeleton(i))}
                         </div>
                     ) : (
                         <>
@@ -630,15 +671,15 @@ export default function PublicAccess() {
                                         <i className="fas fa-bookmark mr-1"></i>
                                         <span className="font-medium">Bookmarks</span>
                                     </span>
+                                ) : currentCategory === "new_approved_files" ? (
+                                    <span className="font-medium text-blue-600">New Approved Files</span>
                                 ) : currentCategory ? (
-                                    <span className="font-medium text-blue-600">
-                                        {categories.find(c => c.id === currentCategory)?.name}
-                                    </span>
+                                    <span className="font-medium text-blue-600">{categories.find((c) => c.id === currentCategory)?.name}</span>
                                 ) : (
                                     <span className="font-medium text-blue-600">All Documents</span>
                                 )}
                             </div>
-                            
+
                             <DocumentList
                                 selectedPdfForComments={selectedPdfForComments}
                                 showBookmarks={showBookmarks}
@@ -712,23 +753,21 @@ export default function PublicAccess() {
                     </div>
                 )}
             </main>
-
-            {/* Empty state */}
             {!isLoading && filteredPdfs.length === 0 && (
                 <div className="container mx-auto flex flex-grow flex-col items-center justify-center p-8 text-center">
                     <div className="mb-6 rounded-full bg-gray-100 p-6">
                         <i className="fas fa-file-search text-4xl text-gray-400"></i>
                     </div>
-                    <h3 className="mb-2 text-xl font-semibold text-gray-800">
-                        {showBookmarks ? 'No bookmarks yet' : 'No documents found'}
-                    </h3>
+                    <h3 className="mb-2 text-xl font-semibold text-gray-800">{showBookmarks ? "No bookmarks yet" : "No documents found"}</h3>
                     <p className="max-w-md text-gray-500">
                         {showBookmarks
-                            ? 'Save documents to your bookmarks to find them easily later'
-                            : 'Try adjusting your search or filter criteria to find what you\'re looking for'}
+                            ? "Save documents to your bookmarks to find them easily later"
+                            : "Try adjusting your search or filter criteria to find what you're looking for"}
                     </p>
                 </div>
             )}
+             <Footer />
+
         </div>
     );
 }

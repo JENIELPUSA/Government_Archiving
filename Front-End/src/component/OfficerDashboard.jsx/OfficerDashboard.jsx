@@ -458,12 +458,7 @@ const OfficerDashboard = () => {
                                                             >
                                                                 Status
                                                             </th>
-                                                            <th
-                                                                scope="col"
-                                                                className="relative px-6 py-3"
-                                                            >
-                                                                <span className="sr-only">View</span>
-                                                            </th>
+    
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
@@ -504,14 +499,6 @@ const OfficerDashboard = () => {
                                                                     >
                                                                         {doc.status}
                                                                     </span>
-                                                                </td>
-                                                                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
-                                                                    <button
-                                                                        onClick={() => handleViewDocument(doc)}
-                                                                        className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
-                                                                    >
-                                                                        View
-                                                                    </button>
                                                                 </td>
                                                             </motion.tr>
                                                         ))}

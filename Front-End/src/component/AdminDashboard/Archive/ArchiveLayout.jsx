@@ -10,7 +10,7 @@ import { ArchiveHeaderContent } from "./AtchiveHeaderContent";
 import { DocumentDetailsPanel } from "./DocumentDetailPanel";
 
 const NoDataDisplay = ({ message }) => (
- <div className="col-span-full flex h-full min-h-[400px] flex-col items-center justify-center space-y-4 rounded-xl border-2 border-dashed border-gray-300 p-12 dark:border-gray-600">
+    <div className="col-span-full flex h-full min-h-[400px] flex-col items-center justify-center space-y-4 rounded-xl border-2 border-dashed border-gray-300 p-12 dark:border-gray-600">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
             <Database className="h-8 w-8" />
         </div>
@@ -89,7 +89,7 @@ const ArchiveLayout = () => {
             let targetFolder = null;
             if (doc.ArchivedStatus === "For Restore") {
                 targetFolder = organized["Restoration Queue"];
-            } else if (doc.ArchivedStatus === "Active" && doc.status === "Approved") {
+            } else if ((doc.ArchivedStatus === "Active" || doc.ArchivedStatus === "Archived") && doc.status === "Approved") {
                 targetFolder = organized["Public Documents"];
             } else if (doc.ArchivedStatus === "Deleted") {
                 targetFolder = organized["Pending Deletion"];
@@ -240,7 +240,6 @@ const ArchiveLayout = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [isFilterOpen, showTagSuggestions]);
 
-    // --- Render Logic ---
     let content;
     if (isLoading) {
         if (!selectedMainFolder) {

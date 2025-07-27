@@ -46,6 +46,9 @@ function DashboardLayout() {
     const {isTotalOfficer}=useContext(OfficerDisplayContext)
     const documents = isFile;
 
+
+    console.log("File",isFile)
+
     const totalDocuments = documents.length;
     const newDocumentsToday = documents.filter(doc => {
         const docDate = new Date(doc.createdAt);

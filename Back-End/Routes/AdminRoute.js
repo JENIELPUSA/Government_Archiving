@@ -5,6 +5,8 @@ const AdminController=require('../Controller/AdminController')
 const authController = require('./../Controller/authController')
 router.route('/')
     .get(authController.protect,AdminController.DisplayAdmin)
+    router.route('/Profile')
+    .get(authController.protect,AdminController.DisplayProfile)
 
 
 router.route('/:id')

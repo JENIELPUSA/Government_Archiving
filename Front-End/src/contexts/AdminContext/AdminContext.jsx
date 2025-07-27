@@ -11,38 +11,59 @@ export const AdminDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [isAdmin, setAdmin] = useState([]);
-    const [isTotalAdmin,setTotalAdmin]=useState([])
+    const [isAdminProfile, setAdminProfile] = useState([]);
+    const [isTotalAdmin, setTotalAdmin] = useState([]);
 
     useEffect(() => {
         if (!authToken) return;
         FetchAdminData();
+        FetchProfileData();
     }, [authToken]);
 
-   const FetchAdminData = async () => {
-    if (!authToken) return;
-    setLoading(true);
-    try {
-        const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
-            withCredentials: true,
-            headers: {
-                Authorization: `Bearer ${authToken}`,
-                "Cache-Control": "no-cache",
-            },
-        });
+    const FetchAdminData = async () => {
+        if (!authToken) return;
+        setLoading(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
+                withCredentials: true,
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Cache-Control": "no-cache",
+                },
+            });
 
-        const TotalAdmin = res.data.totalAdmin; 
-        const AdminData = res.data.data;
-        setAdmin(AdminData);
-        setTotalAdmin(TotalAdmin);
-        console.log("data", AdminData);
-    } catch (error) {
-        console.error("Error fetching data:", error);
-    } finally {
-        setLoading(false);
-    }
-};
-;
+            const TotalAdmin = res.data.totalAdmin;
+            const AdminData = res.data.data;
+            setAdmin(AdminData);
+            setTotalAdmin(TotalAdmin);
+            console.log("data", AdminData);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    const FetchProfileData = async () => {
+        if (!authToken) return;
+        setLoading(true);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/Profile`, {
+                withCredentials: true,
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Cache-Control": "no-cache",
+                },
+            });
+
+            const AdminData = res.data.data;
+            setAdminProfile(AdminData);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
     const DeleteAdmin = async (officerID) => {
         try {
             const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${officerID}`, {
@@ -69,9 +90,9 @@ export const AdminDisplayProvider = ({ children }) => {
             const dataToSend = {
                 first_name: values.first_name || "",
                 last_name: values.last_name || "",
-                middle_name: values.middle_name || "",
-                gender: values.gender || "",
+                middle_name: values.middle_name || "", // make sure correct key
                 email: values.email || "",
+                specialty: values.specialty || "", // if department included
             };
 
             const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${dataID}`, dataToSend, {
@@ -79,7 +100,10 @@ export const AdminDisplayProvider = ({ children }) => {
             });
 
             if (response.data && response.data.status === "success") {
-                setAdmin((prevUsers) => prevUsers.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
+                setAdmin((prevAdmin) => ({
+                    ...prevAdmin,
+                    ...response.data.data,
+                }));
                 setModalStatus("success");
                 setShowModal(true);
             } else {
@@ -106,7 +130,8 @@ export const AdminDisplayProvider = ({ children }) => {
                 isAdmin,
                 DeleteAdmin,
                 UpdateAdmin,
-                isTotalAdmin
+                isTotalAdmin,
+                isAdminProfile,
             }}
         >
             {children}
