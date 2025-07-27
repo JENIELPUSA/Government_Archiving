@@ -959,7 +959,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     category,
   } = req.body;
 
-  // ✅ Validate incoming data
   if (!file) return res.status(400).json({ error: "No file uploaded" });
 
   if (!fileId || !mongoose.Types.ObjectId.isValid(fileId))
@@ -971,11 +970,10 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(admin))
     return res.status(400).json({ error: "Invalid admin ID format" });
 
-  // ✅ Archive old version
   const oldFile = await Files.findByIdAndUpdate(
     fileId,
     {
-      ArchivedStatus: "For Restore",
+      ArchivedStatus: "Archived",
       archivedMetadata: {
         dateArchived: new Date(),
         archivedBy: admin,

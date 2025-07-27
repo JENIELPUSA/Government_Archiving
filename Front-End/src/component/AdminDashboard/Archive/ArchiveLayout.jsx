@@ -94,7 +94,7 @@ const ArchiveLayout = () => {
             } else if (doc.ArchivedStatus === "Deleted") {
                 targetFolder = organized["Pending Deletion"];
             } else if (doc.ArchivedStatus === "Archived") {
-                targetFolder = organized["Pending Deletion"];
+                targetFolder = organized["Archived Files"];
             }
 
             if (targetFolder) {
