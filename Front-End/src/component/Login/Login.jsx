@@ -171,8 +171,8 @@ export default function AuthForm() {
                             />
                         </div>
                         <h2 className="text-center text-3xl font-extrabold leading-tight">
-                            <span className="block text-blue-400">GOVERNMENT</span>
-                            <span className="block text-gray-800 dark:text-gray-100">File Archiving System</span>
+                            <span className="block text-blue-400">Sangguniang Panlalawigan</span>
+                            <span className="block text-gray-800 dark:text-gray-100">Archiving System</span>
                         </h2>
 
                         <p className="text-md mt-2 text-gray-600 dark:text-gray-400">Securely manage your documents</p>

@@ -1,9 +1,9 @@
 const express = require('express');
 const authController = require('../Controller/authController');
 const router = express.Router();
-
+const upload = require("../middleware/imageUploader");
 router.route('/signup')
-.post(authController.signup);
+.post(upload.single("avatar"),authController.signup);
 
 router.route('/login')
 .post(authController.login);
@@ -13,7 +13,6 @@ router.route('/forgotPassword').post(
 );
 router.route('/resetPassword/:token')
 .patch(authController.resetPassword)
-
 
 router.route('/mail-verification')
 .post(authController.verifyOtp)

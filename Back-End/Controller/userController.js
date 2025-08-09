@@ -37,48 +37,49 @@ exports.createUser = AsyncErrorHandler(async (req, res) => {
   
 
 exports.DisplayAll = AsyncErrorHandler(async (req, res) => {
-  const features = new Apifeatures(user.find(), req.query)
-    .filter()
-    .sort()
-    .limitFields()
-    .paginate();
+  try {
+    const displayuser = await user.find();
 
-  let displayuser = await features.query;
+    if (!displayuser || displayuser.length === 0) {
+      return res.status(404).json({ message: "No users found" });
+    }
 
-  if (!displayuser) {
-    return res.status(404).json({ message: "No users found" });
-  }
-
-  // Perform aggregation to count male and female users
-  const result = await user.aggregate([
-    {
-      $match: {} // Match all users (after the query filters are applied)
-    },
-    {
-      $group: {
-        _id: null, // No grouping by any field
-        totalMale: {
-          $sum: { $cond: [{ $eq: ["$gender", "Male"] }, 1, 0] }
-        },
-        totalFemale: {
-          $sum: { $cond: [{ $eq: ["$gender", "Female"] }, 1, 0] }
+    // Count total Male and Female users using aggregation
+    const result = await user.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalMale: {
+            $sum: { $cond: [{ $eq: ["$gender", "Male"] }, 1, 0] }
+          },
+          totalFemale: {
+            $sum: { $cond: [{ $eq: ["$gender", "Female"] }, 1, 0] }
+          }
         }
       }
-    }
-  ]);
+    ]);
 
-  // Get the count of male and female users
-  const totalMale = result.length > 0 ? result[0].totalMale : 0;
-  const totalFemale = result.length > 0 ? result[0].totalFemale : 0;
+    const totalMale = result.length > 0 ? result[0].totalMale : 0;
+    const totalFemale = result.length > 0 ? result[0].totalFemale : 0;
 
-  res.status(200).json({
-    status: "success",
-    totalUser: displayuser.length,
-    totalMale: totalMale,
-    totalFemale: totalFemale,
-    data: displayuser,
-  });
+    res.status(200).json({
+      status: "success",
+      totalUser: displayuser.length,
+      totalMale,
+      totalFemale,
+      data: displayuser,
+    });
+
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Failed to retrieve users.",
+      error: error.message
+    });
+  }
 });
+
 
 
 exports.deleteUser = AsyncErrorHandler(async (req, res) => {

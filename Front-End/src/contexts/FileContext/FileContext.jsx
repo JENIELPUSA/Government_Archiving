@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback } from "react";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
@@ -13,12 +13,24 @@ export const FilesDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [isPublicData, setPublicData] = useState([]);
-
+    const [isSpecificData, setSpecificData] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isTotaDocuments, setTotalDocuments] = useState(0);
+    const [isTodayDocuments, setTodayDocuments] = useState(0);
+    const [isActiveTags, setActiveTags] = useState([]);
+    const [filters, setFilters] = useState({});
+    const limit = 5;
     useEffect(() => {
         if (!authToken) return;
-        FetchFiles();
-        fetchpublicdata();
+
+        const fetchAll = async () => {
+            await Promise.all([FetchFiles(), fetchpublicdata()]);
+        };
+
+        fetchAll();
     }, [authToken]);
+
     useEffect(() => {
         fetchpublicdata();
     }, []);
@@ -71,7 +83,6 @@ export const FilesDisplayProvider = ({ children }) => {
         }
     };
     const fetchpublicdata = async () => {
-        setLoading(true);
         try {
             const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetPublicData`, {
                 withCredentials: true,
@@ -81,41 +92,58 @@ export const FilesDisplayProvider = ({ children }) => {
             console.log("User", user);
         } catch (error) {
             console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
         }
     };
 
-    const FetchFiles = async () => {
-        if (!authToken) return;
-        setLoading(true);
-        try {
-            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, {
-                withCredentials: true,
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                    "Cache-Control": "no-cache",
-                },
-            });
+    const FetchFiles = useCallback(
+        async (page = 1, customFilters = {}) => {
+            if (!authToken) return;
 
-            const StaffData = res.data.data;
-            setFiles(StaffData);
-            console.log("datahht", StaffData);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+            try {
+                const params = { page, limit: 5 };
+
+                if (customFilters.title?.trim()) params.title = customFilters.title;
+                if (customFilters.tags?.length) params.tags = customFilters.tags;
+                if (customFilters.status?.trim()) params.status = customFilters.status;
+                if (customFilters.category?.trim()) params.category = customFilters.category;
+                if (customFilters.dateFrom?.trim()) params.dateFrom = customFilters.dateFrom;
+                if (customFilters.dateTo?.trim()) params.dateTo = customFilters.dateTo;
+
+                const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, {
+                    params,
+                    withCredentials: true,
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                        "Cache-Control": "no-cache",
+                    },
+                });
+
+                const { activeTags, data, totalPages, currentPage, totalCount, totalDocumentsToday } = res.data;
+                setFiles(data);
+                setTotalDocuments(totalCount);
+                setTotalPages(totalPages);
+                setCurrentPage(currentPage);
+                setTodayDocuments(totalDocumentsToday);
+                setActiveTags(activeTags);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        },
+        [authToken, setFiles, setTotalDocuments, setTotalPages, setCurrentPage, setTodayDocuments],
+    );
 
     const InsertOfficer = async (dataId, values) => {
         try {
             const dataToSend = {
                 officer: values.officer,
             };
-            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/OfficerUpdate/${dataId}`, dataToSend, {
-                headers: { Authorization: `Bearer ${authToken}` },
-            });
+            const response = await axiosInstance.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/OfficerUpdate/${dataId}`,
+                dataToSend,
+                {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                },
+            );
 
             if (response.data && response.data.status === "success") {
                 const newFile = response.data.data;
@@ -237,7 +265,6 @@ export const FilesDisplayProvider = ({ children }) => {
     };
 
     const UpdateStatus = async (bornID, values) => {
-        console.log("Test", values);
         try {
             let dataToSend = {
                 status: values.status || "",
@@ -257,7 +284,7 @@ export const FilesDisplayProvider = ({ children }) => {
 
             if (response.data && response.data.status === "success") {
                 console.log("Status Data");
-                const newFile=response.data.data;
+                const newFile = response.data.data;
                 return { success: true, data: newFile };
             } else {
                 setModalStatus("failed");
@@ -276,6 +303,19 @@ export const FilesDisplayProvider = ({ children }) => {
             }
         }
     };
+    const getSpeficFile = async (ID) => {
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${ID}`, {
+                withCredentials: true,
+            });
+            const user = res?.data?.data;
+            setSpecificData(user);
+            return { success: true, data: user };
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            return { success: false, data: null };
+        }
+    };
 
     return (
         <FilesDisplayContext.Provider
@@ -289,6 +329,18 @@ export const FilesDisplayProvider = ({ children }) => {
                 InsertOfficer,
                 isPublicData,
                 setFiles,
+                isSpecificData,
+                getSpeficFile,
+                FetchFiles,
+                totalPages,
+                currentPage,
+                setCurrentPage,
+                isTotaDocuments,
+                isTodayDocuments,
+                setFilters,
+                filters,
+                isActiveTags,
+                customError,
             }}
         >
             {children}

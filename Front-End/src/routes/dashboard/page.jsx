@@ -8,10 +8,9 @@ import { useContext } from "react";
 const DashboardPage = () => {
     const { role } = useContext(AuthContext);
     const { theme } = useTheme();
-
     return (
         <div className="flex flex-col gap-y-4">
-            {role === "officer" ? <OfficerDashboard /> : <DashboardLayout />}
+            {role === "officer" || role === "approver"|| role === "sbmember" ? <OfficerDashboard /> : <DashboardLayout />}
             <Footer />
         </div>
     );

@@ -101,7 +101,7 @@ function LineGraph({isFileData}) {
         </ResponsiveContainer>
 
         <div className="mt-4 text-center text-gray-600 dark:text-gray-400 text-sm">
-          <p>This graph shows the monthly trend of approved, rejected, and pending applications based on the provided dummy data.</p>
+          <p>This graph shows the monthly trend of approved, rejected, and pending applications based on the provided data.</p>
           <p>
             <span className="text-green-500 font-semibold">Green line</span> = Approved &nbsp; | &nbsp;
             <span className="text-orange-500 font-semibold">Orange line</span> = Rejected &nbsp; | &nbsp;

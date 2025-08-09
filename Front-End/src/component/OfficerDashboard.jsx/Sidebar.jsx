@@ -9,7 +9,7 @@ const Sidebar = ({ notifications, onNotificationClick, onDismissNotification, on
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 z-50 p-6 flex flex-col"
+      className="right-0 top-0 h-full w-80 bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 z-50 p-6 flex flex-col"
     >
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
         <h2 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center">

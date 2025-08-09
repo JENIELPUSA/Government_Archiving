@@ -22,7 +22,7 @@ const Logs=require("./Routes/LogsRoute")
 
 const Comments = require("./Routes/CommentRoute")
 
-const Files = require ("./Routes/FilesRoute")
+const FilesRoute = require ("./Routes/FilesRoute")
 
 const authentic = require("./Routes/authRouter");
 
@@ -34,6 +34,10 @@ const CategoryFileRouter = require("./Routes/CategoryFileRouter")
 
 const StorageOptimization = require("./Routes/StorageOptimizedRoute")
 
+const SbmemberRoute = require("./Routes/SbmemberRoute")
+
+const ApproverRoute = require("./Routes/ApproverRoute")
+
 let app = express();
 
 const logger = function (req, res, next) {
@@ -41,8 +45,8 @@ const logger = function (req, res, next) {
   next();
 };
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.set("trust proxy", true);
 
 app.use(
@@ -84,16 +88,15 @@ app.use("/api/v1/Patient", PatientDentalRoute);
 app.use("/api/v1/Admin", AdminRoute);
 app.use("/api/v1/Notification", Notification);
 app.use("/api/v1/LogsAudit", Logs);
-app.use("/api/v1/Files", Files);
+app.use("/api/v1/Files", FilesRoute);
 app.use("/api/v1/Department", DepartmentRoute);
 app.use("/api/v1/Comments", Comments);
 app.use("/api/v1/Ratings", RatingRoute);
 app.use("/api/v1/Category", CategoryFileRouter);
 app.use("/api/v1/Retention", Retention);
-app.use("/api/v1/Retention", Retention);
 app.use("/api/v1/Optimization", StorageOptimization);
-
-
+app.use("/api/v1/SbmemberRoute", SbmemberRoute);
+app.use("/api/v1/Approver", ApproverRoute);
 
 
 app.use(ErrorController);

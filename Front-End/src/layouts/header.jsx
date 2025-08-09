@@ -51,8 +51,6 @@ export const Header = ({ collapsed, setCollapsed }) => {
                             />
                         </button>
                     )}
-
-                    {/* Notification dropdown renders here */}
                     <NotificationDropdown
                         notifications={userNotifications}
                         setNotifications={setUserNotifications}
@@ -80,6 +78,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
             ) : role === "officer" ? (
                 <p className="ml-14 text-sm font-medium opacity-90">
                     You're logged in as an <span className="font-semibold">Officer</span>. These are your available tools:
+                </p>
+            ) : role === "approver" ? (
+                <p className="ml-14 text-sm font-medium opacity-90">
+                    You're logged in as an <span className="font-semibold">Approver</span>. These are your available tools:
                 </p>
             ) : null}
         </header>

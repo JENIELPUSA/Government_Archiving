@@ -9,8 +9,11 @@ const deleteOldDraftFiles = async () => {
     daysAgo.setDate(daysAgo.getDate() - setting.deleteAfterDays);
 
     const result = await File.deleteMany({
-      createdAt: { $lt: daysAgo },
-      status: "Draft",
+      $and: [
+        { createdAt: { $lt: daysAgo } },
+        { status: "Pending" },
+        { ArchivedStatus: "Deleted" },
+      ],
     });
 
     console.log(`Deleted ${result.deletedCount} old draft files.`);

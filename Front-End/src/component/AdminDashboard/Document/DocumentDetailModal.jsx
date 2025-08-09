@@ -107,7 +107,6 @@ const DocumentDetailsModal = ({ document, isVisible, onClose }) => {
               <div>
                 <SectionHeader icon={<FiInfo size={18} />} title="Document Info" />
                 <div className="mt-4 space-y-4">
-                  <InfoItem icon={<FiFolder size={16} />} label="Department" value={document.department} />
                   <InfoItem icon={<FiFolder size={16} />} label="Category" value={document.category} />
                   <InfoItem icon={<FiCalendar size={16} />} label="Uploaded" value={formatDate(document.createdAt)} />
                 </div>
@@ -121,9 +120,8 @@ const DocumentDetailsModal = ({ document, isVisible, onClose }) => {
               </div>
 
               <div>
-                <SectionHeader icon={<FiFile size={18} />} title="Notes & Details" />
+                <SectionHeader icon={<FiFile size={18} />} title="Details" />
                 <div className="mt-4 space-y-4">
-                  <InfoItem icon={<FiEdit3 size={16} />} label="Notes" value={document.suggestion} truncate />
                   <InfoItem icon={<FiUser size={16} />} label="Uploaded By" value={document.uploadedBy || "Unknown"} />
                   <InfoItem icon={<FiClock size={16} />} label="Last Updated" value={formatDate(document.updatedAt || document.createdAt)} />
                 </div>

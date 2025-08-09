@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X } from "lucide-react";
-import { FilesDisplayContext } from "../../contexts/FileContext/FileContext"; // Ito ang naitama na import
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../contexts/AuthContext";
 import LoadingOverlay from "../../ReusableFolder/LoadingOverlay";

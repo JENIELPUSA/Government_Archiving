@@ -41,7 +41,7 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
 };
 
 function DashboardLayout() {
-    const {isFile}=useContext(FilesDisplayContext)
+    const {isFile,isTotaDocuments,isTodayDocuments}=useContext(FilesDisplayContext)
     const {isTotalAdmin}=useContext(AdminDisplayContext);
     const {isTotalOfficer}=useContext(OfficerDisplayContext)
     const documents = isFile;
@@ -49,15 +49,7 @@ function DashboardLayout() {
 
     console.log("File",isFile)
 
-    const totalDocuments = documents.length;
-    const newDocumentsToday = documents.filter(doc => {
-        const docDate = new Date(doc.createdAt);
-        const today = new Date();
-        return docDate.getDate() === today.getDate() &&
-               docDate.getMonth() === today.getMonth() &&
-               docDate.getFullYear() === today.getFullYear();
-    }).length;
-
+    const totalDocuments =isTotaDocuments;
     const activeUsers = isTotalAdmin  + isTotalOfficer;
     const totalStorageUsedBytes = documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
 
@@ -80,7 +72,7 @@ function DashboardLayout() {
         },
         {
             icon: <UploadCloud size={26} />,
-            value: <AnimatedValue targetValue={newDocumentsToday} />,
+            value: <AnimatedValue targetValue={isTodayDocuments} />,
             label: "New Documents (Today)",
             trend: "Calculated",
         },

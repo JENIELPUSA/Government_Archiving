@@ -1,27 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useContext, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import { ArrowLeft, FileText } from "lucide-react";
+import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 
-const DocumentTableList = ({ documents, title, icon: Icon, iconColorClass, onBack, onViewDocument, isNewDocument }) => {
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  
-  // Reset to first page when documents change
+const DocumentTableList = ({
+  documents,
+  title,
+  icon: Icon,
+  iconColorClass,
+  onBack,
+  onViewDocument,
+  isNewDocument,
+}) => {
+  const officerContext = useContext(OfficerDisplayContext);
+
+  const { totalPages, currentPage, setCurrentPage, fetchData } = useMemo(() => {
+    const {
+      totalPagesPending,
+      totalPagesApproved,
+      totalPagesRejected,
+      currentPagePending,
+      currentPageApproved,
+      currentPageRejected,
+      setCurrentPagePending,
+      setCurrentPageApproved,
+      setCurrentPageRejected,
+      FetchOfficerFiles,
+    } = officerContext;
+
+    switch (title) {
+      case "Pending Documents":
+        return {
+          totalPages: totalPagesPending,
+          currentPage: currentPagePending,
+          setCurrentPage: setCurrentPagePending,
+          fetchData: () => FetchOfficerFiles(currentPagePending, "pending"),
+        };
+      case "Approved Documents":
+        return {
+          totalPages: totalPagesApproved,
+          currentPage: currentPageApproved,
+          setCurrentPage: setCurrentPageApproved,
+          fetchData: () => FetchOfficerFiles(currentPageApproved, "approved"),
+        };
+      case "Rejected Documents":
+        return {
+          totalPages: totalPagesRejected,
+          currentPage: currentPageRejected,
+          setCurrentPage: setCurrentPageRejected,
+          fetchData: () => FetchOfficerFiles(currentPageRejected, "rejected"),
+        };
+      default:
+        return {
+          totalPages: 1,
+          currentPage: 1,
+          setCurrentPage: () => {},
+          fetchData: () => {},
+        };
+    }
+  }, [
+    title,
+    officerContext.totalPagesPending,
+    officerContext.totalPagesApproved,
+    officerContext.totalPagesRejected,
+    officerContext.currentPagePending,
+    officerContext.currentPageApproved,
+    officerContext.currentPageRejected,
+    officerContext.setCurrentPagePending,
+    officerContext.setCurrentPageApproved,
+    officerContext.setCurrentPageRejected,
+    officerContext.FetchOfficerFiles,
+  ]);
+
   useEffect(() => {
-    setCurrentPage(1);
-  }, [documents]);
+    fetchData();
+  }, [currentPage, fetchData]);
 
-  // Calculate pagination values
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = documents.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(documents.length / itemsPerPage);
-
-  // Handle items per page change
-  const handleItemsPerPageChange = (e) => {
-    setItemsPerPage(Number(e.target.value));
-    setCurrentPage(1);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
   };
 
   return (
@@ -30,64 +86,48 @@ const DocumentTableList = ({ documents, title, icon: Icon, iconColorClass, onBac
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -100 }}
       transition={{ duration: 0.3 }}
-      className="relative bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 border border-gray-200 dark:border-gray-700"
+      className="relative rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700 dark:bg-gray-800"
     >
       <button
         onClick={onBack}
-        className="mb-6 flex items-center text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium transition-colors duration-200"
+        className="mb-6 flex items-center font-medium text-indigo-600 transition-colors duration-200 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
       >
-        <ArrowLeft className="h-5 w-5 mr-2" />
+        <ArrowLeft className="mr-2 h-5 w-5" />
         Back
       </button>
 
-      <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-6 flex items-center justify-between border-b border-gray-200 pb-4 dark:border-gray-700">
         <div className="flex items-center">
-          <Icon className={`h-7 w-7 mr-3 ${iconColorClass}`} />
+          <Icon className={`mr-3 h-7 w-7 ${iconColorClass}`} />
           <h2 className="text-2xl font-bold text-gray-800 dark:text-white">{title}</h2>
         </div>
-        
-        {/* Items per page selector */}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-600 dark:text-gray-300">Show:</span>
-          <select
-            value={itemsPerPage}
-            onChange={handleItemsPerPageChange}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
-          >
-            <option value="5">5</option>
-            <option value="10">10</option>
-            <option value="20">20</option>
-            <option value="50">50</option>
-          </select>
-          <span className="text-sm text-gray-600 dark:text-gray-300">items</span>
-        </div>
       </div>
-      
+
       <div className="overflow-x-auto">
-        {currentItems.length > 0 ? (
+        {documents?.length > 0 ? (
           <>
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                     Filename
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                     Title
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                     Date
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-300">
                     Status
                   </th>
-                  <th scope="col" className="relative px-6 py-3">
+                  <th className="relative px-6 py-3">
                     <span className="sr-only">View</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {currentItems.map((doc, index) => (
+              <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
+                {documents.map((doc, index) => (
                   <motion.tr
                     key={doc._id || index}
                     initial={{ opacity: 0, y: 20 }}
@@ -95,40 +135,43 @@ const DocumentTableList = ({ documents, title, icon: Icon, iconColorClass, onBac
                     transition={{ duration: 0.2, delay: index * 0.05 }}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-6 py-4">
                       <div className="flex items-center">
-                        <FileText className="h-5 w-5 text-gray-500 mr-2" />
-                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-xs">
+                        <FileText className="mr-2 h-5 w-5 text-gray-500" />
+                        <div className="max-w-xs truncate text-sm font-medium text-gray-900 dark:text-white">
                           {doc.fileName}
                           {isNewDocument(doc.createdAt) && (
-                            <span className="ml-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                            <span className="ml-2 rounded-full bg-blue-500 px-2 py-1 text-xs font-bold text-white">
                               New
                             </span>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                          {doc.title}
-                      </div>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {doc.title}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {new Date(doc.createdAt).toLocaleDateString()}
-                      </div>
+                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {new Date(doc.createdAt).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        ${doc.status === 'Approved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : ''}
-                        ${doc.status === 'Pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : ''}
-                        ${doc.status === 'Rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : ''}
-                        ${doc.status === 'Draft' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' : ''}
-                      `}>
+                    <td className="whitespace-nowrap px-6 py-4">
+                      <span
+                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${
+                          doc.status === "Approved"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                            : doc.status === "Pending"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                            : doc.status === "Rejected"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                            : doc.status === "Draft"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                            : ""
+                        }`}
+                      >
                         {doc.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                       <button
                         onClick={() => onViewDocument(doc)}
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
@@ -140,88 +183,78 @@ const DocumentTableList = ({ documents, title, icon: Icon, iconColorClass, onBac
                 ))}
               </tbody>
             </table>
-            
-            {/* Pagination controls */}
-            <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-6">
-              <div className="flex flex-1 justify-between sm:hidden">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                >
-                  Previous
-                </button>
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-                >
-                  Next
-                </button>
-              </div>
-              
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300">
-                    Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to{' '}
-                    <span className="font-medium">{Math.min(indexOfLastItem, documents.length)}</span> of{' '}
-                    <span className="font-medium">{documents.length}</span> documents
-                  </p>
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
+                <div className="flex flex-1 justify-between sm:hidden">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  >
+                    Next
+                  </button>
                 </div>
-                <div>
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
+                <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm text-gray-700 dark:text-gray-400">
+                      Page <span className="font-medium">{currentPage}</span> of{" "}
+                      <span className="font-medium">{totalPages}</span>
+                    </p>
+                  </div>
+                  <div>
+                    <nav
+                      className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                      aria-label="Pagination"
                     >
-                      <span className="sr-only">Previous</span>
-                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    
-                    {/* Page numbers - show up to 5 pages */}
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        pageNum = currentPage - 2 + i;
-                      }
-                      
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
-                          className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
-                            ${currentPage === pageNum 
-                              ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-900 dark:border-indigo-700 dark:text-indigo-300' 
-                              : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-300'}
-                          `}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                    
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600"
-                    >
-                      <span className="sr-only">Next</span>
-                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  </nav>
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-600 dark:hover:bg-gray-700"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                        (page) => (
+                          <button
+                            key={page}
+                            onClick={() => handlePageChange(page)}
+                            className={`relative z-10 inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                              page === currentPage
+                                ? "bg-indigo-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500"
+                                : "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-600 dark:text-white dark:hover:bg-gray-700"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        )
+                      )}
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-600 dark:hover:bg-gray-700"
+                      >
+                        <span className="sr-only">Next</span>
+                        <ArrowLeft
+                          className="h-5 w-5 rotate-180"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </nav>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </>
         ) : (
-          <div className="text-center py-10 text-gray-500 dark:text-gray-400">
+          <div className="py-10 text-center text-gray-500 dark:text-gray-400">
             <p>No documents found for this category.</p>
           </div>
         )}

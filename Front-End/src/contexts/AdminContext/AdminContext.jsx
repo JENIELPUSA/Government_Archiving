@@ -16,13 +16,16 @@ export const AdminDisplayProvider = ({ children }) => {
 
     useEffect(() => {
         if (!authToken) return;
-        FetchAdminData();
-        FetchProfileData();
+
+        const fetchAll = async () => {
+            await Promise.all([FetchAdminData(), FetchProfileData()]);
+        };
+
+        fetchAll();
     }, [authToken]);
 
     const FetchAdminData = async () => {
         if (!authToken) return;
-        setLoading(true);
         try {
             const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
                 withCredentials: true,
@@ -39,16 +42,16 @@ export const AdminDisplayProvider = ({ children }) => {
             console.log("data", AdminData);
         } catch (error) {
             console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
         }
     };
 
     const FetchProfileData = async () => {
-        if (!authToken) return;
-        setLoading(true);
+        if (!authToken || !linkId) {
+            console.warn("Missing token or linkId");
+            return;
+        }
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/Profile`, {
+            const response = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin`, {
                 withCredentials: true,
                 headers: {
                     Authorization: `Bearer ${authToken}`,
@@ -56,14 +59,22 @@ export const AdminDisplayProvider = ({ children }) => {
                 },
             });
 
-            const AdminData = res.data.data;
-            setAdminProfile(AdminData);
+            if (response.data?.status === "success") {
+                setAdminProfile(response.data.data);
+            } else {
+                console.warn("Unexpected response:", response.data);
+            }
         } catch (error) {
-            console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
+            if (error.response) {
+                console.error("Server Error:", error.response.status, error.response.data);
+            } else if (error.request) {
+                console.error("No response received:", error.request);
+            } else {
+                console.error("Error setting up request:", error.message);
+            }
         }
     };
+
     const DeleteAdmin = async (officerID) => {
         try {
             const response = await axios.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${officerID}`, {
@@ -132,6 +143,7 @@ export const AdminDisplayProvider = ({ children }) => {
                 UpdateAdmin,
                 isTotalAdmin,
                 isAdminProfile,
+                FetchAdminData,
             }}
         >
             {children}

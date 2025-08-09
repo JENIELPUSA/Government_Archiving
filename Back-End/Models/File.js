@@ -7,11 +7,6 @@ const ArchivingSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    department: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "department",
-      default: null,
-    },
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "category",
@@ -21,13 +16,9 @@ const ArchivingSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    author: {
-      type: String,
-      trim: true,
-    },
     fullText: {
       type: String,
-      required: true,
+      trim: true,
     },
     fileSize: Number,
     fileUrl: {
@@ -41,7 +32,7 @@ const ArchivingSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Pending", "Review", "Approved", "Rejected", "Draft"],
-      default: "Draft",
+      default: "Pending",
     },
     tags: {
       type: [String],
@@ -51,11 +42,6 @@ const ArchivingSchema = new mongoose.Schema(
       type: String,
       enum: ["Active", "Archived", "Deleted", "For Restore", "Pending Review"],
       default: "Active",
-    },
-    officer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Officer",
-      default: null,
     },
     archivedMetadata: {
       dateArchived: {
@@ -73,9 +59,26 @@ const ArchivingSchema = new mongoose.Schema(
     suggestion: {
       type: String,
     },
+    dateOfResolution: {
+      type: Date,
+      default: null,
+    },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "SBmember",
+      default: null, // optional pero recommended
+    },
+    approverID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Approver",
+    },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
+    },
+    resolutionNumber: {
+      type: String,
+      trim: true
     },
   },
   {

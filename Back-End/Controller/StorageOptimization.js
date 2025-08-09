@@ -30,19 +30,21 @@ exports.storageOptimization = AsyncErrorHandler(async (req, res) => {
 });
 
 
-exports.DisplayStorageOptimizer = AsyncErrorHandler(async(req,res)=>{
-    const features= new Apifeatures(StorageOptimization.find(),req.query)
-                                .filter()
-                                .sort()
-                                .limitFields()
-                                .paginate()
-
-    const Optimizer = await features.query;
-
+exports.DisplayStorageOptimizer = AsyncErrorHandler(async (req, res) => {
+  try {
+    const Optimizer = await StorageOptimization.find();
 
     res.status(200).json({
-        status:'success',
-        data:Optimizer[0]
-    })
+      status: 'success',
+      data: Optimizer[0] || null, // Para safe kahit walang data
+    });
+  } catch (error) {
+    console.error("Error fetching storage optimizer data:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching storage optimizer.",
+      error: error.message,
+    });
+  }
+});
 
-})

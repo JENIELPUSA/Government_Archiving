@@ -1,5 +1,6 @@
 const UserLogin = require("../Models/LogInDentalSchema");
 const Admin = require("../Models/AdminSchema");
+const Approver = require("../Models/ApproverSchema");
 const Officer = require("../Models/OfficerSchema");
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const CustomError = require("../Utils/CustomError");
@@ -7,7 +8,9 @@ const jwt = require("jsonwebtoken");
 const util = require("util");
 const crypto = require("crypto");
 const sendEmail = require("./../Utils/email");
-
+const cloudinary = require("../Utils/cloudinary");
+const SBmember = require("../Models/SBmember");
+const sharp = require("sharp");
 const signToken = (id, role, linkId) => {
   return jwt.sign({ id, role, linkId }, process.env.SECRET_STR, {
     expiresIn: "12h",
@@ -33,108 +36,148 @@ const createSendResponse = (user, statusCode, res) => {
   });
 };
 
-exports.signup = AsyncErrorHandler(async (req, res, next) => {
-  const {
-    contact_number,
-    first_name,
-    last_name,
-    email,
-    role,
-    avatar,
-    department,
-    gender,
-    middle_name, // consistent naming; consider changing to "middle_name"
-  } = req.body;
+exports.signup = AsyncErrorHandler(async (req, res) => {
+  console.log("Received data:", req.body);
 
-  // Debug: See what body is received
-  console.log("BODY RECEIVED:", req.body);
-
-  const defaultPassword = "123456789";
-  const missingFields = [];
-
-  // Role-based required fields validation
-  if (role === "officer") {
-    if (!first_name) missingFields.push("First Name");
-    if (!middle_name) missingFields.push("Middle Name");
-    if (!last_name) missingFields.push("Last Name");
-    if (!email) missingFields.push("Email");
-    if (!gender) missingFields.push("Gender");
-    if (!department) missingFields.push("Department");
-  } else if (role === "admin") {
-    if (!first_name) missingFields.push("First Name");
-    if (!middle_name) missingFields.push("Middle Name");
-    if (!last_name) missingFields.push("Last Name");
-    if (!email) missingFields.push("Email");
-    if (!gender) missingFields.push("Gender");
-  } else {
-    return res.status(400).json({
-      message: "Invalid role provided. Must be 'admin' or 'officer'.",
-    });
-  }
-
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      message: `Missing required fields: ${missingFields.join(", ")}`,
-    });
-  }
-
-  // Check if the user already exists
-  const existingUser = await UserLogin.findOne({ username: email });
-  if (existingUser) {
-    return res.status(400).json({
-      message: "User with this email already exists!",
-    });
-  }
-
-  // Create the appropriate role-specific profile
-  let linkedRecord = null;
-
-  if (role === "admin") {
-    linkedRecord = await Admin.create({
+  try {
+    const {
+      contact_number,
       first_name,
       last_name,
-      middle_name,
       email,
+      role,
+      Position,
       gender,
+      middle_name,
+      detailInfo,
+      district,
+    } = req.body;
+
+    const defaultPassword = "123456789";
+
+    // 🔹 Required fields mapping by role
+    const requiredFieldsByRole = {
+      officer: ["first_name", "middle_name", "last_name", "email", "gender"],
+      admin: ["first_name", "middle_name", "last_name", "email", "gender"],
+      approver: ["first_name", "middle_name", "last_name", "email"],
+      sbmember: ["first_name", "last_name", "email"],
+    };
+
+    const requiredFields = requiredFieldsByRole[role];
+
+    if (!requiredFields) {
+      return res.status(400).json({
+        message:
+          "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
+      });
+    }
+
+    // 🔸 Validate required fields
+    const missingFields = [];
+    requiredFields.forEach((field) => {
+      if (!req.body[field]) {
+        missingFields.push(
+          field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())
+        );
+      }
     });
-  } else if (role === "officer") {
-    linkedRecord = await Officer.create({
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+      });
+    }
+
+    // 🔹 Check if user already exists
+    const existingUser = await UserLogin.findOne({ username: email });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "User with this email already exists!",
+      });
+    }
+
+    // 🔸 Handle image upload if avatar is present
+    let avatarUploadPromise = Promise.resolve({ url: "", public_id: "" });
+
+    if (req.file) {
+      avatarUploadPromise = sharp(req.file.buffer)
+        .resize({ width: 512 })
+        .jpeg({ quality: 80 })
+        .toBuffer()
+        .then((resizedBuffer) => {
+          const base64Image = `data:${
+            req.file.mimetype
+          };base64,${resizedBuffer.toString("base64")}`;
+          return cloudinary.uploader.upload(base64Image, {
+            folder: "Government Archiving/Profile",
+          });
+        })
+        .then((uploadedResponse) => ({
+          url: uploadedResponse.secure_url,
+          public_id: uploadedResponse.public_id,
+        }));
+    }
+
+    // 🔹 Wait for avatar upload to finish
+    const avatar = await avatarUploadPromise;
+
+    // 🔸 Define models by role
+    const profileModels = {
+      admin: Admin,
+      officer: Officer,
+      approver: Approver,
+      sbmember: SBmember,
+    };
+
+    const profileModel = profileModels[role];
+    const profileData = {
       avatar,
       first_name,
       last_name,
       middle_name,
+      detailInfo,
+      district,
       email,
-      department,
-      gender,
+    };
+
+    if (gender) profileData.gender = gender;
+
+    if (Position) {
+      profileData.Position = Array.isArray(Position) ? Position[0] : Position;
+    }
+
+    const linkedRecord = await profileModel.create(profileData);
+    const [newUserLogin] = await Promise.all([
+      UserLogin.create({
+        avatar,
+        first_name,
+        last_name,
+        username: email,
+        contact_number,
+        password: defaultPassword,
+        role,
+        linkedId: linkedRecord._id,
+        isVerified: true,
+      }),
+      sendEmail({
+        email,
+        subject: "Your Account Credentials",
+        text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
+      }),
+    ]);
+
+    return res.status(201).json({
+      status: "Success",
+      user: newUserLogin,
+      profile: linkedRecord,
+    });
+  } catch (error) {
+    console.error("Signup Error:", error);
+    return res.status(500).json({
+      message: "Something went wrong during signup.",
+      error: error.message,
     });
   }
-
-  // Create UserLogin record
-  const newUserLogin = await UserLogin.create({
-    avatar,
-    first_name,
-    last_name,
-    username: email,
-    contact_number,
-    password: defaultPassword, // default password
-    role,
-    linkedId: linkedRecord._id,
-    isVerified: true, // since no OTP is required
-  });
-
-  // Send email with account credentials
-  await sendEmail({
-    email: email,
-    subject: "Your Account Credentials",
-    text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
-  });
-
-  // Respond with success
-  return res.status(201).json({
-    status: "Success",
-    user: newUserLogin,
-    profile: linkedRecord,
-  });
 });
 
 exports.login = AsyncErrorHandler(async (req, res, next) => {

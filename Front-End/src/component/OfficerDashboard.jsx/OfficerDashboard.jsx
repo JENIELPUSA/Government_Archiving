@@ -60,7 +60,7 @@ const SkeletonTableRow = () => (
 );
 
 const OfficerDashboard = () => {
-    const { isOfficerData, setOfficerData } = useContext(OfficerDisplayContext);
+    const { isOfficerData, setOfficerData, isRejectedData, isApproved, isPendingData, isCount, isRecentData } = useContext(OfficerDisplayContext);
     const [activeSection, setActiveSection] = useState("summary");
     const [selectedFolderStatus, setSelectedFolderStatus] = useState(null);
     const [selectedDocument, setSelectedDocument] = useState(null);
@@ -69,7 +69,6 @@ const OfficerDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-
     useEffect(() => {
         let isMounted = true;
 
@@ -77,10 +76,7 @@ const OfficerDashboard = () => {
             try {
                 setLoading(true);
                 await new Promise((resolve) => setTimeout(resolve, 500));
-
                 if (!isMounted) return;
-                setOfficerData(mockOfficerData?.data || []);
-                setNotifications(mockNotifications || []);
             } catch (error) {
                 console.error("Error loading data:", error);
             } finally {
@@ -91,19 +87,17 @@ const OfficerDashboard = () => {
         };
 
         fetchData();
-
-        // Cleanup function to prevent state updates on unmounted component
         return () => {
             isMounted = false;
         };
     }, [setOfficerData]);
 
+    console.log("publicOfficer", isOfficerData);
+
     const handlePdfView = () => {
         if (!selectedDocument) return;
         const fileId = selectedDocument._id;
         const fileData = selectedDocument;
-
-        console.log("JKKKJJKKJJKKJ",fileData)
         navigate(`/dashboard/pdf-viewer/${fileId}`, { state: { fileData } });
     };
 
@@ -114,18 +108,22 @@ const OfficerDashboard = () => {
     const pendingDocuments = useMemo(() => {
         return isOfficerData ? isOfficerData.filter((doc) => doc.status === "Pending" && doc.ArchivedStatus === "Active") : [];
     }, [isOfficerData]);
-
     const rejectedDocuments = useMemo(() => {
-        return isOfficerData ? isOfficerData.filter((doc) => doc.status === "Rejected" && doc.ArchivedStatus === "Active") : [];
+        return isOfficerData?.filter((doc) => doc.status === "Rejected" && doc.ArchivedStatus === "Active") || [];
     }, [isOfficerData]);
-
     const recentDocuments = useMemo(() => {
-        if (!isOfficerData) return [];
-        return [...isOfficerData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-    }, [isOfficerData]);
+        // Check if isRecentData is an array and not empty
+        if (!Array.isArray(isRecentData) || isRecentData.length === 0) {
+            return [];
+        }
+        // Now you can safely spread and sort it
+        return [...isRecentData].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+    }, [isRecentData]);
+
+ 
 
     const statusCounts = useMemo(() => {
-        const counts = { Approved: 0, Pending: 0, Rejected: 0, Draft: 0 };
+        const counts = { Approved: isCount?.approved, Pending: isCount?.pending, Rejected: isCount?.rejected};
 
         isOfficerData
             ?.filter((doc) => doc.ArchivedStatus === "Active")
@@ -144,23 +142,11 @@ const OfficerDashboard = () => {
     }, [isOfficerData]);
 
     const COLORS = ["#82ca9d", "#ffc658", "#ff7380", "#8884d8"];
-
-    // Add this constant at the top of the file (outside the component)
-    const TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB
-
-    // Inside the OfficerDashboard component:
-
-    // Remove the existing consumedStorage useMemo and replace it with:
-    const totalStorageUsedBytes = useMemo(() => {
-        if (!isOfficerData || isOfficerData.length === 0) return 0;
-        return isOfficerData.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
-    }, [isOfficerData]);
-
+    const TOTAL_STORAGE_BYTES = 5 * 1024 * 1024 * 1024;
     const storagePercentage = useMemo(() => {
-        return (totalStorageUsedBytes / TOTAL_STORAGE_BYTES) * 100;
-    }, [totalStorageUsedBytes]);
+        return (isCount.totalFileSize / TOTAL_STORAGE_BYTES) * 100;
+    }, [isCount.totalFileSize]);
 
-    // Helper function to format storage
     const formatStorage = (bytes) => {
         if (bytes < 1024) return { value: bytes, unit: "bytes", formatted: `${bytes} bytes` };
         if (bytes < 1024 * 1024) return { value: bytes / 1024, unit: "KB", formatted: `${(bytes / 1024).toFixed(0)} KB` };
@@ -168,8 +154,7 @@ const OfficerDashboard = () => {
         return { value: bytes / (1024 * 1024 * 1024), unit: "GB", formatted: `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB` };
     };
 
-    // Usage in the JSX:
-    const consumedStorage = formatStorage(totalStorageUsedBytes);
+    const consumedStorage = formatStorage(isCount.totalFileSize);
     const totalStorage = formatStorage(TOTAL_STORAGE_BYTES);
 
     const isNewDocument = useCallback((createdAt) => {
@@ -283,7 +268,6 @@ const OfficerDashboard = () => {
                             </div>
                         </motion.div>
                     ) : (
-                        // Actual content when not loading
                         <>
                             {activeSection === "summary" && (
                                 <motion.div
@@ -350,7 +334,7 @@ const OfficerDashboard = () => {
                                                 className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
                                             >
                                                 <FolderCard
-                                                    count={approvedDocuments.length}
+                                                    count={isCount?.approved}
                                                     folderName="Approved"
                                                     icon={CheckCircle}
                                                     iconColorClass="text-green-500"
@@ -359,7 +343,7 @@ const OfficerDashboard = () => {
                                                     newCount={approvedDocuments.filter(isNewDocument).length}
                                                 />
                                                 <FolderCard
-                                                    count={pendingDocuments.length}
+                                                    count={isCount.pending}
                                                     folderName="Pending"
                                                     icon={Clock}
                                                     iconColorClass="text-yellow-500"
@@ -368,7 +352,7 @@ const OfficerDashboard = () => {
                                                     newCount={pendingDocuments.filter(isNewDocument).length}
                                                 />
                                                 <FolderCard
-                                                    count={rejectedDocuments.length}
+                                                    count={isCount?.rejected}
                                                     folderName="Rejected"
                                                     icon={XCircle}
                                                     iconColorClass="text-red-500"
@@ -460,7 +444,6 @@ const OfficerDashboard = () => {
                                                             >
                                                                 Status
                                                             </th>
-    
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
@@ -486,9 +469,7 @@ const OfficerDashboard = () => {
                                                                     </div>
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-6 py-4">
-                                                                    <div className="text-sm text-gray-900 dark:text-white">
-                                                                        {doc.title}
-                                                                    </div>
+                                                                    <div className="text-sm text-gray-900 dark:text-white">{doc.title}</div>
                                                                 </td>
                                                                 <td className="whitespace-nowrap px-6 py-4">
                                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -520,10 +501,10 @@ const OfficerDashboard = () => {
                                 <DocumentTableList
                                     documents={
                                         selectedFolderStatus === "Approved"
-                                            ? approvedDocuments
+                                            ? isApproved
                                             : selectedFolderStatus === "Pending"
-                                              ? pendingDocuments
-                                              : rejectedDocuments
+                                              ? isPendingData
+                                              : isRejectedData
                                     }
                                     title={`${selectedFolderStatus} Documents`}
                                     icon={selectedFolderStatus === "Approved" ? CheckCircle : selectedFolderStatus === "Pending" ? Clock : XCircle}

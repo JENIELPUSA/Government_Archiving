@@ -2,26 +2,24 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/theme-context";
 import Layout from "@/routes/layout";
 import DashboardPage from "@/routes/dashboard/page";
-import UploadDocuments from "./component/AdminDashboard/Document/UploadForm";
+import UploadDocuments from "./component/AdminDashboard/Document/Upload/UploadForm";
 import DocumentsSection from "./component/AdminDashboard/Document/DocumentSection";
 import PrivateRoute from "./component/PrivateRoute/PrivateRoute";
 import PublicRoute from "./component/PublicRoute/PublicRoute";
 import Login from "./component/Login/Login";
 import PdfViewer from "./component/PdfViewer/PdfViewer";
-import AllDocument from "./component/AdminDashboard/Document/AllDocument";
-import SearchArhiving from "./component/AdminDashboard/SearchArchiving/ArchivingView";
-import DraftTable from "./component/Draft/DraftTable";
 import RecentDocument from "./component/AdminDashboard/RecentDocument/RecentDocument";
 import ArchiveLayout from "./component/AdminDashboard/Archive/ArchiveLayout";
 import DocumentLayout from "./component/AdminDashboard/Document/DocumentsLayout";
-import DraftLayout from "./component/Draft/DraftLayout";
-import PublicAccessLayout from "./component/PublicAccess/PublicAccessLayout";
+import PublicAccessLayout from "./component/PublicView/Publicview";
 import ExpandPDFView from "./component/PublicAccess/ExpandPDFView";
 import CommentLayout from "./component/Comments/CommentLayout";
 import LogsAndAudit from "./component/LogsAudit/LogsAndAudit";
 import ResetPassword from "./component/Login/ResetPassword";
-import UserManagement from "./component/UserManagement/UserManagement";
 import SettingsPage from "./component/Setting/SettingLayout";
+import SBmember from "./component/SBmember/SBmember";
+import UnderMaintenance from "./component/PublicView/AboutUs";
+
 function App() {
     const router = createBrowserRouter([
         {
@@ -64,12 +62,8 @@ function App() {
                             element: <RecentDocument />,
                         },
                         {
-                            path: "/dashboard/draft",
-                            element: <DraftLayout />,
-                        },
-                        {
                             path: "/dashboard/user-management",
-                            element: <UserManagement />,
+                            element: <UnderMaintenance />,
                         },
                         {
                             path: "/dashboard/logs",
@@ -80,16 +74,16 @@ function App() {
                             element: <PdfViewer />,
                         },
                         {
-                            path: "/dashboard/category",
-                            element: <AllDocument />,
+                            path: "/dashboard/SBmember",
+                            element: <SBmember />,
                         },
                         {
                             path: "/dashboard/task-managemnet",
-                            element: <h1 className="title">Task and Management</h1>,
+                            element: <UnderMaintenance />,
                         },
                         {
                             path: "dashboard/settings",
-                            element:<SettingsPage/>,
+                            element: <SettingsPage />,
                         },
                         {
                             path: "/dashboard/comments",

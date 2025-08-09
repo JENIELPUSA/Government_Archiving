@@ -61,21 +61,16 @@ export const navbarLinks = [
                 label: "Audit Logs",
                 icon: Logs,
                 path: "/dashboard/logs",
-            },
-            {
-                label: "Draft",
-                icon: SquarePen,
-                path: "/dashboard/draft",
-            },
+            }
         ],
     },
     {
-        title: "Organization & Categorization ",
+        title: "Member List",
         links: [
             {
-                label: "Categories/Folders",
-                icon: FolderOpen,
-                path: "/dashboard/category",
+                label: "SB Member List",
+                icon: Users,
+                path: "/dashboard/SBmember",
             },
         ],
     },

@@ -13,6 +13,8 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
     const navigate = useNavigate();
     const rolePermissions = {
         officer: ["/dashboard"],
+        approver: ["/dashboard"],
+        sbmember: ["/dashboard"],
         admin: [],
     };
 
@@ -62,7 +64,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                     alt="Logo"
                     className="hidden h-10 w-10 dark:block"
                 />
-                {!collapsed && <p className="text-lg font-semibold text-slate-900 dark:text-white">Government Archiving System</p>}
+                {!collapsed && <p className="text-lg font-semibold text-slate-900 dark:text-white">Sangguniang Panlalawigan Archiving System</p>}
             </div>
 
             <div className="flex w-full flex-grow flex-col gap-y-4 overflow-y-auto overflow-x-hidden p-3 [scrollbar-width:_thin]">
@@ -78,7 +80,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
                             <NavLink
                                 key={link.label}
                                 to={link.path}
-                                end // Add this for exact matching
+                                end 
                                 className={({ isActive }) =>
                                     cn(
                                         "sidebar-item group flex items-center gap-x-3 rounded-xl px-3 py-2 transition-colors",

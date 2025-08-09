@@ -9,7 +9,7 @@ const SocketListener = () => {
     const { role, linkId } = useAuth();
     const { setFiles } = useContext(FilesDisplayContext);
     const { setNotify } = useContext(NotificationDisplayContext);
-    const { setOfficerData } = useContext(OfficerDisplayContext);
+    const { setOfficerData, FetchOfficerFiles } = useContext(OfficerDisplayContext);
 
     const formatNotification = (data, fallbackMessage = "You have a new notification") => ({
         _id: data._id || (data.data && data.data._id) || Math.random().toString(36).substr(2, 9),
@@ -45,11 +45,7 @@ const SocketListener = () => {
             if (!updatedDoc?._id) return;
 
             setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
-
-            setOfficerData((prev) => {
-                const filtered = prev.filter((f) => f._id !== updatedDoc._id);
-                return [updatedDoc, ...filtered]; 
-            });
+            FetchOfficerFiles();
         };
 
         const handleNewDocumentNotification = (notification) => {
@@ -76,17 +72,12 @@ const SocketListener = () => {
             if (!updatedDoc?._id) return;
 
             setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
-
-            if (role === "officer") {
-                setOfficerData((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
-            }
+            FetchOfficerFiles();
         };
-
 
         socket.on("SentDocumentNotification", handleDocumentNotification);
         socket.on("SentNewDocuNotification", handleNewDocumentNotification);
         socket.on("UpdateFileData", handleUpdateFileData);
-
 
         return () => {
             socket.off("SentDocumentNotification", handleDocumentNotification);

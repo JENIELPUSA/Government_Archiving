@@ -5,7 +5,10 @@ const crypto = require("crypto");
 const { type } = require("os");
 
 const UserLoginSchema = new mongoose.Schema({
-  avatar: { type: String },
+  avatar: {
+    url: String,
+    public_id: String,
+  },
   first_name: { type: String },
   last_name: { type: String },
   contact_number: { type: Number },
@@ -13,7 +16,7 @@ const UserLoginSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ["admin", "officer"],
+    enum: ["admin", "officer", "approver", "sbmember"],
     required: true,
     lowercase: true,
   },

@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import AddUserModal from "./AddUserModal";
-import { Database, UserPlus, Pencil, Trash2, ArrowLeft, Search, RefreshCw } from "lucide-react"; // Import Search and RefreshCw icons
+import { Database, UserPlus, Pencil, Trash2, ArrowLeft, Search, RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 
 const Dashboard = ({
-    selectedRole,
     resetSelection,
     tableData,
     handleDeleteItem,
@@ -19,7 +18,8 @@ const Dashboard = ({
     formMessage,
     isSubmitting,
     setFormMessage,
-    onRefresh, // New prop for refresh functionality
+    onRefresh,
+    isRefreshing,
 }) => {
     const [searchTerm, setSearchTerm] = useState("");
     const [filteredTableData, setFilteredTableData] = useState(tableData);
@@ -30,11 +30,10 @@ const Dashboard = ({
             (item.first_name && item.first_name.toLowerCase().includes(lowercasedSearchTerm)) ||
             (item.last_name && item.last_name.toLowerCase().includes(lowercasedSearchTerm)) ||
             (item.email && item.email.toLowerCase().includes(lowercasedSearchTerm)) ||
-            (selectedRole !== "Admin" && item.department && item.department.toLowerCase().includes(lowercasedSearchTerm)) ||
             (item.gender && item.gender.toLowerCase().includes(lowercasedSearchTerm))
         );
         setFilteredTableData(filteredData);
-    }, [searchTerm, tableData, selectedRole]);
+    }, [searchTerm, tableData]);
 
     const handleEditItem = (item) => {
         setEditUserData(item);
@@ -69,7 +68,7 @@ const Dashboard = ({
                             </svg>
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold">{selectedRole} Management</h1>
+                            <h1 className="text-2xl font-bold">Admin Management</h1>
                             <p className="text-blue-200 dark:text-blue-300">
                                 {tableData.length} user{tableData.length !== 1 ? 's' : ''} registered
                             </p>
@@ -91,10 +90,10 @@ const Dashboard = ({
                     <div>
                         <h2 className="text-xl font-semibold text-gray-800 dark:text-white">User Records</h2>
                         <p className="text-gray-600 dark:text-gray-400">
-                            Manage all {selectedRole.toLowerCase()} accounts in the system
+                            Manage all admin accounts in the system
                         </p>
                     </div>
-                    <div className="flex items-center gap-4"> {/* Container for search, refresh, and add user buttons */}
+                    <div className="flex items-center gap-4">
                         <div className="relative">
                             <input
                                 type="text"
@@ -105,16 +104,20 @@ const Dashboard = ({
                             />
                             <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
                         </div>
-                        {onRefresh && ( // Only show refresh button if onRefresh prop is provided
-                            <button
-                                onClick={onRefresh}
-                                className="flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 text-gray-700 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
-                                title="Refresh Data"
-                            >
-                                <RefreshCw className="h-5 w-5" />
-                                <span className="sr-only md:not-sr-only">Refresh</span>
-                            </button>
-                        )}
+                        {/* REFRESH BUTTON with loading spinner effect */}
+                        <button
+                            onClick={onRefresh}
+                            disabled={isRefreshing}
+                            className={`flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2.5 text-gray-700 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 ${isRefreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
+                            title={isRefreshing ? "Refreshing data..." : "Refresh data"}
+                        >
+                            <RefreshCw
+                                className={`h-5 w-5 ${isRefreshing ? 'animate-spin' : ''}`}
+                            />
+                            <span className="sr-only md:not-sr-only">
+                                {isRefreshing ? "Refreshing..." : "Refresh"}
+                            </span>
+                        </button>
                         <button
                             onClick={() => {
                                 setEditUserData(null);
@@ -132,22 +135,12 @@ const Dashboard = ({
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                         <thead className="bg-gray-50 dark:bg-gray-800">
                             <tr>
-                                {selectedRole !== "Admin" && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        ID
-                                    </th>
-                                )}
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Name
                                 </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Email
                                 </th>
-                                {selectedRole !== "Admin" && (
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                        Department
-                                    </th>
-                                )}
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                                     Gender
                                 </th>
@@ -163,24 +156,14 @@ const Dashboard = ({
                                         key={item.id}
                                         className="transition hover:bg-gray-50 dark:hover:bg-gray-800/50"
                                     >
-                                        {selectedRole !== "Admin" && (
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-                                                {item.id}
-                                            </td>
-                                        )}
                                         <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                             {item.first_name} {item.middle_name} {item.last_name}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
                                             {item.email}
                                         </td>
-                                        {selectedRole !== "Admin" && (
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                                {item.department}
-                                            </td>
-                                        )}
                                         <td className="whitespace-nowrap px-6 py-4 text-sm">
-                                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold leading-5 
+                                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold leading-5
                                                 ${item.gender === 'Male' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200' :
                                                     item.gender === 'Female' ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/50 dark:text-pink-200' :
                                                         'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200'}`}>
@@ -211,7 +194,7 @@ const Dashboard = ({
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={selectedRole !== "Admin" ? 6 : 5} className="h-96">
+                                    <td colSpan={4} className="h-96">
                                         <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-gray-50 p-8 text-center dark:bg-gray-800/50">
                                             <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                                                 <Database className="h-10 w-10" />
@@ -220,7 +203,7 @@ const Dashboard = ({
                                                 No Users Found
                                             </h3>
                                             <p className="max-w-md text-gray-500 dark:text-gray-400">
-                                                There are no {selectedRole.toLowerCase()} accounts in the system yet.
+                                                There are no admin accounts in the system yet.
                                                 Start by adding a new user.
                                             </p>
                                             <button
@@ -247,7 +230,6 @@ const Dashboard = ({
                 onEditSubmit={handleEditData}
                 message={formMessage}
                 isSubmitting={isSubmitting}
-                selectedRole={selectedRole}
                 isEditing={!!editUserData}
             />
         </motion.div>

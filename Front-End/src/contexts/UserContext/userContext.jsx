@@ -14,7 +14,6 @@ export const UserDisplayProvider = ({ children }) => {
   }, []);
 
   const fetchUserData = async () => {
-    setLoading(true);
     try {
       const res = await axios.get(
         `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/users`,
@@ -27,8 +26,6 @@ export const UserDisplayProvider = ({ children }) => {
       setUser(user);
     } catch (error) {
       console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
     }
   };
 

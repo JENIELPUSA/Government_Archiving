@@ -12,22 +12,24 @@ exports.createDepartment=AsyncErrorHandler(async(req,res) => {
 
 })
 
-exports.DisplayDepartment = AsyncErrorHandler(async(req,res)=>{
-    const features= new Apifeatures(Department.find(),req.query)
-                                .filter()
-                                .sort()
-                                .limitFields()
-                                .paginate()
-
-    const Departments = await features.query;
-
+exports.DisplayDepartment = AsyncErrorHandler(async (req, res) => {
+  try {
+    const Departments = await Department.find();
 
     res.status(200).json({
-        status:'success',
-        data:Departments
-    })
+      status: "success",
+      data: Departments,
+    });
+  } catch (error) {
+    console.error("Error fetching departments:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching departments.",
+      error: error.message,
+    });
+  }
+});
 
-})
 
 
 exports.UpdateDepartment =AsyncErrorHandler(async (req,res,next) =>{

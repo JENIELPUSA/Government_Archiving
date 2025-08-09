@@ -12,22 +12,23 @@ exports.createCategory=AsyncErrorHandler(async(req,res) => {
 
 })
 
-exports.DisplayCategory = AsyncErrorHandler(async(req,res)=>{
-    const features= new Apifeatures(Category.find(),req.query)
-                                .filter()
-                                .sort()
-                                .limitFields()
-                                .paginate()
+exports.DisplayCategory = AsyncErrorHandler(async (req, res) => {
+    try {
+        const categories = await Category.find();
 
-    const Categorys = await features.query;
-
-
-    res.status(200).json({
-        status:'success',
-        data:Categorys
-    })
-
-})
+        res.status(200).json({
+            status: 'success',
+            data: categories
+        });
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        res.status(500).json({
+            status: 'fail',
+            message: 'Something went wrong while fetching categories',
+            error: error.message
+        });
+    }
+});
 
 
 exports.UpdateCategory =AsyncErrorHandler(async (req,res,next) =>{

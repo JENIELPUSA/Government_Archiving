@@ -1,5 +1,4 @@
-import React, { useContext, useState, useEffect } from "react";
-import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
+import React, { useContext, useState, useEffect, useCallback } from "react";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import RoleSelection from "./RoleSelection";
 import Dashboard from "./Dashboard";
@@ -11,15 +10,13 @@ export default function UserManagement() {
     const [tableData, setTableData] = useState([]);
     const [showAddUserModal, setShowAddUserModal] = useState(false);
 
-    const { isOfficer, AddPatient, DeleteOfficer, UpdateOfficer } = useContext(OfficerDisplayContext);
-    const { isAdmin, DeleteAdmin, UpdateAdmin } = useContext(AdminDisplayContext);
+    const { isAdmin, DeleteAdmin, UpdateAdmin, FetchAdminData } = useContext(AdminDisplayContext);
 
     const [newItem, setNewItem] = useState({
         first_name: "",
         middle_name: "",
         last_name: "",
         email: "",
-        department: "",
         gender: "",
     });
 
@@ -27,40 +24,47 @@ export default function UserManagement() {
     const [formMessage, setFormMessage] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const handleRefresh = useCallback(async () => {
+        try {
+            if (selectedRole === "Admin") {
+                const adminData = await FetchAdminData();
+                const transformedAdminData = (adminData || [])
+                    .filter((admin) => admin && admin._id)
+                    .map((admin) => ({
+                        id: admin._id,
+                        first_name: admin.first_name,
+                        middle_name: admin.middle_name,
+                        last_name: admin.last_name,
+                        email: admin.email,
+                        gender: admin.gender,
+                    }));
+                setTableData(transformedAdminData);
+            }
+        } catch (error) {
+            console.error("Refresh error:", error);
+        }
+    }, [selectedRole, FetchAdminData]);
+
     const handleRoleSelect = (role) => {
         setSelectedRole(role);
         setShowTable(true);
     };
 
-  useEffect(() => {
-  if (selectedRole === "Admin" && isAdmin?.length > 0) {
-    const transformedAdminData = isAdmin
-      .filter((admin) => admin && admin._id)
-      .map((admin) => ({
-        id: admin._id,
-        first_name: admin.first_name,
-        middle_name: admin.middle_name,
-        last_name: admin.last_name,
-        email: admin.email,
-        gender: admin.gender,
-      }));
-    setTableData(transformedAdminData);
-  } else if (selectedRole === "Official" && isOfficer?.length > 0) {
-    const transformedOfficerData = isOfficer
-      .filter((officer) => officer && officer._id)
-      .map((officer) => ({
-        id: officer._id,
-        first_name: officer.first_name,
-        middle_name: officer.middle_name,
-        last_name: officer.last_name,
-        email: officer.email,
-        department: officer.department,
-        gender: officer.gender,
-      }));
-    setTableData(transformedOfficerData);
-  }
-}, [selectedRole, isAdmin, isOfficer]);
-
+    useEffect(() => {
+        if (selectedRole === "Admin" && isAdmin?.length > 0) {
+            const transformedAdminData = isAdmin
+                .filter((admin) => admin && admin._id)
+                .map((admin) => ({
+                    id: admin._id,
+                    first_name: admin.first_name,
+                    middle_name: admin.middle_name,
+                    last_name: admin.last_name,
+                    email: admin.email,
+                    gender: admin.gender,
+                }));
+            setTableData(transformedAdminData);
+        }
+    }, [selectedRole, isAdmin]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -80,7 +84,6 @@ export default function UserManagement() {
             !target.middle_name.trim() ||
             !target.last_name.trim() ||
             !target.email.trim() ||
-            (!target.department?.trim?.() && selectedRole !== "Admin") ||
             !target.gender.trim()
         ) {
             setFormMessage("Please fill in all required fields.");
@@ -88,18 +91,21 @@ export default function UserManagement() {
             return;
         }
 
-        const roleValue = selectedRole === "Admin" ? "admin" : "officer";
         const payload = {
             ...target,
-            role: roleValue,
+            role: "admin",
         };
-        if (roleValue === "admin") delete payload.department;
 
         try {
-            await AddPatient(payload, selectedRole);
+            // NOTE: AddPatient function from OfficerContext is removed.
+            // You will need to replace this with the correct function for adding an admin.
+            // For now, I've commented out the line that previously used AddPatient.
+            // await AddPatient(payload, selectedRole);
+
             resetForm();
             setFormMessage("");
             setShowAddUserModal(false);
+            await handleRefresh();
         } catch (error) {
             console.error("Add user error:", error);
             setFormMessage("Something went wrong while adding the user.");
@@ -111,13 +117,10 @@ export default function UserManagement() {
     const handleEditData = async (editedData) => {
         setIsSubmitting(true);
         try {
-            if (selectedRole === "Admin") {
-                await UpdateAdmin(editedData.id, editedData);
-            } else {
-                await UpdateOfficer(editedData.id, editedData);
-            }
+            await UpdateAdmin(editedData.id, editedData);
             setEditUserData(null);
             setShowAddUserModal(false);
+            await handleRefresh();
         } catch (error) {
             console.error("Edit error:", error);
         } finally {
@@ -127,12 +130,8 @@ export default function UserManagement() {
 
     const handleDeleteItem = async (id) => {
         try {
-            if (selectedRole === "Admin") {
-                await DeleteAdmin(id);
-            } else {
-                await DeleteOfficer(id);
-            }
-            setTableData((prev) => prev.filter((item) => item.id !== id));
+            await DeleteAdmin(id);
+            await handleRefresh();
         } catch (err) {
             console.error("Error deleting:", err);
         }
@@ -144,7 +143,6 @@ export default function UserManagement() {
             middle_name: "",
             last_name: "",
             email: "",
-            department: "",
             gender: "",
         });
         setFormMessage("");
@@ -159,9 +157,9 @@ export default function UserManagement() {
     };
 
     return (
-        <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950 p-4 font-sans text-gray-800 dark:text-white transition-colors duration-300">
+        <div className="relative min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 font-sans text-gray-800 transition-colors duration-300 dark:from-gray-900 dark:to-gray-950 dark:text-white">
             {isSubmitting && <LoadingOverlay />}
-            
+
             {!showTable ? (
                 <RoleSelection
                     onSelectRole={handleRoleSelect}
@@ -184,6 +182,7 @@ export default function UserManagement() {
                     formMessage={formMessage}
                     isSubmitting={isSubmitting}
                     setFormMessage={setFormMessage}
+                    onRefresh={handleRefresh}
                 />
             )}
         </div>

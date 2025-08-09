@@ -1,7 +1,10 @@
 const mongoose = require("mongoose");
 
 const AdminSchema = new mongoose.Schema({
-  avatar: String,
+avatar: {
+    url: String,
+    public_id: String,
+  },
   first_name: String,
   last_name: String,
   middle_name: String,

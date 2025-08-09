@@ -49,20 +49,28 @@ exports.setRetentionAndArchiveOldFiles = AsyncErrorHandler(async (req, res) => {
 });
 
 
+exports.DisplayRetention = AsyncErrorHandler(async (req, res) => {
+  try {
+    const Retention = await RetentionSetting.findOne();
 
-exports.DisplayRetention = AsyncErrorHandler(async(req,res)=>{
-    const features= new Apifeatures(RetentionSetting.find(),req.query)
-                                .filter()
-                                .sort()
-                                .limitFields()
-                                .paginate()
-
-    const Retention = await features.query;
-
+    if (!Retention) {
+      return res.status(404).json({
+        status: "fail",
+        message: "No retention setting found",
+      });
+    }
 
     res.status(200).json({
-        status:'success',
-        data:Retention[0]
-    })
+      status: "success",
+      data: Retention,
+    });
+  } catch (error) {
+    console.error("Error fetching retention setting:", error);
+    res.status(500).json({
+      status: "error",
+      message: "Server error while retrieving retention setting",
+      error: error.message,
+    });
+  }
+});
 
-})

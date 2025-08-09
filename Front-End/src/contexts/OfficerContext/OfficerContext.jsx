@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from "react";
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
@@ -14,10 +14,31 @@ export const OfficerDisplayProvider = ({ children }) => {
     const [isOfficer, setOfficer] = useState([]);
     const [isOfficerData, setOfficerData] = useState([]);
     const [isTotalOfficer, setTotalOfficer] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [isCount, setCount] = useState([]);
+    const [isApproved, setApproved] = useState([]);
+    const [isPendingData, setPendingData] = useState([]);
+    const [totalPagesRejected, setTotalPagesRejected] = useState(1);
+    const [totalPagesApproved, setTotalPagesApproved] = useState(1);
+    const [totalPagesPending, setTotalPagesPending] = useState(1);
+    const [currentPageRejected, setCurrentPageRejected] = useState(1);
+    const [currentPageApproved, setCurrentPageApproved] = useState(1);
+    const [currentPagePending, setCurrentPagePending] = useState(1);
+    const [isRejectedData, setRejectedData] = useState([]);
+    const [isRecentData, setRecentData] = useState([]);
+
     useEffect(() => {
         if (!authToken) return;
-        FetchOfficer();
-        FetchOfficerFiles();
+
+        const fetchAllData = async () => {
+            try {
+                await Promise.all([FetchOfficer(), FetchOfficerFiles()]);
+            } catch (error) {
+                console.error("Error fetching officer data:", error);
+            }
+        };
+        fetchAllData();
     }, [authToken]);
 
     useEffect(() => {
@@ -30,7 +51,6 @@ export const OfficerDisplayProvider = ({ children }) => {
     }, [customError]);
     const FetchOfficer = async () => {
         if (!authToken) return;
-        setLoading(true);
         try {
             const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient`, {
                 withCredentials: true,
@@ -39,26 +59,37 @@ export const OfficerDisplayProvider = ({ children }) => {
                     "Cache-Control": "no-cache",
                 },
             });
+
             const TotalOfficer = res.data.totalUsers;
             const officerData = res.data.data;
+
+            const cleanedData = (officerData || []).filter((officer) => officer && officer._id);
+
             setTotalOfficer(TotalOfficer);
-            setOfficer(officerData);
-            console.log("data", officerData);
+            setOfficer(cleanedData);
+
+            return cleanedData; // ✅ important for refresh
         } catch (error) {
             console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
         }
     };
 
-    const FetchOfficerFiles = async () => {
+    const FetchOfficerFiles = useCallback(async () => {
         if (!authToken || !linkId) return;
-        setLoading(true);
+
         try {
             const res = await axiosInstance.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetOfficerData`,
                 { linkId },
                 {
+                    params: {
+                        pagePending: currentPagePending,
+                        limitPending: 5,
+                        pageApproved: currentPageApproved,
+                        limitApproved: 10,
+                        pageRejected: currentPageRejected,
+                        limitRejected: 10,
+                    },
                     withCredentials: true,
                     headers: {
                         Authorization: `Bearer ${authToken}`,
@@ -67,14 +98,35 @@ export const OfficerDisplayProvider = ({ children }) => {
                 },
             );
 
-            const StaffData = res.data.data;
-            setOfficerData(StaffData);
+            const { pending, approved, rejected, counts, totalPages, recentData } = res.data;
+
+
+            console.log("TOTAL SIZED",counts.totalFileSize)
+            setPendingData(pending);
+            setApproved(approved);
+            setRecentData(recentData);
+            setRejectedData(rejected);
+            setCount(counts);
+            setTotalPagesPending(totalPages.pending);
+            setTotalPagesApproved(totalPages.approved);
+            setTotalPagesRejected(totalPages.rejected);
         } catch (error) {
             console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
         }
-    };
+    }, [
+        authToken,
+        linkId,
+        currentPagePending,
+        currentPageApproved,
+        currentPageRejected,
+        setPendingData,
+        setApproved,
+        setRejectedData,
+        setCount,
+        setTotalPagesPending,
+        setTotalPagesApproved,
+        setTotalPagesRejected,
+    ]);
 
     const AddPatient = async (values) => {
         try {
@@ -172,19 +224,68 @@ export const OfficerDisplayProvider = ({ children }) => {
         }
     };
 
+
+    const contextValue = useMemo(
+        () => ({
+            isOfficer,
+            isOfficerData,
+            AddPatient,
+            DeleteOfficer,
+            UpdateOfficer,
+            setOfficerData,
+            isTotalOfficer,
+            FetchOfficerFiles,
+            FetchOfficer,
+            totalPages,
+            currentPage,
+            setCurrentPage,
+            isCount,
+            isApproved,
+            isPendingData,
+            totalPagesPending,
+            totalPagesApproved,
+            totalPagesRejected,
+            currentPagePending,
+            currentPageApproved,
+            currentPageRejected,
+            setCurrentPagePending,
+            setCurrentPageApproved,
+            setCurrentPageRejected,
+            isRejectedData,
+            isRecentData,
+        }),
+        [
+            isOfficer,
+            isRecentData,
+            isOfficerData,
+            AddPatient,
+            DeleteOfficer,
+            UpdateOfficer,
+            setOfficerData,
+            isTotalOfficer,
+            FetchOfficerFiles,
+            FetchOfficer,
+            totalPages,
+            currentPage,
+            isRejectedData,
+            setCurrentPage,
+            isCount,
+            isApproved,
+            isPendingData,
+            totalPagesPending,
+            totalPagesApproved,
+            totalPagesRejected,
+            currentPagePending,
+            currentPageApproved,
+            currentPageRejected,
+            setCurrentPagePending,
+            setCurrentPageApproved,
+            setCurrentPageRejected,
+        ],
+    );
+
     return (
-        <OfficerDisplayContext.Provider
-            value={{
-                isOfficer,
-                isOfficerData,
-                AddPatient,
-                DeleteOfficer,
-                UpdateOfficer,
-                setOfficerData,
-                isTotalOfficer,
-                FetchOfficerFiles,
-            }}
-        >
+        <OfficerDisplayContext.Provider value={contextValue}>
             {children}
             <SuccessFailed
                 isOpen={showModal}
@@ -195,3 +296,5 @@ export const OfficerDisplayProvider = ({ children }) => {
         </OfficerDisplayContext.Provider>
     );
 };
+
+export default OfficerDisplayProvider;

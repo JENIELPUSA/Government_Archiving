@@ -17,8 +17,6 @@ export const CategoryDisplayProvider = ({ children }) => {
 
     const fetchCategory = async () => {
         if (!authToken) return;
-
-        setLoading(true);
         try {
             const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Category`, {
                 withCredentials: true,
@@ -28,12 +26,9 @@ export const CategoryDisplayProvider = ({ children }) => {
         } catch (error) {
             console.error("Error fetching brands:", error);
             setError("Failed to fetch data.");
-        } finally {
-            setLoading(false);
-        }
+        } 
     };
 
-    // Auto-fetch when token is available
     useEffect(() => {
         fetchCategory();
     }, [authToken]);

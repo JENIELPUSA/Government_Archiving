@@ -5,6 +5,11 @@ const NotificationSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  FileId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Files"
+  },
+
   viewers: [
     {
       user: {
