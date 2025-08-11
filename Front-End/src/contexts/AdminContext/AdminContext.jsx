@@ -97,7 +97,7 @@ export const AdminDisplayProvider = ({ children }) => {
     };
 
     const UpdateAdmin = async (dataID, values) => {
-        console.log("Update",values)
+        console.log("Update", values);
         try {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
@@ -114,6 +114,7 @@ export const AdminDisplayProvider = ({ children }) => {
             });
 
             if (response.data?.status === "success") {
+                FetchAdminData();
                 return { success: true, data: response.data.data };
             } else {
                 return { success: false, error: "Unexpected response from server." };
@@ -130,7 +131,6 @@ export const AdminDisplayProvider = ({ children }) => {
     };
 
     const AddAminData = async (values) => {
-        console.log("CONTXET", values);
         try {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
@@ -154,15 +154,17 @@ export const AdminDisplayProvider = ({ children }) => {
                 },
             });
 
-            if (res.data.status === "Success") {
-                const newAdmin = res.data.data;
+            if (res.data?.status?.toLowerCase() === "success") {
+                const updatedAdmin = res.data.data;
+                FetchAdminData();
                 setModalStatus("success");
                 setShowModal(true);
-                return { success: true, data: newAdmin };
+
+                return { success: true, data: updatedAdmin };
             } else {
                 setModalStatus("failed");
                 setShowModal(true);
-                return { success: false, error: "Unexpected response from server." };
+                return { success: false, error: res.data?.message || "Unexpected response from server." };
             }
         } catch (error) {
             if (error.response?.data) {

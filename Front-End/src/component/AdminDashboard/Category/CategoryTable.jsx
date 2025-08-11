@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { Edit, Trash, Plus, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Edit, Trash, Plus, ChevronLeft, ChevronRight, X,Database } from "lucide-react";
 import { CategoryContext } from "../../../contexts/CategoryContext/CategoryContext";
 import AddCategoryForm from "./AddCategoryForm";
 import "react-toastify/dist/ReactToastify.css";
@@ -160,11 +160,17 @@ const CategoryTable = () => {
                   colSpan="3"
                   className="px-6 py-12 text-center"
                 >
-                  <div className="flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400">
-                    <div className="h-16 w-16 rounded-xl border-2 border-dashed bg-gray-200 dark:bg-gray-700" />
-                    <p className="mt-3 font-medium">No isCategory found</p>
-                    <p className="text-sm">Add a new category to get started</p>
-                  </div>
+                  <div className="flex flex-col items-center justify-center">
+                            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                <Database className="h-10 w-10" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">No Documents Available</h3>
+                            <p className="text-center text-gray-500 dark:text-gray-400">
+                                There are no Category to display in the database.
+                                <br />
+                                Create a new data to get started.
+                            </p>
+                        </div>
                 </td>
               </tr>
             )}
