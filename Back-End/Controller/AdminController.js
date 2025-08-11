@@ -63,26 +63,29 @@ exports.UpdateAdmin = async (req, res) => {
   const adminId = req.params.id;
 
   try {
-    const admin = await Admin.findById(adminId);
-    if (!admin) {
-      return res.status(404).json({ error: 'Admin not found' });
-    }
-
-    let avatar = admin.avatar;
+    let uploadPromise;
+    let avatar;
 
     if (req.file) {
-      if (avatar && avatar.public_id) {
-        try {
-          await cloudinary.uploader.destroy(avatar.public_id);
-        } catch (err) {
-          console.error('Failed to delete old image from Cloudinary:', err);
-        }
-      }
-
-      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
-      const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
-        folder: 'Government Archiving/Profile',
+      // Prepare Cloudinary upload in parallel
+      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      uploadPromise = cloudinary.uploader.upload(base64Image, {
+        folder: "Government Archiving/Profile",
       });
+
+      // Delete old avatar in the background
+      Admin.findById(adminId).then((oldRecord) => {
+        if (oldRecord?.avatar?.public_id) {
+          cloudinary.uploader.destroy(oldRecord.avatar.public_id).catch((err) => {
+            console.error("Failed to delete old image:", err);
+          });
+        }
+      });
+    }
+
+    // Wait for upload only if new file is provided
+    if (uploadPromise) {
+      const uploadedResponse = await uploadPromise;
       avatar = {
         public_id: uploadedResponse.public_id,
         url: uploadedResponse.secure_url,
@@ -95,17 +98,24 @@ exports.UpdateAdmin = async (req, res) => {
       middle_name: req.body.middle_name,
       email: req.body.email,
       gender: req.body.gender,
-      avatar,
+      ...(avatar && { avatar }), // Only include avatar if updated
     };
 
+    // Single DB update
     const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, { new: true });
 
-    res.json({ status: 'success', data: updatedAdmin });
+    if (!updatedAdmin) {
+      return res.status(404).json({ error: "Admin not found" });
+    }
+
+    res.json({ status: "success", data: updatedAdmin });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: 'Something went wrong.' });
+    res.status(500).json({ error: "Something went wrong." });
   }
 };
+
+
 
 
 

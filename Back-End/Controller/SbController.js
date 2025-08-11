@@ -118,57 +118,59 @@ exports.UpdateSBmember = async (req, res) => {
   const SbmemberID = req.params.id;
 
   try {
-    const Sbmember = await SBmember.findById(SbmemberID);
-    if (!Sbmember) {
-      return res.status(404).json({ error: "Admin not found" });
-    }
+    let uploadPromise;
+    let avatar;
 
-    let avatar = Sbmember.avatar; // Default is the existing avatar object
-
-    // If there's a new image uploaded
     if (req.file) {
-      // Delete old image from Cloudinary if it has public_id
-      if (Sbmember.avatar?.public_id) {
-        try {
-          await cloudinary.uploader.destroy(Sbmember.avatar.public_id);
-        } catch (err) {
-          console.error("Failed to delete old image from Cloudinary", err);
-        }
-      }
-
-      // Upload new image
-      const base64Image = `data:${
-        req.file.mimetype
-      };base64,${req.file.buffer.toString("base64")}`;
-      const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
+      // Prepare Cloudinary upload promise
+      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      uploadPromise = cloudinary.uploader.upload(base64Image, {
         folder: "Government Archiving/Profile",
       });
+
+      // Delete old avatar in background (non-blocking)
+      SBmember.findById(SbmemberID).then((oldRecord) => {
+        if (oldRecord?.avatar?.public_id) {
+          cloudinary.uploader.destroy(oldRecord.avatar.public_id).catch((err) => {
+            console.error("Failed to delete old image from Cloudinary:", err);
+          });
+        }
+      });
+    }
+
+    // Wait for Cloudinary upload if there is a file
+    if (uploadPromise) {
+      const uploadedResponse = await uploadPromise;
       avatar = {
         public_id: uploadedResponse.public_id,
         url: uploadedResponse.secure_url,
       };
     }
 
-    const updateSBmember = await SBmember.findByIdAndUpdate(
-      SbmemberID,
-      {
-        first_name: req.body.first_name,
-        last_name: req.body.last_name,
-        middle_name: req.body.middle_name,
-        email: req.body.email,
-        Position: req.body.Position,
-        detailInfo: req.body.detailInfo,
-        avatar, 
-      },
-      { new: true }
-    );
+    const updateData = {
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      middle_name: req.body.middle_name,
+      email: req.body.email,
+      Position: req.body.Position,
+      detailInfo: req.body.detailInfo,
+      ...(avatar && { avatar }), // Add avatar only if updated
+    };
 
-    res.json({ status: "success", data: updateSBmember });
+    // Single query for update
+    const updatedSBmember = await SBmember.findByIdAndUpdate(SbmemberID, updateData, { new: true });
+
+    if (!updatedSBmember) {
+      return res.status(404).json({ error: "SB Member not found" });
+    }
+
+    res.json({ status: "success", data: updatedSBmember });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Something went wrong." });
   }
 };
+
 
 exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
   const SbmemberID = req.params.id;
