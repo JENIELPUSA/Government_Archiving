@@ -18,6 +18,9 @@ const Documents = ({ searchKeyword }) => {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [openYear, setOpenYear] = useState(null);
 
+
+    console.log("Public",isPublicData)
+
     useEffect(() => {
         if (isPublicData && Array.isArray(isPublicData)) {
             setExternalData(prevState => ({

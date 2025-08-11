@@ -78,7 +78,7 @@ const ApproverSettings = ({ approvers }) => {
             transition={{ duration: 0.3 }}
             className="mb-8"
         >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-4 flex items-center justify-between mt-4">
                 <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300">Approver Settings</h2>
                 <button
                     onClick={openAddModal}

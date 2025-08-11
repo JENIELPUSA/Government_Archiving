@@ -10,7 +10,7 @@ import Login from "./component/Login/Login";
 import PdfViewer from "./component/PdfViewer/PdfViewer";
 import RecentDocument from "./component/AdminDashboard/RecentDocument/RecentDocument";
 import ArchiveLayout from "./component/AdminDashboard/Archive/ArchiveLayout";
-import DocumentLayout from "./component/AdminDashboard/Document/DocumentsLayout";
+import DocumentLayout from "./component/AdminDashboard/Document/DocumentsSidebar/DocumentsLayout";
 import PublicAccessLayout from "./component/PublicView/Publicview";
 import ExpandPDFView from "./component/PublicAccess/ExpandPDFView";
 import CommentLayout from "./component/Comments/CommentLayout";
@@ -19,6 +19,8 @@ import ResetPassword from "./component/Login/ResetPassword";
 import SettingsPage from "./component/Setting/SettingLayout";
 import SBmember from "./component/SBmember/SBmember";
 import UnderMaintenance from "./component/PublicView/AboutUs";
+import CategoryTable from "./component/AdminDashboard/Category/ManageCategoryTable";
+import UserManagement from "./component/UserManagement/UserManagement";
 
 function App() {
     const router = createBrowserRouter([
@@ -63,11 +65,14 @@ function App() {
                         },
                         {
                             path: "/dashboard/user-management",
-                            element: <UnderMaintenance />,
+                            element: <UserManagement />,
                         },
                         {
                             path: "/dashboard/logs",
                             element: <LogsAndAudit />,
+                        },                   {
+                            path: "/dashboard/Category",
+                            element: <CategoryTable />,
                         },
                         {
                             path: "pdf-viewer/:fileId",

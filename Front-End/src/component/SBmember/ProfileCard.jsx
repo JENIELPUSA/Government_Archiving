@@ -18,6 +18,8 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
         }
     };
 
+    console.log("trace", memberInfo);
+
     const closeModal = () => setIsModalOpen(false);
 
     const onDeletehandle = () => {
@@ -38,7 +40,7 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
                     <div className="flex w-full flex-col items-center justify-center bg-blue-50 p-4 dark:bg-blue-900 md:w-1/3">
                         <div className="relative">
                             <img
-                                src={memberInfo?.avatar?.url ?? "https://randomuser.me/api/portraits/men/64.jpg"}
+                                src={memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg"}
                                 alt={memberInfo?.fullName || "Profile"}
                                 className="h-16 w-16 rounded-full border-4 border-white object-cover shadow-md sm:h-20 sm:w-20 md:h-24 md:w-24"
                             />

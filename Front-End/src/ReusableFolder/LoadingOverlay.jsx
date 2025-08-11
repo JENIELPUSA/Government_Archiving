@@ -2,7 +2,7 @@ import React from "react";
 
 const LoadingOverlay = ({ message = "Loading..." }) => {
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 z-[999] flex flex-col items-center justify-center text-white">
+    <div className="fixed inset-0 bg-black bg-opacity-20 z-[999] flex flex-col items-center justify-center text-white">
       <div className="spinner"></div>
       <p className="mt-4 text-xl">{message}</p>
 

@@ -3,6 +3,7 @@ const express = require("express");
 const router = express.Router();//express router
 const AdminController=require('../Controller/AdminController')
 const authController = require('./../Controller/authController')
+const upload = require("../middleware/imageUploader");
 router.route('/')
     .get(authController.protect,AdminController.DisplayAdmin)
     router.route('/Profile')
@@ -11,7 +12,7 @@ router.route('/')
 
 router.route('/:id')
     .delete(authController.protect,AdminController.deleteAdmin)
-    .patch(authController.protect,AdminController.UpdateAdmin)
+    .patch(authController.protect, upload.single("avatar"),AdminController.UpdateAdmin)
 
 
 

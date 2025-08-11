@@ -570,6 +570,8 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 5;
   const skip = (page - 1) * limit;
 
+  console.log("DisplayFiles Controller")
+
   const { title, tags, status, category, dateFrom, dateTo } = req.query;
 
   const matchStage = {
@@ -761,6 +763,9 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo } = req.query;
 
+  
+  console.log("getAllAuthorsWithFiles Controller")
+
   const aggregationPipeline = [];
 
   const matchStage = {};
@@ -779,8 +784,25 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
     {
       $lookup: {
         from: "files",
-        localField: "_id",
-        foreignField: "author",
+        let: { authorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$author", "$$authorId"] },
+                  { $eq: ["$status", "Approved"] },
+                  {
+                    $or: [
+                      { $eq: ["$ArchivedStatus", "Archived"] },
+                      { $eq: ["$ArchivedStatus", "Active"] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ],
         as: "files",
       },
     },
@@ -841,7 +863,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         fullName: { $first: "$fullName" },
         district: { $first: "$district" },
         detailInfo: { $first: "$detailInfo" },
-        Position: { $first: "$Position" }, // <-- Idinagdag ang linyang ito
+        Position: { $first: "$Position" },
         memberInfo: { $first: "$$ROOT" },
         files: {
           $push: {
@@ -903,6 +925,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
 
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   try {
+
     const { id } = req.params;
     const file = await Files.findById(id);
     if (!file) return res.status(404).json({ message: "File not found." });
@@ -1178,6 +1201,8 @@ exports.checkDeliveryType = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getFileById = AsyncErrorHandler(async (req, res) => {
+
+       console.log("getFileById Controller")
   const { id } = req.params;
 
   const FilesData = await Files.aggregate([
@@ -1482,6 +1507,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
+  console.log("getOfficer controller")
   const officerId = req.user.linkId;
   const limit = parseInt(req.query.limit) || 5;
   const pagePending = parseInt(req.query.pagePending) || 1;
@@ -1572,8 +1598,8 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
         category: "$categoryInfo.category",
         categoryID: "$categoryInfo._id",
         category: "$categoryInfo.category",
-        sbmemberID: "$sbmemberInfo._id",
-        author: {
+        author: "$sbmemberInfo._id",
+        authorName: {
           $concat: ["$sbmemberInfo.first_name", " ", "$sbmemberInfo.last_name"],
         },
         admin_last_name: "$adminInfo.last_name",
@@ -1690,8 +1716,15 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
     const FilesData = await Files.aggregate([
       {
         $match: {
-          status: "Approved",
-          ArchivedStatus: "Active",
+          $and: [
+            { status: "Approved" },
+            {
+              $or: [
+                { ArchivedStatus: "Active" },
+                { ArchivedStatus: "Archived" },
+              ],
+            },
+          ],
         },
       },
       {
@@ -1716,6 +1749,14 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
           localField: "officer",
           foreignField: "_id",
           as: "officerInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "sbmembers",
+          localField: "author",
+          foreignField: "_id",
+          as: "authorInfo",
         },
       },
       {
@@ -1745,6 +1786,7 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
           as: "categoryInfo",
         },
       },
+      { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
       { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
       {
         $unwind: { path: "$departmentInfo", preserveNullAndEmptyArrays: true },
@@ -1774,6 +1816,16 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
           departmentID: "$departmentInfo._id",
           category: "$categoryInfo.category",
           categoryID: "$categoryInfo._id",
+          author: {
+            $concat: [
+              "$authorInfo.first_name",
+              " ",
+              { $ifNull: ["$authorInfo.middle_name", ""] },
+              " ",
+              "$authorInfo.last_name",
+            ],
+          },
+          authorID: "$authorInfo._id",
           admin: 1,
           admin_first_name: "$adminInfo.first_name",
           admin_last_name: "$adminInfo.last_name",
@@ -1791,7 +1843,7 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
       data: FilesData,
     });
   } catch (error) {
-    console.error("Error in PublicDisplayController:", error); // Log actual error
+    console.error("Error in PublicDisplayController:", error);
     res.status(500).json({
       status: "error",
       message: error.message,

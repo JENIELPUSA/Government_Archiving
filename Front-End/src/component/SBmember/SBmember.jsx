@@ -8,7 +8,6 @@ import { Database } from "lucide-react";
 import StatusVerification from "../../ReusableFolder/StatusModal";
 import { useDebounce } from "use-debounce";
 
-// Skeleton Loading Component
 const SkeletonCard = () => (
     <div className="animate-pulse rounded-lg border border-gray-200 bg-white p-6 shadow dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center space-x-4">
@@ -74,11 +73,12 @@ function SBmember() {
         }
     }, [totalPages, currentPage, setCurrentPage]);
 
-    const goToPage = (page) => {
+    const goToPage = async (page) => {
         if (loading || page < 1 || page > totalPages) return;
-        setCurrentPage(page);
+        setLoading(true);
+        await setCurrentPage(page);
+        setLoading(false);
     };
-
     const handleEdit = (member) => {
         setMemberToEdit(member);
         setShowAddForm(true);
@@ -158,8 +158,8 @@ function SBmember() {
 
     // Filter members based on position status
     const filteredMembers = members
-        .filter(member => member && member._id)
-        .filter(member => {
+        .filter((member) => member && member._id)
+        .filter((member) => {
             if (positionFilter === "withPosition") {
                 return member.Position && member.Position.trim() !== "";
             } else if (positionFilter === "withoutPosition") {
@@ -260,7 +260,7 @@ function SBmember() {
                                         </label>
                                     </div>
                                 </div>
-                                
+
                                 <input
                                     type="text"
                                     placeholder="Search by name..."
@@ -301,7 +301,6 @@ function SBmember() {
                             </div>
 
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                {/* Skeleton Loading State */}
                                 {loading && isInitialLoad ? (
                                     Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={`skeleton-${index}`} />)
                                 ) : (

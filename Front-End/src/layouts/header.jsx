@@ -32,7 +32,9 @@ export const Header = ({ collapsed, setCollapsed }) => {
                     >
                         <ChevronsLeft className={`transition-transform ${collapsed ? "rotate-180" : ""}`} />
                     </button>
-                    <h1 className="text-xl font-bold">Welcome back {role.charAt(0).toUpperCase() + role.slice(1)}!</h1>
+                    <h1 className="text-xl font-bold">
+                        Welcome back {role.toLowerCase() === "sbmember" ? "SB Member" : role.charAt(0).toUpperCase() + role.slice(1)}!
+                    </h1>
                 </div>
 
                 <div className="flex items-center gap-x-3">
@@ -56,18 +58,6 @@ export const Header = ({ collapsed, setCollapsed }) => {
                         setNotifications={setUserNotifications}
                         markNotificationAsRead={markNotificationAsRead}
                     />
-
-                    <button className="size-10 overflow-hidden rounded-full border-2 border-gray-800 dark:border-white">
-                        <img
-                            src="https://placehold.co/40x40/cccccc/000000?text=User"
-                            alt="profile image"
-                            className="size-full object-cover"
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = "https://placehold.co/40x40/cccccc/000000?text=Error";
-                            }}
-                        />
-                    </button>
                 </div>
             </div>
 
@@ -78,6 +68,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
             ) : role === "officer" ? (
                 <p className="ml-14 text-sm font-medium opacity-90">
                     You're logged in as an <span className="font-semibold">Officer</span>. These are your available tools:
+                </p>
+            ) : role === "sbmember" ? (
+                <p className="ml-14 text-sm font-medium opacity-90">
+                    You're logged in as an <span className="font-semibold">SB Member</span>. These are your available tools:
                 </p>
             ) : role === "approver" ? (
                 <p className="ml-14 text-sm font-medium opacity-90">

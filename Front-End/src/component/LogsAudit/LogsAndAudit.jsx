@@ -153,6 +153,15 @@ const LogsAndAudit = () => {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
     const [isLoading, setIsLoading] = useState(true);
+    const [isPaginating, setIsPaginating] = useState(false);
+    const [displayedLogs, setDisplayedLogs] = useState([]);
+
+    // Simpan data yang sedang ditampilkan
+    useEffect(() => {
+        if (allAuditLogs.length > 0 && !isLoading && !isPaginating) {
+            setDisplayedLogs(allAuditLogs);
+        }
+    }, [allAuditLogs, isLoading, isPaginating]);
 
     useEffect(() => {
         if (currentPage > totalPages && totalPages > 0) {
@@ -163,23 +172,29 @@ const LogsAndAudit = () => {
     }, [totalPages, currentPage]);
 
     const goToPage = (page) => {
-        if (page < 1 || page > totalPages) return;
+        if (page < 1 || page > totalPages || page === currentPage) return;
 
+        setIsPaginating(true);
         setCurrentPage(page);
 
         const normalizedType = filterType === "ALL" ? "" : filterType;
 
         if (typeof fetchLogs === "function") {
-            fetchLogs(page, normalizedType, startDate, endDate);
+            fetchLogs(page, normalizedType, startDate, endDate).finally(() => {
+                setIsPaginating(false);
+            });
         }
     };
 
     useEffect(() => {
-        const timer = setTimeout(() => setIsLoading(false), 1500);
+        setIsLoading(true);
+        const timer = setTimeout(() => {
+            setIsLoading(false);
+            setIsPaginating(false);
+        }, 1500);
         return () => clearTimeout(timer);
-    }, []);
+    }, [currentPage, filterType, startDate, endDate]);
 
-    // Fetch logs whenever filters change
     useEffect(() => {
         const normalizedType = filterType === "ALL" ? "" : filterType;
 
@@ -224,7 +239,12 @@ const LogsAndAudit = () => {
         return range.map((page, idx) => {
             if (page === "...") {
                 return (
-                    <span key={`dots-${idx}`} className="mx-1 px-2 py-1 text-gray-500 dark:text-gray-400">...</span>
+                    <span
+                        key={`dots-${idx}`}
+                        className="mx-1 px-2 py-1 text-gray-500 dark:text-gray-400"
+                    >
+                        ...
+                    </span>
                 );
             }
 
@@ -232,11 +252,12 @@ const LogsAndAudit = () => {
                 <button
                     key={page}
                     onClick={() => goToPage(page)}
+                    disabled={isPaginating}
                     className={`mx-1 rounded-md px-3 py-1 ${
                         currentPage === page
                             ? "bg-blue-500 text-white dark:bg-blue-600"
                             : "bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                    }`}
+                    } ${isPaginating ? "cursor-not-allowed" : ""}`}
                 >
                     {page}
                 </button>
@@ -244,15 +265,52 @@ const LogsAndAudit = () => {
         });
     };
 
+    const renderLogs = () => {
+        // Tampilkan skeleton selama initial loading
+        if (isLoading) {
+            return Array.from({ length: 6 }).map((_, i) => (
+                <AuditLogItemSkeleton key={i} />
+            ));
+        }
+
+        // Tampilkan skeleton selama pagination
+        if (isPaginating) {
+            return Array.from({ length: displayedLogs.length || 6 }).map((_, i) => (
+                <AuditLogItemSkeleton key={`skeleton-${i}`} />
+            ));
+        }
+
+        // Tampilkan data normal
+        if (currentLogs.length > 0) {
+            return currentLogs.map((log) => (
+                <AuditLogItem
+                    key={log._id}
+                    log={log}
+                    isLoading={false}
+                />
+            ));
+        }
+
+        return <p className="py-8 text-center text-gray-500 dark:text-gray-400">No audit logs found for the selected filters.</p>;
+    };
+
     return (
         <div className="font-sans transition-colors duration-300">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+            <link
+                rel="stylesheet"
+                href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+            />
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-3">
                     <div className="rounded-lg bg-white p-6 shadow transition-colors duration-300 dark:bg-gray-800">
                         <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
                             <div>
-                                <label htmlFor="typeFilter" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Type:</label>
+                                <label
+                                    htmlFor="typeFilter"
+                                    className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Type:
+                                </label>
                                 <select
                                     id="typeFilter"
                                     className="mt-1 block w-full rounded-md border-gray-300 bg-white py-2 pl-3 pr-10 text-base text-gray-900 shadow-sm transition-colors duration-300 focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 sm:text-sm"
@@ -260,12 +318,22 @@ const LogsAndAudit = () => {
                                     onChange={(e) => setFilterType(e.target.value)}
                                 >
                                     {uniqueTypes.map((type) => (
-                                        <option key={type} value={type}>{type}</option>
+                                        <option
+                                            key={type}
+                                            value={type}
+                                        >
+                                            {type}
+                                        </option>
                                     ))}
                                 </select>
                             </div>
                             <div>
-                                <label htmlFor="startDate" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Start Date:</label>
+                                <label
+                                    htmlFor="startDate"
+                                    className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Start Date:
+                                </label>
                                 <input
                                     type="date"
                                     id="startDate"
@@ -275,7 +343,12 @@ const LogsAndAudit = () => {
                                 />
                             </div>
                             <div>
-                                <label htmlFor="endDate" className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">End Date:</label>
+                                <label
+                                    htmlFor="endDate"
+                                    className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    End Date:
+                                </label>
                                 <input
                                     type="date"
                                     id="endDate"
@@ -287,28 +360,14 @@ const LogsAndAudit = () => {
                         </div>
 
                         <div>
-                            {isLoading ? (
-                                <>
-                                    <AuditLogItemSkeleton />
-                                    <AuditLogItemSkeleton />
-                                    <AuditLogItemSkeleton />
-                                </>
-                            ) : currentLogs.length > 0 ? (
-                                currentLogs.map((log) => (
-                                    <AuditLogItem key={log._id} log={log} isLoading={false} />
-                                ))
-                            ) : (
-                                <p className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                    No audit logs found for the selected filters.
-                                </p>
-                            )}
+                            {renderLogs()}
                         </div>
 
                         {totalPages >= 1 && (
-                            <div className="mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-white px-2 py-4 dark:bg-gray-800">
+                            <div className="relative mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-white px-2 py-4 dark:bg-gray-800">
                                 <button
                                     onClick={() => goToPage(currentPage - 1)}
-                                    disabled={currentPage === 1}
+                                    disabled={currentPage === 1 || isPaginating}
                                     className="rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:disabled:opacity-50"
                                 >
                                     Prev
@@ -316,7 +375,7 @@ const LogsAndAudit = () => {
                                 {renderPageNumbers()}
                                 <button
                                     onClick={() => goToPage(currentPage + 1)}
-                                    disabled={currentPage === totalPages}
+                                    disabled={currentPage === totalPages || isPaginating}
                                     className="rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:disabled:opacity-50"
                                 >
                                     Next
@@ -329,6 +388,5 @@ const LogsAndAudit = () => {
         </div>
     );
 };
-
 
 export default LogsAndAudit;

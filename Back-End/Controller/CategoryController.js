@@ -41,22 +41,28 @@ exports.UpdateCategory =AsyncErrorHandler(async (req,res,next) =>{
      }); 
   })
 
-  exports.deleteCategory = AsyncErrorHandler(async(req,res,next)=>{
+exports.deleteCategory = AsyncErrorHandler(async (req, res, next) => {
+  const categoryDoc = await Category.findById(req.params.id);
 
-      const hasCategory = await Category.exists({ Category: req.params.id });
-    
-      if (hasCategory) {
-        return res.status(400).json({
-          status: "fail",
-          message: "Cannot delete Category: there are existing related records.",
-        });
-      }
-    await Category.findByIdAndDelete(req.params.id)
+  if (!categoryDoc) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Category not found.",
+    });
+  }
 
-    res.status(200).json({
-        status:'success',
-        data:
-            null
-        
-     });
-  })
+  const forbiddenNames = ["resolution", "ordinance"];
+  if (forbiddenNames.includes(categoryDoc.category.trim().toLowerCase())) {
+    return res.status(400).json({
+      status: "fail",
+      message: `Cannot delete "${categoryDoc.category}" category.`,
+    });
+  }
+
+  await Category.findByIdAndDelete(req.params.id);
+
+  res.status(200).json({
+    status: "success",
+    data: null,
+  });
+});

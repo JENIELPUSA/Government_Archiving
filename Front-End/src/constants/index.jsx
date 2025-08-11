@@ -5,7 +5,7 @@ import {
     Home,
     SquarePen,
     FolderClock,
-    PackagePlus,
+    SquareMenu ,
     Settings,
     Logs,
     View,
@@ -41,6 +41,10 @@ export const navbarLinks = [
                 label: "View Documents",
                 icon: View,
                 path: "/dashboard/view-documents",
+            },         {
+                label: "Category",
+                icon: SquareMenu ,
+                   path: "/dashboard/Category",
             },
             {
                 label: "Recent Documents",

@@ -13,7 +13,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
     avatar: null,
     preview: null,
   });
-  // ✅ 1. Magdagdag ng state para sa loading
   const [isLoading, setIsLoading] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -65,7 +64,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
   };
 
   const triggerFileInput = () => {
-    // ✅ I-disable ang button kapag naglo-load
     if (!isLoading) {
       fileInputRef.current.click();
     }
@@ -73,21 +71,14 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // ✅ I-set ang loading sa true bago simulan ang proseso
     setIsLoading(true);
 
     try {
       const memberData = memberToEdit ? { ...newMember, _id: memberToEdit._id } : newMember;
-      
-      // I-assume na ang `onAddMember` ay isang asynchronous function
       await onAddMember(memberData);
-
-      // Ang loading ay magiging false na matapos ang proseso
     } catch (error) {
       console.error("Error submitting form:", error);
     } finally {
-      // ✅ Siguraduhin na ang loading ay magiging false, kahit may error
       setIsLoading(false);
     }
   };
@@ -107,7 +98,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
           </h2>
           <button
             onClick={onClose}
-            // ✅ I-disable ang close button
             disabled={isLoading}
             className={`text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white ${
               isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -166,7 +156,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
               <button
                 type="button"
                 onClick={triggerFileInput}
-                // ✅ I-disable ang upload button
                 disabled={isLoading}
                 className={`text-sm font-medium text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 px-4 py-2 rounded-md border border-blue-500 ${
                   isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -180,7 +169,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                 onChange={handleImageChange}
                 accept="image/*"
                 className="hidden"
-                // ✅ I-disable ang file input
                 disabled={isLoading}
               />
 
@@ -193,7 +181,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                   name="position"
                   value={newMember.position}
                   onChange={handleInputChange}
-                  // ✅ I-disable ang select field
                   disabled={isLoading}
                   className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                     isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -219,7 +206,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                     name="first_name"
                     value={newMember.first_name}
                     onChange={handleInputChange}
-                    // ✅ I-disable ang input field
                     disabled={isLoading}
                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                       isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -238,7 +224,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                     name="middle_name"
                     value={newMember.middle_name}
                     onChange={handleInputChange}
-                    // ✅ I-disable ang input field
                     disabled={isLoading}
                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                       isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -256,7 +241,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                     name="last_name"
                     value={newMember.last_name}
                     onChange={handleInputChange}
-                    // ✅ I-disable ang input field
                     disabled={isLoading}
                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                       isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -275,7 +259,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                     name="district"
                     value={newMember.district}
                     onChange={handleInputChange}
-                    // ✅ I-disable ang input field
                     disabled={isLoading}
                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                       isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -294,7 +277,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                     name="email"
                     value={newMember.email}
                     onChange={handleInputChange}
-                    // ✅ I-disable ang input field
                     disabled={isLoading}
                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                       isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -314,7 +296,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                   value={newMember.detailInfo}
                   onChange={handleInputChange}
                   rows="4"
-                  // ✅ I-disable ang textarea
                   disabled={isLoading}
                   className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                     isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -327,7 +308,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                 <button
                   type="button"
                   onClick={onClose}
-                  // ✅ I-disable ang cancel button
                   disabled={isLoading}
                   className={`rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600 ${
                     isLoading ? "cursor-not-allowed opacity-50" : ""
@@ -337,13 +317,11 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                 </button>
                 <button
                   type="submit"
-                  // ✅ I-disable ang submit button
                   disabled={isLoading}
                   className={`rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 ${
                     isLoading ? "cursor-not-allowed opacity-50" : ""
                   }`}
                 >
-                  {/* ✅ Magpakita ng loading state sa button */}
                   {isLoading ? (
                     <span className="flex items-center">
                       <svg

@@ -6,9 +6,46 @@ import StatusVerification from "../../../ReusableFolder/StatusModal";
 import NoteModal from "./NotespopupModal";
 import DocumentDetailsModal from "./DocumentDetailModal";
 
-const DocumentTable = ({ documents, onEdit}) => {
+// Skeleton components
+const DocumentTableRowSkeleton = () => (
+    <tr className="cursor-pointer border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700">
+        <td className="px-6 py-3 text-left">
+            <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </td>
+        <td className="px-6 py-3 text-left">
+            <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </td>
+        <td className="px-6 py-3 text-left">
+            <div className="h-6 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </td>
+        <td className="px-6 py-3 text-left">
+            <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        </td>
+        <td className="px-6 py-3 text-left">
+            <div className="flex gap-2">
+                <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+                <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700"></div>
+            </div>
+        </td>
+    </tr>
+);
+
+const PaginationSkeleton = () => (
+    <div className="flex animate-pulse items-center justify-end space-x-2">
+        <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-700"></div>
+        <div className="flex space-x-1">
+            {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700"></div>
+            ))}
+        </div>
+        <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-700"></div>
+    </div>
+);
+
+const DocumentTable = ({ documents, onEdit }) => {
     const navigate = useNavigate();
-    const { MOveArchived, FetchFiles,totalPages,currentPage,setCurrentPage } = useContext(FilesDisplayContext);
+    const { MOveArchived, FetchFiles, totalPages, currentPage, setCurrentPage } = useContext(FilesDisplayContext);
     const [isNoteOpen, setNoteOpen] = useState(false);
     const [isVerification, setVerification] = useState(false);
     const [isDeleteID, setIsDeleteId] = useState("");
@@ -16,6 +53,15 @@ const DocumentTable = ({ documents, onEdit}) => {
     const [clickedDocument, setClickedDocument] = useState(null);
     const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [displayedDocuments, setDisplayedDocuments] = useState([]);
+    
+    // Save current displayed documents
+    useEffect(() => {
+        if (documents.length > 0 && !loading) {
+            setDisplayedDocuments(documents);
+        }
+    }, [documents, loading]);
+
     useEffect(() => {
         if (currentPage > totalPages && totalPages > 0) {
             setCurrentPage(1);
@@ -24,12 +70,21 @@ const DocumentTable = ({ documents, onEdit}) => {
         }
     }, [totalPages, currentPage]);
 
-    const goToPage = (page) => {
+    const goToPage = async (page) => {
         if (page < 1 || page > totalPages) return;
+
+        setLoading(true); 
         setCurrentPage(page);
+
         if (typeof FetchFiles === "function") {
-            FetchFiles(page);
+            try {
+                await FetchFiles(page); 
+            } catch (error) {
+                console.error("FetchFiles error:", error);
+            }
         }
+
+        setLoading(false); 
     };
 
     const handleViewFile = (fileId, item) => {
@@ -92,6 +147,8 @@ const DocumentTable = ({ documents, onEdit}) => {
     };
 
     const renderPageNumbers = () => {
+        if (loading) return <PaginationSkeleton />;
+        
         const pageNumbers = [];
         const maxPagesToShow = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
@@ -109,13 +166,16 @@ const DocumentTable = ({ documents, onEdit}) => {
                     className="mx-1 rounded-md bg-gray-200 px-3 py-1 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                 >
                     1
-                </button>
+                </button>,
             );
             if (startPage > 2) {
                 pageNumbers.push(
-                    <span key="dots-start" className="mx-1 px-3 py-1 text-gray-500">
+                    <span
+                        key="dots-start"
+                        className="mx-1 px-3 py-1 text-gray-500"
+                    >
                         ...
-                    </span>
+                    </span>,
                 );
             }
         }
@@ -132,16 +192,19 @@ const DocumentTable = ({ documents, onEdit}) => {
                     }`}
                 >
                     {i}
-                </button>
+                </button>,
             );
         }
 
         if (endPage < totalPages) {
             if (endPage < totalPages - 1) {
                 pageNumbers.push(
-                    <span key="dots-end" className="mx-1 px-3 py-1 text-gray-500">
+                    <span
+                        key="dots-end"
+                        className="mx-1 px-3 py-1 text-gray-500"
+                    >
                         ...
-                    </span>
+                    </span>,
                 );
             }
             pageNumbers.push(
@@ -151,30 +214,111 @@ const DocumentTable = ({ documents, onEdit}) => {
                     className="mx-1 rounded-md bg-gray-200 px-3 py-1 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                 >
                     {totalPages}
-                </button>
+                </button>,
             );
         }
 
         return pageNumbers;
     };
 
-    if (!documents || documents.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-white p-12 shadow-md dark:border-gray-600 dark:bg-gray-800">
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
-                    <Database className="h-10 w-10" />
-                </div>
-                <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
-                    No Documents Available
-                </h3>
-                <p className="text-center text-gray-500 dark:text-gray-400">
-                    There are no documents to display in the database.
-                    <br />
-                    Create a new document to get started.
-                </p>
-            </div>
-        );
-    }
+    const renderTableContent = () => {
+        if (loading) {
+            return Array.from({ length: displayedDocuments.length || 5 }).map((_, index) => (
+                <DocumentTableRowSkeleton key={`skeleton-${index}`} />
+            ));
+        }
+
+        if (!documents || documents.length === 0) {
+            return (
+                <tr>
+                    <td colSpan="5" className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                            <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                                <Database className="h-10 w-10" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">No Documents Available</h3>
+                            <p className="text-center text-gray-500 dark:text-gray-400">
+                                There are no documents to display in the database.
+                                <br />
+                                Create a new document to get started.
+                            </p>
+                        </div>
+                    </td>
+                </tr>
+            );
+        }
+
+        return documents.map((document) => (
+            <tr
+                key={document._id}
+                className="cursor-pointer border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
+                onClick={(e) => handleClickDocument(document, e)}
+            >
+                <td className="px-6 py-3 text-left">
+                    <div className="flex max-w-[10rem] flex-col break-words">
+                        <span className="text-sm font-light text-gray-700 dark:text-gray-300">{document.title}</span>
+                    </div>
+                </td>
+                <td className="px-6 py-3 text-left">{document.author}</td>
+                <td className="px-6 py-3 text-left">
+                    <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            document.status === "Approved"
+                                ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-100"
+                                : ["Pending", "Draft"].includes(document.status)
+                                  ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
+                                  : document.status === "Archived"
+                                    ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+                                    : document.status === "Rejected"
+                                      ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-100"
+                                      : ""
+                        }`}
+                    >
+                        {document.status}
+                    </span>
+                </td>
+                <td className="px-6 py-3 text-left">
+                    <div className="flex max-w-[6rem] flex-col break-words">
+                        <span className="text-sm font-light text-gray-700 dark:text-gray-300">{document.fileName}</span>
+                    </div>
+                </td>
+                <td className="px-6 py-3 text-left">
+                    <div className="flex gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewFile(document._id, document);
+                            }}
+                            className="rounded-full p-1 hover:bg-blue-100 dark:hover:bg-gray-600"
+                            title="View File"
+                        >
+                            <Eye className="h-4 w-4 text-blue-500" />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(document);
+                            }}
+                            className="rounded-full p-1 hover:bg-yellow-100 dark:hover:bg-gray-600"
+                            title="Edit"
+                        >
+                            <Pencil className="h-4 w-4 text-yellow-500" />
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(document._id);
+                            }}
+                            className="rounded-full p-1 hover:bg-red-100 dark:hover:bg-gray-600"
+                            title="Delete"
+                        >
+                            <Trash className="h-4 w-4 text-red-500" />
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        ));
+    };
 
     return (
         <div className="overflow-hidden rounded-lg bg-white shadow-md dark:bg-gray-800">
@@ -190,80 +334,7 @@ const DocumentTable = ({ documents, onEdit}) => {
                         </tr>
                     </thead>
                     <tbody className="text-sm font-light text-gray-600 dark:text-gray-300">
-                        {documents.map((document) => (
-                            <tr
-                                key={document._id}
-                                className="cursor-pointer border-b border-gray-200 hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-700"
-                                onClick={(e) => handleClickDocument(document, e)}
-                            >
-                                <td className="px-6 py-3 text-left">
-                                    <div className="flex max-w-[10rem] flex-col break-words">
-                                        <span className="text-sm font-light text-gray-700 dark:text-gray-300">
-                                            {document.title}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-3 text-left">{document.author}</td>
-                                <td className="px-6 py-3 text-left">
-                                    <span
-                                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                            document.status === "Approved"
-                                                ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-100"
-                                                : ["Pending", "Draft"].includes(document.status)
-                                                ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-100"
-                                                : document.status === "Archived"
-                                                ? "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
-                                                : document.status === "Rejected"
-                                                ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-100"
-                                                : ""
-                                        }`}
-                                    >
-                                        {document.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-3 text-left">
-                                    <div className="flex max-w-[6rem] flex-col break-words">
-                                        <span className="text-sm font-light text-gray-700 dark:text-gray-300">
-                                            {document.fileName}
-                                        </span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-3 text-left">
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleViewFile(document._id, document);
-                                            }}
-                                            className="rounded-full p-1 hover:bg-blue-100 dark:hover:bg-gray-600"
-                                            title="View File"
-                                        >
-                                            <Eye className="h-4 w-4 text-blue-500" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onEdit(document);
-                                            }}
-                                            className="rounded-full p-1 hover:bg-yellow-100 dark:hover:bg-gray-600"
-                                            title="Edit"
-                                        >
-                                            <Pencil className="h-4 w-4 text-yellow-500" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(document._id);
-                                            }}
-                                            className="rounded-full p-1 hover:bg-red-100 dark:hover:bg-gray-600"
-                                            title="Delete"
-                                        >
-                                            <Trash className="h-4 w-4 text-red-500" />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
+                        {renderTableContent()}
                     </tbody>
                 </table>
             </div>
@@ -272,7 +343,7 @@ const DocumentTable = ({ documents, onEdit}) => {
                 <div className="mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-white px-2 py-4 dark:bg-gray-800">
                     <button
                         onClick={() => goToPage(currentPage - 1)}
-                        disabled={currentPage === 1}
+                        disabled={currentPage === 1 || loading}
                         className="rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:disabled:opacity-50"
                     >
                         Prev
@@ -280,7 +351,7 @@ const DocumentTable = ({ documents, onEdit}) => {
                     {renderPageNumbers()}
                     <button
                         onClick={() => goToPage(currentPage + 1)}
-                        disabled={currentPage === totalPages}
+                        disabled={currentPage === totalPages || loading}
                         className="rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 disabled:opacity-50 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:disabled:opacity-50"
                     >
                         Next

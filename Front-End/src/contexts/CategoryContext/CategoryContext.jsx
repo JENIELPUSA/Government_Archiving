@@ -7,10 +7,10 @@ import axiosInstance from "../../ReusableFolder/axioxInstance";
 export const CategoryContext = createContext();
 
 export const CategoryDisplayProvider = ({ children }) => {
-    const [isCategory, setCategory] = useState([]); 
+    const [isCategory, setCategory] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const { authToken } = useContext(AuthContext); 
+    const { authToken } = useContext(AuthContext);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [customError, setCustomError] = useState("");
@@ -26,12 +26,19 @@ export const CategoryDisplayProvider = ({ children }) => {
         } catch (error) {
             console.error("Error fetching brands:", error);
             setError("Failed to fetch data.");
-        } 
+        }
     };
 
     useEffect(() => {
         fetchCategory();
     }, [authToken]);
+
+    useEffect(() => {
+        if (customError) {
+            setModalStatus("failed");
+            setShowModal(true);
+        }
+    }, [customError]);
 
     const AddCategory = async (values) => {
         try {
@@ -45,12 +52,12 @@ export const CategoryDisplayProvider = ({ children }) => {
                 },
             );
             if (res.data.status === "success") {
-                setCategory((prevUsers) => [...prevUsers, res.data.data]);
+                const newData = res.data.data;
                 setModalStatus("success");
                 setShowModal(true);
+                setCategory((prevUsers) => [...prevUsers, res.data.data]);
+                return { success: true, data: newData };
             } else {
-                setModalStatus("failed");
-                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -65,55 +72,48 @@ export const CategoryDisplayProvider = ({ children }) => {
             }
         }
     };
-const UpdateCategory = async ({ _id, category }) => {
-  try {
-    const response = await axiosInstance.patch(
-      `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${_id}`,
-      { category },
-      { headers: { Authorization: `Bearer ${authToken}` } }
-    );
+    const UpdateCategory = async ({ _id, category }) => {
+        try {
+            const response = await axiosInstance.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${_id}`,
+                { category },
+                { headers: { Authorization: `Bearer ${authToken}` } },
+            );
 
-    if (response.data?.status === "success") {
-      setCategory((prev) =>
-        prev.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u))
-      );
-      setModalStatus("success");
-      setShowModal(true);
-    } else {
-      setModalStatus("failed");
-      setShowModal(true);
-      return { success: false, error: "Unexpected response from server." };
-    }
-  } catch (error) {
-    const message =
-      error.response?.data?.message ||
-      error.response?.data?.error ||
-      error.message ||
-      "Unexpected error occurred.";
+            if (response.data?.status === "success") {
+                const newData = response.data.data;
+                setCategory((prev) => prev.map((u) => (u._id === newData._id ? { ...u, ...newData } : u)));
+                setModalStatus("success");
+                setShowModal(true);
+                return { success: true, data: newData };
+            } else {
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Unexpected error occurred.";
 
-    setCustomError(message);
-  }
-};
+            setCustomError(message);
+        }
+    };
 
-
-    const DeleteCategory = async (BrandId) => {
+    const deleteCategory = async (BrandId) => {
         try {
             const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/category/${BrandId}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
             if (response.data.status === "success") {
-                setCategory((prevUsers) => prevUsers.filter((user) => user._id !== BrandId));
+                const newData = response.data.data;
                 setModalStatus("success");
                 setShowModal(true);
+                setCategory((prevUsers) => prevUsers.filter((user) => user._id !== BrandId));
+                return { success: true, data: newData };
             } else {
-                setModalStatus("failed");
-                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
             console.error("Error deleting user:", error);
-            toast.error(error.response?.data?.message || "Failed to delete user.");
+            setCustomError(error.response?.data?.message || "Failed to delete user.");
         }
     };
 
@@ -125,7 +125,11 @@ const UpdateCategory = async ({ _id, category }) => {
                 fetchCategory,
                 loading,
                 error,
-                UpdateCategory,DeleteCategory
+                UpdateCategory,
+                deleteCategory,
+                setCategory,
+                customError,
+                setCustomError,
             }}
         >
             {children}
@@ -134,6 +138,7 @@ const UpdateCategory = async ({ _id, category }) => {
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
                 status={modalStatus}
+                error={customError}
             />
         </CategoryContext.Provider>
     );

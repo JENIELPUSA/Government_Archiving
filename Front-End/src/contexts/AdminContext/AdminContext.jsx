@@ -97,35 +97,76 @@ export const AdminDisplayProvider = ({ children }) => {
     };
 
     const UpdateAdmin = async (dataID, values) => {
+        console.log("Update",values)
         try {
-            const dataToSend = {
-                first_name: values.first_name || "",
-                last_name: values.last_name || "",
-                middle_name: values.middle_name || "", // make sure correct key
-                email: values.email || "",
-                specialty: values.specialty || "", // if department included
-            };
-
-            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${dataID}`, dataToSend, {
-                headers: { Authorization: `Bearer ${authToken}` },
+            const formData = new FormData();
+            formData.append("first_name", values.first_name || "");
+            formData.append("last_name", values.last_name || "");
+            formData.append("middle_name", values.middle_name || "");
+            formData.append("email", values.email || "");
+            formData.append("role", "admin");
+            if (values.avatar) formData.append("avatar", values.avatar);
+            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${dataID}`, formData, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
+                },
             });
 
-            if (response.data && response.data.status === "success") {
-                setAdmin((prevAdmin) => ({
-                    ...prevAdmin,
-                    ...response.data.data,
-                }));
+            if (response.data?.status === "success") {
+                return { success: true, data: response.data.data };
+            } else {
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Something went wrong.";
+
+            setCustomError(message);
+            setModalStatus("failed");
+            setShowModal(true);
+
+            return { success: false, error: message };
+        }
+    };
+
+    const AddAminData = async (values) => {
+        console.log("CONTXET", values);
+        try {
+            const formData = new FormData();
+            formData.append("first_name", values.first_name || "");
+            formData.append("last_name", values.last_name || "");
+            formData.append("email", values.email || "");
+            formData.append("gender", values.gender || "");
+            formData.append("role", "admin");
+
+            if (values.middle_name) {
+                formData.append("middle_name", values.middle_name);
+            }
+
+            if (values.avatar instanceof File) {
+                formData.append("avatar", values.avatar);
+            }
+
+            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (res.data.status === "Success") {
+                const newAdmin = res.data.data;
                 setModalStatus("success");
                 setShowModal(true);
+                return { success: true, data: newAdmin };
             } else {
                 setModalStatus("failed");
                 setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
-            if (error.response && error.response.data) {
-                const errorData = error.response.data;
-                const message = typeof errorData === "string" ? errorData : errorData.message || errorData.error || "Something went wrong.";
+            if (error.response?.data) {
+                const message = error.response.data.message || error.response.data.error || "Something went wrong.";
                 setCustomError(message);
             } else if (error.request) {
                 setCustomError("No response from the server.");
@@ -144,6 +185,7 @@ export const AdminDisplayProvider = ({ children }) => {
                 isTotalAdmin,
                 isAdminProfile,
                 FetchAdminData,
+                AddAminData,
             }}
         >
             {children}

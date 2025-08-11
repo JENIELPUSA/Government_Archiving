@@ -15,8 +15,8 @@ import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
 import { CategoryContext } from "../../../contexts/CategoryContext/CategoryContext";
 import { DepartmentContext } from "../../../contexts/DepartmentContext/DepartmentContext"; 
 import ViewOnly from "../../PdfViewer/ViewOnly";
-import CategoryTable from "./CategoryTable";
-import AddCategoryForm from "./AddCategoryForm";
+import CategoryTable from "../Category/CategoryTable";
+import AddCategoryForm from "../Category/AddCategoryForm";
 import DepartmentTable from "../Department/DepartmentTable";
 import AddDepartmentForm from "../Department/AddDepartmentForm";
 

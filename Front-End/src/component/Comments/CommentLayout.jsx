@@ -9,8 +9,6 @@ const CommentReview = () => {
     const [loading, setLoading] = useState(true);
     const [currentOpenDropdownId, setCurrentOpenDropdownId] = useState(null);
     const dropdownRefs = useRef({});
-
-    // NEW: State for date filters
     const [startDate, setStartDate] = useState(""); // Stores date in YYYY-MM-DD format
     const [endDate, setEndDate] = useState(""); // Stores date in YYYY-MM-DD format
 

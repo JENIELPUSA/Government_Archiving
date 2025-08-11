@@ -1,6 +1,6 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const Admin = require("../Models/AdminSchema");
-const Apifeatures = require("../Utils/ApiFeatures");
+const cloudinary = require("../Utils/cloudinary");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
 
 exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
@@ -59,12 +59,53 @@ exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
   });
 });
 
-exports.UpdateAdmin = AsyncErrorHandler(async (req, res, next) => {
-  const updateAdmin = await Admin.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.status(200).json({
-    status: "success",
-    data: updateAdmin,
-  });
-});
+exports.UpdateAdmin = async (req, res) => {
+  const adminId = req.params.id;
+
+  try {
+    const admin = await Admin.findById(adminId);
+    if (!admin) {
+      return res.status(404).json({ error: 'Admin not found' });
+    }
+
+    let avatar = admin.avatar;
+
+    if (req.file) {
+      if (avatar && avatar.public_id) {
+        try {
+          await cloudinary.uploader.destroy(avatar.public_id);
+        } catch (err) {
+          console.error('Failed to delete old image from Cloudinary:', err);
+        }
+      }
+
+      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
+        folder: 'Government Archiving/Profile',
+      });
+      avatar = {
+        public_id: uploadedResponse.public_id,
+        url: uploadedResponse.secure_url,
+      };
+    }
+
+    const updateData = {
+      first_name: req.body.first_name,
+      last_name: req.body.last_name,
+      middle_name: req.body.middle_name,
+      email: req.body.email,
+      gender: req.body.gender,
+      avatar,
+    };
+
+    const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, { new: true });
+
+    res.json({ status: 'success', data: updatedAdmin });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Something went wrong.' });
+  }
+};
+
+
+

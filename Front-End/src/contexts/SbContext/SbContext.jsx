@@ -55,6 +55,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
         }
     }, []);
 
+
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true);
@@ -102,10 +103,10 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 const newAdmin = res.data.data;
                 setModalStatus("success");
                 setShowModal(true);
-                DisplayPerSb()
+                DisplayPerSb();
                 return { success: true, data: newAdmin };
             } else {
-                 setModalStatus("failed");
+                setModalStatus("failed");
                 setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
