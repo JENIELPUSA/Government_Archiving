@@ -1,21 +1,19 @@
+// src/pages/SettingsPage.js
 import React, { useState, useContext } from 'react';
 import { motion } from 'framer-motion';
-import { FaCog, FaSave } from 'react-icons/fa';
-import GeneralSettings from './GeneralSettings';
-import AccountSettings from './AccountSettings';
-import StorageSettings from './StorageSettings';
-import ApproverSettings from './ApproverSettings';
+import GeneralSettings from '../../component/Setting/GeneralSettings';
+import AccountSettings from '../../component/Setting/AccountSettings';
+import StorageSettings from '../../component/Setting/StorageSettings';
+import ApproverSettings from '../../component/Setting/ApproverSettings';
+import PictureUploadSettings from '../../component/Setting/UploadPicture/PictureUploadSettings';
 import { ApproverDisplayContext } from '../../contexts/ApproverContext/ApproverContext';
 
 const SettingsPage = () => {
-  const { approver, setApprover } = useContext(ApproverDisplayContext); // single data lang, not array
-
+  const { approver, setApprover } = useContext(ApproverDisplayContext);
   const [autoMoveArchive, setAutoMoveArchive] = useState(true);
   const [fileRetention, setFileRetention] = useState(365);
   const [storageQuota, setStorageQuota] = useState(50);
   const [showPassword, setShowPassword] = useState(false);
-
-  console.log("APPROVER DATA:", approver);
 
   return (
     <div className="text-gray-800 dark:text-gray-100">
@@ -47,8 +45,10 @@ const SettingsPage = () => {
           />
 
           <StorageSettings storageQuota={storageQuota} />
-
-          {/* Pass single approver object */}
+          
+          {/* Picture Upload Component */}
+          <PictureUploadSettings />
+          
           <ApproverSettings 
             approvers={approver} 
             setApprover={setApprover} 

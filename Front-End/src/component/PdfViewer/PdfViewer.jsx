@@ -82,7 +82,6 @@ const PdfViewer = () => {
                                 width: imgWidth,
                                 height: imgHeight,
                                 opacity: 0.4,
-                              
                             });
                         }
 
@@ -220,148 +219,143 @@ const PdfViewer = () => {
         }
     };
 
-const handleSave = async () => {
-    try {
-        const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
-        const pages = pdfDoc.getPages();
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const handleSave = async () => {
+        try {
+            const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
+            const pages = pdfDoc.getPages();
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-        const boundingBox = pageContainerRef.current?.getBoundingClientRect();
-        const renderedPageWidth = boundingBox?.width ?? 1;
-        const renderedPageHeight = boundingBox?.height ?? 1;
+            const boundingBox = pageContainerRef.current?.getBoundingClientRect();
+            const renderedPageWidth = boundingBox?.width ?? 1;
+            const renderedPageHeight = boundingBox?.height ?? 1;
 
-        // Apply signatures and text
-        for (let i = 0; i < pages.length; i++) {
-            const page = pages[i];
-            const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
-            const scaleX = pdfPageWidth / renderedPageWidth;
-            const scaleY = pdfPageHeight / renderedPageHeight;
+            // Apply signatures and text
+            for (let i = 0; i < pages.length; i++) {
+                const page = pages[i];
+                const { width: pdfPageWidth, height: pdfPageHeight } = page.getSize();
+                const scaleX = pdfPageWidth / renderedPageWidth;
+                const scaleY = pdfPageHeight / renderedPageHeight;
 
-            // Signatures - with centered logo for approved
-            for (const sig of placedSignatures.filter((s) => s.page === i + 1)) {
-                const imageBytes = await fetch(sig.src).then((res) => res.arrayBuffer());
-                const pdfImage = sig.src.includes("png") 
-                    ? await pdfDoc.embedPng(imageBytes) 
-                    : await pdfDoc.embedJpg(imageBytes);
+                // Signatures - with centered logo for approved
+                for (const sig of placedSignatures.filter((s) => s.page === i + 1)) {
+                    const imageBytes = await fetch(sig.src).then((res) => res.arrayBuffer());
+                    const pdfImage = sig.src.includes("png") ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
 
-                const scaledX = sig.x * scaleX;
-                const scaledY = sig.y * scaleY;
-                const scaledWidth = sig.width * scaleX;
-                const scaledHeight = sig.height * scaleY;
-                const adjustedY = pdfPageHeight - scaledY - scaledHeight - 2;
+                    const scaledX = sig.x * scaleX;
+                    const scaledY = sig.y * scaleY;
+                    const scaledWidth = sig.width * scaleX;
+                    const scaledHeight = sig.height * scaleY;
+                    const adjustedY = pdfPageHeight - scaledY - scaledHeight - 2;
 
-                // Center the approved logo horizontally
-                const adjustedX = sig.isApprovedLogo 
-                    ? (pdfPageWidth - scaledWidth) / 10 // Center horizontally
-                    : scaledX + 70;  // Regular positioning
+                    // Center the approved logo horizontally
+                    const adjustedX = sig.isApprovedLogo
+                        ? (pdfPageWidth - scaledWidth) / 10 // Center horizontally
+                        : scaledX + 70; // Regular positioning
+                    page.drawImage(pdfImage, {
+                        x: adjustedX,
+                        y: adjustedY,
+                        width: scaledWidth,
+                        height: scaledHeight,
+                    });
+                }
 
-                page.drawImage(pdfImage, {
-                    x: adjustedX,
-                    y: adjustedY,
-                    width: scaledWidth,
-                    height: scaledHeight,
-                });
+                // Text elements
+                for (const text of placedTexts.filter((t) => t.page === i + 1)) {
+                    const scaledX = text.x * scaleX;
+                    const scaledY = text.y * scaleY;
+                    const scaledFontSize = text.fontSize * scaleY;
+                    const adjustedTextY = pdfPageHeight - scaledY - scaledFontSize - 16;
+                    const calculatedMaxWidth = (text.width + 40) * scaleX;
+                    const textWidth = font.widthOfTextAtSize(text.value, scaledFontSize);
+
+                    // Center text horizontally
+                    const centerX = scaledX + (calculatedMaxWidth - textWidth) / 2;
+
+                    page.drawText(text.value, {
+                        x: centerX,
+                        y: adjustedTextY,
+                        font,
+                        size: scaledFontSize,
+                        color: rgb(
+                            parseInt(text.fontColor.slice(1, 3), 16) / 255,
+                            parseInt(text.fontColor.slice(3, 5), 16) / 255,
+                            parseInt(text.fontColor.slice(5, 7), 16) / 255,
+                        ),
+                        maxWidth: calculatedMaxWidth,
+                        lineHeight: scaledFontSize * 1.2,
+                    });
+                }
             }
-            
-            // Text elements
-            for (const text of placedTexts.filter((t) => t.page === i + 1)) {
-                const scaledX = text.x * scaleX;
-                const scaledY = text.y * scaleY;
-                const scaledFontSize = text.fontSize * scaleY;
-                const adjustedTextY = pdfPageHeight - scaledY - scaledFontSize - 16;
-                const calculatedMaxWidth = (text.width + 40) * scaleX;
-                const textWidth = font.widthOfTextAtSize(text.value, scaledFontSize);
-                
-                // Center text horizontally
-                const centerX = scaledX + (calculatedMaxWidth - textWidth) / 2;
 
-                page.drawText(text.value, {
-                    x: centerX,
-                    y: adjustedTextY,
-                    font,
-                    size: scaledFontSize,
-                    color: rgb(
-                        parseInt(text.fontColor.slice(1, 3), 16) / 255,
-                        parseInt(text.fontColor.slice(3, 5), 16) / 255,
-                        parseInt(text.fontColor.slice(5, 7), 16) / 255,
-                    ),
-                    maxWidth: calculatedMaxWidth,
-                    lineHeight: scaledFontSize * 1.2,
-                });
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+            const originalName = fileData?.fileName || "document.pdf";
+            const baseMatch = originalName.match(/^(.*?)(?:_v(\d+))?\.pdf$/i);
+            let baseName = baseMatch?.[1] || "document";
+            let currentVersion = baseMatch?.[2] ? parseInt(baseMatch[2]) : 0;
+            const newVersion = currentVersion + 1;
+            const newFilename = `${baseName}_v${newVersion}.pdf`;
+            const formData = new FormData();
+            formData.append("file", blob, newFilename);
+            formData.append("fileId", fileData._id);
+            formData.append("title", fileData.title);
+            formData.append("category", fileData.categoryID);
+            formData.append("summary", fileData.summary || "");
+            formData.append("resolutionNumber", fileData.resolutionNumber || "");
+            formData.append("dateOfResolution", fileData.dateOfResolution || "");
+            formData.append("admin", fileData.admin);
+            formData.append("status", "Approved");
+            if (fileData.author) {
+                formData.append("author", fileData.author || "");
             }
-        }
+            if (fileData.approverID) {
+                formData.append("approverID", fileData.approverID);
+            }
+            if (fileData.officer) {
+                formData.append("officer", fileData.officer);
+            }
 
-        const pdfBytes = await pdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        const originalName = fileData?.fileName || "document.pdf";
-        const baseMatch = originalName.match(/^(.*?)(?:_v(\d+))?\.pdf$/i);
-        let baseName = baseMatch?.[1] || "document";
-        let currentVersion = baseMatch?.[2] ? parseInt(baseMatch[2]) : 0;
-        const newVersion = currentVersion + 1;
-        const newFilename = `${baseName}_v${newVersion}.pdf`;
-        const formData = new FormData();
-        formData.append("file", blob, newFilename);
-        formData.append("fileId", fileData._id);
-        formData.append("title", fileData.title);
-        formData.append("category", fileData.categoryID);
-        formData.append("summary", fileData.summary || "");
-        formData.append("admin", fileData.admin);
-        formData.append("status", "Approved");
-        if (fileData.author) {
-            formData.append("author", fileData.author|| "");
-        }
-        if (fileData.approverID) {
-            formData.append("approverID", fileData.approverID);
-        }
-        if (fileData.officer) {
-            formData.append("officer", fileData.officer);
-        }
-
-        const response = await axios.post(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/UpdateCloudinary`,
-            formData,
-            {
+            const response = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/UpdateCloudinary`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
                 },
-            }
-        );
-
-        if (response.data.status === "success") {
-            setModalStatus("success");
-            setShowModal(true);
-            FetchOfficerFiles();
-            setTimeout(() => {
-                navigate("/dashboard");
-            }, 1500);
-        } else {
-            alert("⚠️ Update failed. Please try again.");
-        }
-    } catch (err) {
-        console.error("❌ Error during PDF save:", err);
-
-        if (err.response) {
-            const status = err.response.status;
-            const message = err.response.data?.message || "Unknown server error";
-            const errorDetails = err.response.data?.error;
-
-            console.error("📡 Server error:", {
-                status,
-                message,
-                errorDetails,
             });
 
-            alert(`❗Server Error (${status}): ${message}`);
-        } else if (err.request) {
-            console.error("📭 No response received:", err.request);
-            alert("❗Walang natanggap na response mula sa server.");
-        } else {
-            console.error("⚠️ Request setup error:", err.message);
-            alert("❗May nangyaring error habang naghahanda ng request.");
+            if (response.data.status === "success") {
+                setModalStatus("success");
+                setShowModal(true);
+                FetchOfficerFiles();
+                setTimeout(() => {
+                    navigate("/dashboard");
+                }, 1500);
+            } else {
+                alert("⚠️ Update failed. Please try again.");
+            }
+        } catch (err) {
+            console.error("❌ Error during PDF save:", err);
+
+            if (err.response) {
+                const status = err.response.status;
+                const message = err.response.data?.message || "Unknown server error";
+                const errorDetails = err.response.data?.error;
+
+                console.error("📡 Server error:", {
+                    status,
+                    message,
+                    errorDetails,
+                });
+
+                alert(`❗Server Error (${status}): ${message}`);
+            } else if (err.request) {
+                console.error("📭 No response received:", err.request);
+                alert("❗Walang natanggap na response mula sa server.");
+            } else {
+                console.error("⚠️ Request setup error:", err.message);
+                alert("❗May nangyaring error habang naghahanda ng request.");
+            }
         }
-    }
-};
+    };
     const handleApprovedReject = () => {
         setApproved(true);
         setApprovedData(fileData);

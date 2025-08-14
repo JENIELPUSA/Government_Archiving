@@ -10,7 +10,12 @@ avatar: {
   middle_name: String,
   gender: { type: String, enum: ["Male", "Female"] },
   contact_number: String,
-  email: String,
+   email: {
+    type: String,
+    required: true,
+    unique: true, 
+    trim: true 
+  },
   created_at: { type: Date, default: Date.now },
 });
 

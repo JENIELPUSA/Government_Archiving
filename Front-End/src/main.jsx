@@ -23,53 +23,59 @@ import { UpdateDisplayProvider } from "./contexts/UpdateContext/updateContext.js
 import { SbMemberDisplayProvider } from "./contexts/SbContext/SbContext.jsx";
 import { ApproverDisplayProvider } from "./contexts/ApproverContext/ApproverContext.jsx";
 import NoSignalModal from "./component/NoSignalModal/NoSignalModal";
+import { NewsDisplayProvider } from "./contexts/NewsContext/NewsContext.jsx";
+import { FolderDisplayProvider } from "./contexts/FolderContext/FolderContext.jsx";
 createRoot(document.getElementById("root")).render(
     // <StrictMode>
     <AuthProvider>
-        <NoSignalModal/>
-        <ApproverDisplayProvider>
-            <SbMemberDisplayProvider>
-                <StorageOptimizationProvider>
-                    <UpdateDisplayProvider>
-                        <RetentionDisplayProvider>
-                            <AdminDisplayProvider>
-                                <NotificationDisplayProvider>
-                                    <LogsDisplayProvider>
-                                        <CategoryDisplayProvider>
-                                            <RatingDisplayProvider>
-                                                <CommentDisplayProvider>
-                                                    <OfficerDisplayProvider>
-                                                        <DepartmentDisplayProvider>
-                                                            <UserDisplayProvider>
-                                                                <FilesDisplayProvider>
-                                                                    <SocketListener />
-                                                                    <App />
-                                                                    <AxiosInterceptor />
-                                                                    <ToastContainer
-                                                                        position="top-right"
-                                                                        autoClose={3000}
-                                                                        hideProgressBar={false}
-                                                                        newestOnTop
-                                                                        closeOnClick
-                                                                        pauseOnHover
-                                                                        draggable
-                                                                        theme="light"
-                                                                    />
-                                                                </FilesDisplayProvider>
-                                                            </UserDisplayProvider>
-                                                        </DepartmentDisplayProvider>
-                                                    </OfficerDisplayProvider>
-                                                </CommentDisplayProvider>
-                                            </RatingDisplayProvider>
-                                        </CategoryDisplayProvider>
-                                    </LogsDisplayProvider>
-                                </NotificationDisplayProvider>
-                            </AdminDisplayProvider>
-                        </RetentionDisplayProvider>
-                    </UpdateDisplayProvider>
-                </StorageOptimizationProvider>
-            </SbMemberDisplayProvider>
-        </ApproverDisplayProvider>
+        <NoSignalModal />
+        <FolderDisplayProvider>
+            <NewsDisplayProvider>
+                <ApproverDisplayProvider>
+                    <SbMemberDisplayProvider>
+                        <StorageOptimizationProvider>
+                            <UpdateDisplayProvider>
+                                <RetentionDisplayProvider>
+                                    <AdminDisplayProvider>
+                                        <NotificationDisplayProvider>
+                                            <LogsDisplayProvider>
+                                                <CategoryDisplayProvider>
+                                                    <RatingDisplayProvider>
+                                                        <CommentDisplayProvider>
+                                                            <OfficerDisplayProvider>
+                                                                <DepartmentDisplayProvider>
+                                                                    <UserDisplayProvider>
+                                                                        <FilesDisplayProvider>
+                                                                            <SocketListener />
+                                                                            <App />
+                                                                            <AxiosInterceptor />
+                                                                            <ToastContainer
+                                                                                position="top-right"
+                                                                                autoClose={3000}
+                                                                                hideProgressBar={false}
+                                                                                newestOnTop
+                                                                                closeOnClick
+                                                                                pauseOnHover
+                                                                                draggable
+                                                                                theme="light"
+                                                                            />
+                                                                        </FilesDisplayProvider>
+                                                                    </UserDisplayProvider>
+                                                                </DepartmentDisplayProvider>
+                                                            </OfficerDisplayProvider>
+                                                        </CommentDisplayProvider>
+                                                    </RatingDisplayProvider>
+                                                </CategoryDisplayProvider>
+                                            </LogsDisplayProvider>
+                                        </NotificationDisplayProvider>
+                                    </AdminDisplayProvider>
+                                </RetentionDisplayProvider>
+                            </UpdateDisplayProvider>
+                        </StorageOptimizationProvider>
+                    </SbMemberDisplayProvider>
+                </ApproverDisplayProvider>
+            </NewsDisplayProvider>
+        </FolderDisplayProvider>
     </AuthProvider>,
     // </StrictMode>
 );

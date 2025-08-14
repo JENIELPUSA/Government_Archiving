@@ -5,7 +5,7 @@ import {
     Home,
     SquarePen,
     FolderClock,
-    SquareMenu ,
+    SquareMenu,
     Settings,
     Logs,
     View,
@@ -21,6 +21,16 @@ export const navbarLinks = [
                 label: "Dashboard",
                 icon: Home,
                 path: "/dashboard",
+            },
+        ],
+    },
+    {
+        title: "Member List",
+        links: [
+            {
+                label: "SB Member List",
+                icon: Users,
+                path: "/dashboard/SBmember",
             },
         ],
     },
@@ -41,15 +51,16 @@ export const navbarLinks = [
                 label: "View Documents",
                 icon: View,
                 path: "/dashboard/view-documents",
-            },         {
-                label: "Category",
-                icon: SquareMenu ,
-                   path: "/dashboard/Category",
             },
             {
-                label: "Recent Documents",
+                label: "Category",
+                icon: SquareMenu,
+                path: "/dashboard/Category",
+            },
+            {
+                label: "Old Documents",
                 icon: FolderClock,
-                path: "/dashboard/recent",
+                path: "/dashboard/oldFiles",
             },
         ],
     },
@@ -65,19 +76,10 @@ export const navbarLinks = [
                 label: "Audit Logs",
                 icon: Logs,
                 path: "/dashboard/logs",
-            }
-        ],
-    },
-    {
-        title: "Member List",
-        links: [
-            {
-                label: "SB Member List",
-                icon: Users,
-                path: "/dashboard/SBmember",
             },
         ],
     },
+
     {
         title: "System Settings",
         links: [
@@ -85,8 +87,7 @@ export const navbarLinks = [
                 label: "Settings",
                 icon: Settings,
                 path: "dashboard/settings",
-            }
- 
+            },
         ],
     },
 ];

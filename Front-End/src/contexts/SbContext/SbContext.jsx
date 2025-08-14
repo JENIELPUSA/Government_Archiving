@@ -16,7 +16,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const [isGroupFiles, setGroupFiles] = useState([]);
     const [totalPages, setTotalPages] = useState(1);
     const [currentPage, setCurrentPage] = useState(1);
-    const limit = 6;
+    const limit = 9;
 
     const FetchDisplaySbMember = useCallback(async () => {
         if (!authToken) return;
@@ -46,7 +46,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 params,
             });
 
-            const { totalPages, currentPage, results } = res.data;
+            const { totalPages, currentPage} = res.data;
             setGroupFiles(res.data.data);
             setTotalPages(totalPages);
             setCurrentPage(currentPage);

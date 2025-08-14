@@ -24,9 +24,6 @@ export const DocumentCard = ({ doc, onSelect }) => (
             <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
                 {doc.fullText}
             </span>
-            <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
-                {doc.department}
-            </span>
             <span className={`rounded-full px-2 py-1 text-xs font-medium ${
                 doc.status === 'ArchiveLayoutroved' 
                     ? 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300' 

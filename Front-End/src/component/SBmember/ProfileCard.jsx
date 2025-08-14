@@ -44,9 +44,6 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
                                 alt={memberInfo?.fullName || "Profile"}
                                 className="h-16 w-16 rounded-full border-4 border-white object-cover shadow-md sm:h-20 sm:w-20 md:h-24 md:w-24"
                             />
-                            <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 transform whitespace-nowrap rounded-full bg-green-500 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm md:text-xs">
-                                Online
-                            </span>
                         </div>
                     </div>
 

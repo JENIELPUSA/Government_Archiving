@@ -9,6 +9,7 @@ export const FilesDisplayProvider = ({ children }) => {
     const [customError, setCustomError] = useState("");
     const { authToken } = useContext(AuthContext);
     const [loading, setLoading] = useState(true);
+    const [isLatestBill, setLatestBill] = useState([]);
     const [isFile, setFiles] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
@@ -20,12 +21,28 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isTodayDocuments, setTodayDocuments] = useState(0);
     const [isActiveTags, setActiveTags] = useState([]);
     const [filters, setFilters] = useState({});
-    const limit = 5;
+    const [isArchived, setArchived] = useState([]);
+
+    const [isDeletedData, setDeletedData] = useState([]);
+    const [isForRestoreData, setForRestoreData] = useState([]);
+    const [isArchivedData, setArchivedData] = useState([]);
+    const [isCount, setCount] = useState([]);
+    const [isPublicDatas, setPublicDatas] = useState([]);
+
+    const [currentPageDeleted, setTotalPagesDeleted] = useState([]);
+    const [currentPageForRestore, setTotalPagesForRestore] = useState([]);
+    const [currentPageArchived, setTotalPagesArchived] = useState([]);
+    const [currentPagePublic, setTotalPagesPublic] = useState({});
+    const [Archivedtotalpage, setArchivedtotalpage] = useState({});
+    const [Archivedcurrentpage, setArchivedcurrentpage] = useState({});
+    const [isPublic, setPublic] = useState({});
+    const [isPublictotalpage, setPublictotalpage] = useState({});
+    const [isPubliccurrentpage, setPubliccurrentpage] = useState({});
     useEffect(() => {
         if (!authToken) return;
 
         const fetchAll = async () => {
-            await Promise.all([FetchFiles(), fetchpublicdata()]);
+            await Promise.all([FetchFiles(), fetchpublicdata(), FetchArchiveFiles(), fetchAchivedData()]);
         };
 
         fetchAll();
@@ -33,6 +50,8 @@ export const FilesDisplayProvider = ({ children }) => {
 
     useEffect(() => {
         fetchpublicdata();
+        fetchlatestdata();
+        fetchPublicDisplay();
     }, []);
 
     useEffect(() => {
@@ -90,6 +109,21 @@ export const FilesDisplayProvider = ({ children }) => {
             const user = res?.data?.data;
             setPublicData(user);
             console.log("User", user);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+        }
+    };
+
+    const fetchlatestdata = async () => {
+        try {
+            const res = await axios.post(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetLatestBill`,
+                {},
+                { withCredentials: true },
+            );
+
+            const { latestBill } = res.data;
+            setLatestBill(latestBill);
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -317,9 +351,108 @@ export const FilesDisplayProvider = ({ children }) => {
         }
     };
 
+    const FetchArchiveFiles = useCallback(
+        async (searchTerm = "", tags = []) => {
+            if (!authToken) return;
+
+            try {
+                const res = await axiosInstance.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/ArchiveFile`, {
+                    params: {
+                        pageDeleted: currentPageDeleted,
+                        pageForRestore: currentPageForRestore,
+                        pageArchived: currentPageArchived,
+                        pagePublic: currentPagePublic,
+                        search: searchTerm,
+                        tags: tags.join(","),
+                    },
+                    withCredentials: true,
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                        "Cache-Control": "no-cache",
+                    },
+                });
+
+                const { deleted, forRestore, archived, public: publicData, counts, totalPages } = res.data;
+
+                setDeletedData(deleted);
+                setForRestoreData(forRestore);
+                setArchivedData(archived);
+                setPublicDatas(publicData);
+                setCount(counts);
+                setTotalPagesDeleted(totalPages.deleted);
+                setTotalPagesForRestore(totalPages.forRestore);
+                setTotalPagesArchived(totalPages.archived);
+                setTotalPagesPublic(totalPages.public);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        },
+        [authToken, currentPageDeleted, currentPageForRestore, currentPageArchived, currentPagePublic],
+    );
+
+    const fetchAchivedData = async (queryParams = {}) => {
+        try {
+            const res = await axiosInstance.post(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetArchivedData`,
+                {},
+                {
+                    withCredentials: true,
+                    params: queryParams,
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                        "Cache-Control": "no-cache",
+                    },
+                },
+            );
+
+            const { currentPage, totalPages } = res.data;
+            const ArchivedData = res.data.data || [];
+            setArchived(ArchivedData);
+            setArchivedtotalpage(totalPages);
+            setArchivedcurrentpage(currentPage);
+        } catch (error) {
+            console.error("Error fetching archived data:", error);
+        }
+    };
+const fetchPublicDisplay = useCallback(async (queryParams = {}) => {
+    try {
+        const res = await axiosInstance.post(
+            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/DocumentPerYear`,
+            {},
+            {
+                withCredentials: true,
+                params: queryParams,
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Cache-Control": "no-cache",
+                },
+            },
+        );
+
+        const ArchivedData = res.data || []; // array of year groups
+        setPublic(ArchivedData);
+
+        // Example: pag gusto mo lang first year’s pagination
+        if (ArchivedData.length > 0) {
+            setPublictotalpage(ArchivedData[0].totalPages || 1);
+            setPubliccurrentpage(ArchivedData[0].currentPage || 1);
+        } else {
+            setPublictotalpage(1);
+            setPubliccurrentpage(1);
+        }
+
+    } catch (error) {
+        console.error("Error fetching archived data:", error);
+    }
+}, [authToken]);
+
+
     return (
         <FilesDisplayContext.Provider
             value={{
+                isPublic,
+                isPublictotalpage,
+                isPubliccurrentpage,
                 AddFiles,
                 isFile,
                 DeleteFiles,
@@ -341,6 +474,17 @@ export const FilesDisplayProvider = ({ children }) => {
                 filters,
                 isActiveTags,
                 customError,
+                isLatestBill,
+                isDeletedData,
+                isForRestoreData,
+                isArchivedData,
+                isCount,
+                isPublicDatas,
+                fetchAchivedData,
+                isArchived,
+                Archivedtotalpage,
+                Archivedcurrentpage,
+                fetchPublicDisplay,
             }}
         >
             {children}

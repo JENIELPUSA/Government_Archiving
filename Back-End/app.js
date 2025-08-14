@@ -38,6 +38,11 @@ const SbmemberRoute = require("./Routes/SbmemberRoute")
 
 const ApproverRoute = require("./Routes/ApproverRoute")
 
+const NewsRoute = require("./Routes/NewsRoute")
+
+
+const FolderRoute = require("./Routes/FolderRoute")
+
 let app = express();
 
 const logger = function (req, res, next) {
@@ -97,6 +102,8 @@ app.use("/api/v1/Retention", Retention);
 app.use("/api/v1/Optimization", StorageOptimization);
 app.use("/api/v1/SbmemberRoute", SbmemberRoute);
 app.use("/api/v1/Approver", ApproverRoute);
+app.use("/api/v1/News", NewsRoute);
+app.use("/api/v1/Folder",FolderRoute)
 
 
 app.use(ErrorController);

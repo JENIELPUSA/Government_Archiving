@@ -1,7 +1,7 @@
 // App.jsx
 import React, { useState } from "react";
 import SBMembers from "../PublicView/SBMember";
-import Home from "./Home";
+import Home from "./Home/Home";
 import Documents from "./Document";
 import Navbar from "./Navbar";
 import AboutUs from "./AboutUs"
@@ -21,7 +21,7 @@ const App = () => {
       case "about-us":
      <  AboutUs/>
       default:
-        return <Home />;
+        return <AboutUs />;
     }
   };
 

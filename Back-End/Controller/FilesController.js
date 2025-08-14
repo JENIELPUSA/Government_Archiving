@@ -8,8 +8,9 @@ const axios = require("axios");
 const ActivityLog = require("./../Models/LogActionAudit");
 const Notification = require("../Models/NotificationSchema");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
+const Category = require("../Models/CategorySchema");
 const SBmember = require("../Models/SBmember");
-
+const { ObjectId } = require("mongodb");
 const sanitizeFolderName = (name) => {
   return name
     .replace(/[^a-zA-Z0-9\s]/g, "")
@@ -325,20 +326,20 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
 exports.createFiles = AsyncErrorHandler(async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
     const {
       title,
       category,
       summary,
       author,
       admin,
-      archived,
       resolutionNumber,
       dateOfResolution,
       approverID,
+      oldFile,
+      folderID,
       status = "Pending",
     } = req.body;
-
-    console.log("File creation request body:", req.body);
 
     if (!title || !admin || !category)
       return res.status(400).json({ error: "Missing required fields" });
@@ -346,9 +347,10 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(admin))
       return res.status(400).json({ error: "Invalid admin ID format" });
 
-    if (approverID && !mongoose.Types.ObjectId.isValid(approverID)) {
+    if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
       return res.status(400).json({ error: "Invalid approver ID format" });
-    }
+
+    // File upload
     const ext = path.extname(req.file.originalname);
     const baseName = path.basename(req.file.originalname, ext);
     const fileName = `${Date.now()}_${baseName}${ext}`;
@@ -401,7 +403,8 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
     const fileSize = req.file.size;
 
-    const newFile = new Files({
+    // Build file data object dynamically
+    const fileData = {
       title,
       resolutionNumber,
       category,
@@ -414,10 +417,21 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       dateOfResolution,
       fileUrl: result.secure_url,
       fileName,
+      oldFile,
+      folderID,
       folderPath,
       fullText: fullTextType,
-      Archived: archived === "true",
-    });
+    };
+
+
+    console.log("OLDFILE",oldFile)
+
+    if (oldFile === "true" || oldFile === true) {
+      fileData.ArchivedStatus = "Archived";
+      fileData.Archived = true;
+    }
+
+    const newFile = new Files(fileData);
 
     let savedFile;
     try {
@@ -428,6 +442,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       return res.status(500).json({ error: "Failed to save file to database" });
     }
 
+    // Activity log
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
     const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
@@ -447,6 +462,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           })
         : Promise.resolve();
 
+    // Enrichment
     const enrichmentPromise = Files.aggregate([
       { $match: { _id: savedFile._id } },
       {
@@ -457,9 +473,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           as: "categoryInfo",
         },
       },
-      {
-        $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true },
-      },
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
       {
         $project: {
           title: 1,
@@ -471,14 +485,13 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           approverID: 1,
           fullText: 1,
           Archived: 1,
+          ArchivedStatus: 1,
+          status: 1,
           createdAt: 1,
-          fileSize: 1,
           updatedAt: 1,
-          departmentId: { $arrayElemAt: ["$departmentInfo._id", 0] },
+          fileSize: 1,
           category: "$categoryInfo.category",
           categoryID: "$categoryInfo._id",
-          status: 1,
-          approverID: 1,
         },
       },
     ]);
@@ -488,12 +501,12 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       enrichmentPromise,
     ]);
     const enrichedFile = enrichedFileResult[0];
+
+    // Notification for Pending
     if (savedFile.status === "Pending") {
-      console.log("Creating notification for Pending file");
       const fileId = savedFile._id;
       const fileTitle = savedFile.title || "Untitled Document";
       const categoryTitle = enrichedFile.category || "Unknown Category";
-
       const messageText = `New document pending your approval: "${fileTitle}" from ${categoryTitle}`;
 
       const targetViewer =
@@ -501,26 +514,18 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           ? approverID
           : author;
 
-      try {
-        if (!mongoose.Types.ObjectId.isValid(targetViewer)) {
-          console.log("Invalid target viewer ID, skipping notification");
-        } else {
-          const viewersArray = [
-            {
-              user: targetViewer,
-              isRead: false,
-              isApprover: !!approverID, // true if approverID exists
-            },
-          ];
+      if (mongoose.Types.ObjectId.isValid(targetViewer)) {
+        const viewersArray = [
+          { user: targetViewer, isRead: false, isApprover: !!approverID },
+        ];
 
+        if (approverID) {
           const notificationDoc = await Notification.create({
             message: messageText,
             viewers: viewersArray,
             FileId: fileId,
-            relatedApprover: approverID, // this can still be null
+            relatedApprover: approverID,
           });
-
-          console.log("Notification created:", notificationDoc._id);
 
           const io = req.app.get("io");
           if (io) {
@@ -546,12 +551,8 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
                 `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
               );
             }
-          } else {
-            console.warn("Socket.io instance not available");
           }
         }
-      } catch (error) {
-        console.error("Notification creation failed:", error.message);
       }
     }
 
@@ -569,13 +570,10 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 5;
   const skip = (page - 1) * limit;
-
-  console.log("DisplayFiles Controller")
-
   const { title, tags, status, category, dateFrom, dateTo } = req.query;
 
   const matchStage = {
-    ArchivedStatus: "Active", // <--- IMPORTANT!
+    ArchivedStatus: "Active",
   };
 
   if (title) {
@@ -696,6 +694,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
               suggestion: 1,
               ArchivedStatus: 1,
               fileSize: 1,
+              oldFile: 1,
               tags: 1,
               createdAt: 1,
               dateOfResolution: 1,
@@ -748,10 +747,32 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     },
   });
 
+  const now = new Date();
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday (0) as start
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+  endOfWeek.setHours(23, 59, 59, 999);
+
+  const latestBill = await Files.find({
+    ArchivedStatus: "Active",
+    status: "Approved",
+    dateOfResolution: {
+      $gte: startOfWeek,
+      $lte: endOfWeek,
+    },
+  })
+    .sort({ dateOfResolution: -1 })
+    .limit(3)
+    .select("title dateOfResolution status fileUrl fileName");
+
   res.status(200).json({
     status: "success",
     currentPage: page,
     totalPages,
+    latestBill,
     totalCount,
     totalDocumentsToday,
     results: files.length,
@@ -760,12 +781,132 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   });
 });
 
+exports.getLatestBillsThisWeek = async (req, res) => {
+  try {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = (day === 0 ? -6 : 1) - day;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() + diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    const latestBill = await Files.aggregate([
+      {
+        $match: {
+          ArchivedStatus: "Active",
+          status: "Approved", // o "Approved" kung yun ang gamit mo
+          dateOfResolution: { $ne: null }, // para sigurado may date
+        },
+      },
+      {
+        $lookup: {
+          from: "admins",
+          localField: "admin",
+          foreignField: "_id",
+          as: "adminInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "sbmembers",
+          localField: "author",
+          foreignField: "_id",
+          as: "authorInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "officers",
+          localField: "officer",
+          foreignField: "_id",
+          as: "officerInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "admins",
+          localField: "archivedMetadata.archivedBy",
+          foreignField: "_id",
+          as: "archiverInfo",
+        },
+      },
+      { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+
+      // sort by dateOfResolution para latest base sa resolution date
+      { $sort: { dateOfResolution: -1 } },
+      { $limit: 3 }, // tatlo lang
+
+      {
+        $project: {
+          title: 1,
+          summary: 1,
+          fullText: 1,
+          fileUrl: 1,
+          fileName: 1,
+          status: 1,
+          approverID: 1,
+          suggestion: 1,
+          ArchivedStatus: 1,
+          fileSize: 1,
+          tags: 1,
+          createdAt: 1,
+          dateOfResolution: 1,
+          resolutionNumber: 1,
+          updatedAt: 1,
+          "archivedMetadata.dateArchived": 1,
+          "archivedMetadata.notes": 1,
+          "archivedMetadata.archivedBy": 1,
+          author: {
+            $concat: [
+              "$authorInfo.first_name",
+              " ",
+              "$authorInfo.middle_name",
+              " ",
+              "$authorInfo.last_name",
+            ],
+          },
+          departmentID: "$authorInfo._id",
+          category: "$categoryInfo.category",
+          categoryID: "$categoryInfo._id",
+          admin: 1,
+          admin_first_name: "$adminInfo.first_name",
+          admin_last_name: "$adminInfo.last_name",
+          archivedBy_first_name: "$archiverInfo.first_name",
+          archivedBy_last_name: "$archiverInfo.last_name",
+          officer: "$officerInfo._id",
+          officer_first_name: "$officerInfo.first_name",
+          officer_last_name: "$officerInfo.last_name",
+        },
+      },
+    ]).allowDiskUse(true);
+    res.status(200).json({
+      status: "success",
+      latestBill,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo } = req.query;
-
-  
-  console.log("getAllAuthorsWithFiles Controller")
-
   const aggregationPipeline = [];
 
   const matchStage = {};
@@ -908,7 +1049,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   ).allowDiskUse(true);
 
   const totalCount = AuthorsWithFiles.length;
-  const limit = parseInt(req.query.limit) || 6;
+  const limit = parseInt(req.query.limit) || 9;
   const currentPage = parseInt(req.query.page) || 1;
   const totalPages = Math.ceil(totalCount / limit);
   const startIndex = (currentPage - 1) * limit;
@@ -925,7 +1066,6 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
 
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   try {
-
     const { id } = req.params;
     const file = await Files.findById(id);
     if (!file) return res.status(404).json({ message: "File not found." });
@@ -1201,8 +1341,7 @@ exports.checkDeliveryType = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getFileById = AsyncErrorHandler(async (req, res) => {
-
-       console.log("getFileById Controller")
+  console.log("getFileById Controller");
   const { id } = req.params;
 
   const FilesData = await Files.aggregate([
@@ -1271,6 +1410,8 @@ exports.getFileById = AsyncErrorHandler(async (req, res) => {
         approverID: 1,
         Archived: 1,
         fileSize: 1,
+        dateOfResolution: 1,
+        resolutionNumber: 1,
         createdAt: 1,
         updatedAt: 1,
         "archivedMetadata.dateArchived": 1,
@@ -1302,6 +1443,188 @@ exports.getFileById = AsyncErrorHandler(async (req, res) => {
   });
 });
 
+exports.getFileForArchive = AsyncErrorHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
+  const { title, tags, status, category, dateFrom, dateTo, archivedStatus } =
+    req.query;
+
+  const matchStage = {};
+
+  // ArchivedStatus filter (Active, Delete, For Restore)
+  matchStage.ArchivedStatus = archivedStatus || "Active"; // default Active kung walang pinasa
+
+  if (title) {
+    matchStage.title = { $regex: title, $options: "i" };
+  }
+
+  if (tags) {
+    const tagArray = Array.isArray(tags)
+      ? tags.map((tag) => tag.trim().toLowerCase())
+      : tags.split(",").map((tag) => tag.trim().toLowerCase());
+
+    if (tagArray.length > 0) {
+      matchStage.tags = { $in: tagArray };
+    }
+  }
+
+  if (status) matchStage.status = status;
+  if (category) matchStage.category = new mongoose.Types.ObjectId(category);
+
+  if (dateFrom || dateTo) {
+    matchStage.createdAt = {};
+    if (dateFrom) matchStage.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      matchStage.createdAt.$lte = endOfDay;
+    }
+  }
+
+  // Kunin lahat ng tags para sa kasalukuyang ArchivedStatus
+  const activeTagDocs = await Files.aggregate([
+    { $match: { ArchivedStatus: matchStage.ArchivedStatus } },
+    { $project: { tags: 1 } },
+  ]);
+  const allActiveTags = Array.from(
+    new Set(activeTagDocs.flatMap((doc) => doc.tags || []))
+  );
+
+  // Main query with pagination
+  const result = await Files.aggregate([
+    { $match: matchStage },
+    // Lookups
+    {
+      $lookup: {
+        from: "admins",
+        localField: "admin",
+        foreignField: "_id",
+        as: "adminInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "sbmembers",
+        localField: "author",
+        foreignField: "_id",
+        as: "authorInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "categoryInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "officers",
+        localField: "officer",
+        foreignField: "_id",
+        as: "officerInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "admins",
+        localField: "archivedMetadata.archivedBy",
+        foreignField: "_id",
+        as: "archiverInfo",
+      },
+    },
+
+    // Unwind
+    { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+
+    { $sort: { createdAt: -1 } },
+
+    // Paginate + count
+    {
+      $facet: {
+        data: [
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              title: 1,
+              summary: 1,
+              fullText: 1,
+              fileUrl: 1,
+              fileName: 1,
+              status: 1,
+              approverID: 1,
+              suggestion: 1,
+              ArchivedStatus: 1,
+              fileSize: 1,
+              oldFile: 1,
+              tags: 1,
+              createdAt: 1,
+              dateOfResolution: 1,
+              resolutionNumber: 1,
+              updatedAt: 1,
+              "archivedMetadata.dateArchived": 1,
+              "archivedMetadata.notes": 1,
+              "archivedMetadata.archivedBy": 1,
+              author: {
+                $concat: [
+                  "$authorInfo.first_name",
+                  " ",
+                  "$authorInfo.middle_name",
+                  " ",
+                  "$authorInfo.last_name",
+                ],
+              },
+              departmentID: "$authorInfo._id",
+              category: "$categoryInfo.category",
+              categoryID: "$categoryInfo._id",
+              admin: 1,
+              admin_first_name: "$adminInfo.first_name",
+              admin_last_name: "$adminInfo.last_name",
+              archivedBy_first_name: "$archiverInfo.first_name",
+              archivedBy_last_name: "$archiverInfo.last_name",
+              officer: "$officerInfo._id",
+              officer_first_name: "$officerInfo.first_name",
+              officer_last_name: "$officerInfo.last_name",
+            },
+          },
+        ],
+        totalCount: [{ $count: "count" }],
+      },
+    },
+  ]).allowDiskUse(true);
+
+  const files = result[0].data || [];
+  const totalCount = result[0].totalCount[0]?.count || 0;
+  const totalPages = Math.ceil(totalCount / limit);
+
+  // Kunin counts per ArchivedStatus
+  const statusCounts = await Files.aggregate([
+    { $group: { _id: "$ArchivedStatus", count: { $sum: 1 } } },
+  ]);
+  const countsObj = { Active: 0, Delete: 0, "For Restore": 0 };
+  statusCounts.forEach((item) => {
+    countsObj[item._id] = item.count;
+  });
+
+  res.status(200).json({
+    status: "success",
+    currentPage: page,
+    totalPages,
+    totalCount,
+    results: files.length,
+    data: files,
+    activeTags: allActiveTags,
+    archivedStatusCounts: countsObj,
+  });
+});
+
 exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   const { file } = req;
   const {
@@ -1315,6 +1638,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     category,
     approverID,
     dateOfResolution,
+    resolutionNumber,
   } = req.body;
 
   console.log("📥 Body received:", req.body);
@@ -1390,6 +1714,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     status,
     approverID,
     dateOfResolution,
+    resolutionNumber,
   }).save();
 
   // Aggregate and populate new file
@@ -1507,7 +1832,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
-  console.log("getOfficer controller")
+  console.log("getOfficer controller");
   const officerId = req.user.linkId;
   const limit = parseInt(req.query.limit) || 5;
   const pagePending = parseInt(req.query.pagePending) || 1;
@@ -1589,6 +1914,9 @@ exports.getOfficer = AsyncErrorHandler(async (req, res) => {
         ArchivedStatus: 1,
         createdAt: 1,
         updatedAt: 1,
+        dateOfResolution: 1,
+        resolutionNumber: 1,
+        approverID:1,
         fileSize: 1,
         "archivedMetadata.dateArchived": 1,
         "archivedMetadata.notes": 1,
@@ -1851,3 +2179,337 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 });
+
+exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
+  const defaultLimit = parseInt(req.query.limit) || 9;
+
+  // Parse per-category pagination from query string
+  let pagePerCategory = {};
+  try {
+    pagePerCategory = req.query.page ? JSON.parse(req.query.page) : {};
+  } catch (err) {
+    console.warn("Invalid page object, defaulting to 1 per category");
+  }
+
+  // Destructure filters from query string
+  const {
+    title,
+    tags,
+    status,
+    category,
+    dateFrom,
+    dateTo,
+    ArchivedStatus,
+    oldFile,
+  } = req.query;
+
+  // Build dynamic match stage
+  const matchStage = {};
+
+  if (ArchivedStatus) matchStage.ArchivedStatus = ArchivedStatus;
+
+  if (oldFile !== undefined) {
+    matchStage.oldFile = oldFile === "true";
+  }
+
+  // ENHANCED TITLE SEARCH: Partial phrase matching with special character handling
+  if (title) {
+    const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    matchStage.title = {
+      $regex: escapedTitle,
+      $options: "i",
+    };
+  }
+
+  if (tags) {
+    const tagArray = Array.isArray(tags)
+      ? tags.map((t) => t.trim().toLowerCase())
+      : tags.split(",").map((t) => t.trim().toLowerCase());
+    if (tagArray.length > 0) matchStage.tags = { $in: tagArray };
+  }
+
+  if (status) matchStage.status = status;
+
+  if (category) matchStage.category = new mongoose.Types.ObjectId(category);
+
+  if (dateFrom || dateTo) {
+    matchStage.createdAt = {};
+    if (dateFrom) matchStage.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) {
+      const endOfDay = new Date(dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      matchStage.createdAt.$lte = endOfDay;
+    }
+  }
+
+  // Aggregate with lookups
+  let files = await Files.aggregate([
+    { $match: matchStage },
+    {
+      $lookup: {
+        from: "admins",
+        localField: "admin",
+        foreignField: "_id",
+        as: "adminInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "sbmembers",
+        localField: "author",
+        foreignField: "_id",
+        as: "authorInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "categoryInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "officers",
+        localField: "officer",
+        foreignField: "_id",
+        as: "officerInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "admins",
+        localField: "archivedMetadata.archivedBy",
+        foreignField: "_id",
+        as: "archiverInfo",
+      },
+    },
+    { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
+    { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+    { $sort: { createdAt: -1 } },
+  ]).allowDiskUse(true);
+
+  // Group by category
+  const filesByCategory = {};
+  files.forEach((file) => {
+    const catId = file.categoryInfo?._id?.toString() || "uncategorized";
+    if (!filesByCategory[catId]) filesByCategory[catId] = [];
+    filesByCategory[catId].push(file);
+  });
+
+  // Apply per-category pagination or single-category page
+  const result = Object.entries(filesByCategory).map(([catId, catFiles]) => {
+    // Single-category pagination if category matches query
+    const page =
+      category && catId === category
+        ? parseInt(req.query.page) || 1
+        : pagePerCategory[catId] || 1;
+
+    const start = (page - 1) * defaultLimit;
+    const paginatedFiles = catFiles.slice(start, start + defaultLimit);
+
+    return {
+      categoryId: catId,
+      categoryName: catFiles[0]?.categoryInfo?.category || "Uncategorized",
+      totalFiles: catFiles.length,
+      totalPages: Math.ceil(catFiles.length / defaultLimit),
+      currentPage: page,
+      files: paginatedFiles.map((f) => ({
+        _id: f._id,
+        title: f.title,
+        summary: f.summary,
+        fileUrl: f.fileUrl,
+        fileName: f.fileName,
+        status: f.status,
+        ArchivedStatus: f.ArchivedStatus,
+        oldFile: f.oldFile,
+        tags: f.tags,
+        createdAt: f.createdAt,
+        updatedAt: f.updatedAt,
+        author: `${f.authorInfo?.first_name || ""} ${
+          f.authorInfo?.middle_name || ""
+        } ${f.authorInfo?.last_name || ""}`.trim(),
+        category: f.categoryInfo?.category,
+        categoryID: f.categoryInfo?._id,
+        admin_first_name: f.adminInfo?.first_name,
+        admin_last_name: f.adminInfo?.last_name,
+        archivedBy_first_name: f.archiverInfo?.first_name,
+        archivedBy_last_name: f.archiverInfo?.last_name,
+        officer_first_name: f.officerInfo?.first_name,
+        officer_last_name: f.officerInfo?.last_name,
+      })),
+    };
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: result,
+  });
+});
+
+exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const { year, title, tags, category, oldFile, sort } = req.query;
+
+  // Always filter for Approved and Active
+  const matchStage = { status: "Approved", ArchivedStatus: "Active" };
+
+  if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
+
+  if (title) {
+    const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    matchStage.title = { $regex: escapedTitle, $options: "i" };
+  }
+
+  if (tags) {
+    const tagArray = Array.isArray(tags)
+      ? tags.map(t => t.trim().toLowerCase())
+      : tags.split(",").map(t => t.trim().toLowerCase());
+    if (tagArray.length > 0) matchStage.tags = { $in: tagArray };
+  }
+
+  if (category) matchStage.category = new mongoose.Types.ObjectId(category);
+
+  // --- Single year search ---
+  if (year) {
+    matchStage.dateOfResolution = {
+      $gte: new Date(`${year}-01-01T00:00:00.000Z`),
+      $lte: new Date(`${year}-12-31T23:59:59.999Z`),
+    };
+
+    const totalCount = await Files.countDocuments(matchStage);
+    const totalPages = Math.ceil(totalCount / limit);
+    const skip = (page - 1) * limit;
+
+    const files = await Files.aggregate([
+      { $match: matchStage },
+      { $lookup: { from: "admins", localField: "admin", foreignField: "_id", as: "adminInfo" } },
+      { $lookup: { from: "sbmembers", localField: "author", foreignField: "_id", as: "authorInfo" } },
+      { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "categoryInfo" } },
+      { $lookup: { from: "officers", localField: "officer", foreignField: "_id", as: "officerInfo" } },
+      { $lookup: { from: "admins", localField: "archivedMetadata.archivedBy", foreignField: "_id", as: "archiverInfo" } },
+      { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+      { $sort: { dateOfResolution: sort === "asc" ? 1 : -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+    const formattedFiles = files.map(f => ({
+      _id: f._id,
+      title: f.title,
+      summary: f.summary,
+      fileUrl: f.fileUrl,
+      fileName: f.fileName,
+      status: f.status,
+      ArchivedStatus: f.ArchivedStatus,
+      oldFile: f.oldFile,
+      tags: f.tags,
+      createdAt: f.createdAt,
+      updatedAt: f.updatedAt,
+      author: `${f.authorInfo?.first_name || ""} ${f.authorInfo?.middle_name || ""} ${f.authorInfo?.last_name || ""}`.trim(),
+      category: f.categoryInfo?.category,
+      categoryID: f.categoryInfo?._id,
+      admin_first_name: f.adminInfo?.first_name,
+      admin_last_name: f.adminInfo?.last_name,
+      archivedBy_first_name: f.archiverInfo?.first_name,
+      archivedBy_last_name: f.archiverInfo?.last_name,
+      officer_first_name: f.officerInfo?.first_name,
+      officer_last_name: f.officerInfo?.last_name,
+    }));
+
+    return res.status(200).json({
+      status: "success",
+      year,
+      currentPage: page,
+      totalPages,
+      totalCount,
+      results: formattedFiles.length,
+      data: formattedFiles,
+    });
+  }
+
+  // --- All years search ---
+  const distinctDates = await Files.distinct("dateOfResolution", matchStage);
+  const yearSet = new Set(distinctDates.map(d => new Date(d).getFullYear()));
+  const sortedYears = Array.from(yearSet).sort((a, b) => b - a);
+
+  const results = [];
+
+  for (const y of sortedYears) {
+    const yearMatch = {
+      ...matchStage,
+      dateOfResolution: {
+        $gte: new Date(`${y}-01-01T00:00:00.000Z`),
+        $lte: new Date(`${y}-12-31T23:59:59.999Z`),
+      },
+    };
+
+    const totalCount = await Files.countDocuments(yearMatch);
+    const totalPages = Math.ceil(totalCount / limit);
+    const skip = (page - 1) * limit;
+
+    const files = await Files.aggregate([
+      { $match: yearMatch },
+      { $lookup: { from: "admins", localField: "admin", foreignField: "_id", as: "adminInfo" } },
+      { $lookup: { from: "sbmembers", localField: "author", foreignField: "_id", as: "authorInfo" } },
+      { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "categoryInfo" } },
+      { $lookup: { from: "officers", localField: "officer", foreignField: "_id", as: "officerInfo" } },
+      { $lookup: { from: "admins", localField: "archivedMetadata.archivedBy", foreignField: "_id", as: "archiverInfo" } },
+      { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+      { $sort: { dateOfResolution: sort === "asc" ? 1 : -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
+    const formattedFiles = files.map(f => ({
+      _id: f._id,
+      title: f.title,
+      summary: f.summary,
+      fileUrl: f.fileUrl,
+      fileName: f.fileName,
+      status: f.status,
+      ArchivedStatus: f.ArchivedStatus,
+      oldFile: f.oldFile,
+      tags: f.tags,
+      createdAt: f.createdAt,
+      updatedAt: f.updatedAt,
+      author: `${f.authorInfo?.first_name || ""} ${f.authorInfo?.middle_name || ""} ${f.authorInfo?.last_name || ""}`.trim(),
+      category: f.categoryInfo?.category,
+      categoryID: f.categoryInfo?._id,
+      admin_first_name: f.adminInfo?.first_name,
+      admin_last_name: f.adminInfo?.last_name,
+      archivedBy_first_name: f.archiverInfo?.first_name,
+      archivedBy_last_name: f.archiverInfo?.last_name,
+      officer_first_name: f.officerInfo?.first_name,
+      officer_last_name: f.officerInfo?.last_name,
+    }));
+
+    results.push({
+      status: "success",
+      year: y.toString(),
+      currentPage: page,
+      totalPages,
+      totalCount,
+      results: formattedFiles.length,
+      data: formattedFiles,
+    });
+  }
+
+  res.status(200).json(results);
+});
+
+

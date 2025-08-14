@@ -24,7 +24,7 @@ const PdfPreviewModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="relative mx-4 w-full max-w-4xl rounded-2xl bg-white shadow-2xl dark:bg-gray-800">
         <div className="p-6">
           <div className="mb-4 flex items-center justify-between">

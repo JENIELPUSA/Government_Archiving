@@ -5,6 +5,7 @@ import { useNotificationDisplay } from "../../contexts/NotificationContext/Notif
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import { AuthContext } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+
 const timeAgo = (dateString) => {
     const now = new Date();
     const date = new Date(dateString);
@@ -23,24 +24,29 @@ const timeAgo = (dateString) => {
 };
 
 const NotificationDropdown = () => {
-    const { getSpeficFile} = useContext(FilesDisplayContext);
+    const { getSpeficFile } = useContext(FilesDisplayContext);
     const navigate = useNavigate();
-    const { notify: notifications, setNotify: setNotifications, markNotificationAsRead } = useNotificationDisplay();
+    const { notify: notifications, setNotify: setNotifications, markNotificationAsRead, fetchNotifications } = useNotificationDisplay();
     const [open, setOpen] = useState(false);
     const [showAll, setShowAll] = useState(false);
     const ref = useRef(null);
     const { linkId } = useContext(AuthContext);
+
     const toggleDropdown = () => {
         setOpen((prev) => !prev);
-        if (open) setShowAll(false);
+        if (open) {
+            setShowAll(false);
+        }
     };
 
     const markAllAsRead = useCallback(() => {
         setNotifications((prev) =>
             prev.map((n) => {
-                const updatedViewers = n.viewers.map((v) => (v.user?.toString() === linkId?.toString() ? { ...v, isRead: true } : v));
+                const updatedViewers = n.viewers.map((v) =>
+                    v.user?.toString() === linkId?.toString() ? { ...v, isRead: true } : v
+                );
                 return { ...n, viewers: updatedViewers };
-            }),
+            })
         );
         notifications.forEach((n) => {
             markNotificationAsRead(n._id);
@@ -72,11 +78,14 @@ const NotificationDropdown = () => {
     const displayed = showAll ? notifications : notifications.slice(0, 5);
     const hasUnread = unreadCount > 0;
 
+    const handleShowAllToggle = async () => {
+        const newShowAll = !showAll;
+        setShowAll(newShowAll);
+        await fetchNotifications(newShowAll); // <-- tatawag sa backend na may showAll param
+    };
+
     return (
-        <div
-            className="relative"
-            ref={ref}
-        >
+        <div className="relative" ref={ref}>
             <button
                 onClick={toggleDropdown}
                 className={`relative flex items-center justify-center rounded-full p-2 transition-all duration-300 ${
@@ -86,10 +95,7 @@ const NotificationDropdown = () => {
                 }`}
                 aria-label="Notifications"
             >
-                <Bell
-                    size={20}
-                    className="shrink-0"
-                />
+                <Bell size={20} className="shrink-0" />
                 {hasUnread && (
                     <motion.span
                         initial={{ scale: 0 }}
@@ -144,8 +150,9 @@ const NotificationDropdown = () => {
                             {displayed.length > 0 ? (
                                 <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                                     {displayed.map((notif) => {
-                                        const isUnread = notif.viewers?.some((v) => v.user?.toString() === linkId?.toString() && !v.isRead);
-
+                                        const isUnread = notif.viewers?.some(
+                                            (v) => v.user?.toString() === linkId?.toString() && !v.isRead
+                                        );
                                         return (
                                             <motion.li
                                                 key={notif._id}
@@ -159,31 +166,27 @@ const NotificationDropdown = () => {
                                                 {isUnread && <div className="absolute left-0 top-0 h-full w-1 bg-blue-500"></div>}
                                                 <button
                                                     onClick={async () => {
-
-                                                      console.log("notify",notif)
                                                         const result = await getSpeficFile(notif.FileId);
                                                         if (result.success && result.data) {
                                                             navigate(`/dashboard/pdf-viewer/${notif.FileId}`, { state: { fileData: result.data } });
-                                                        } else {
-                                                            console.warn("No file data retrieved.");
                                                         }
-
                                                         const viewerIndex = notif.viewers.findIndex(
-                                                            (viewer) => viewer.user?.toString() === linkId?.toString(),
+                                                            (viewer) => viewer.user?.toString() === linkId?.toString()
                                                         );
-
                                                         if (viewerIndex !== -1 && !notif.viewers[viewerIndex].isRead) {
                                                             markNotificationAsRead(notif._id);
                                                             setNotifications((prev) =>
                                                                 prev.map((n) => {
                                                                     if (n._id === notif._id) {
                                                                         const updatedViewers = n.viewers.map((v) =>
-                                                                            v.user?.toString() === linkId?.toString() ? { ...v, isRead: true } : v,
+                                                                            v.user?.toString() === linkId?.toString()
+                                                                                ? { ...v, isRead: true }
+                                                                                : v
                                                                         );
                                                                         return { ...n, viewers: updatedViewers };
                                                                     }
                                                                     return n;
-                                                                }),
+                                                                })
                                                             );
                                                         }
                                                     }}
@@ -218,10 +221,7 @@ const NotificationDropdown = () => {
                                     className="flex flex-col items-center px-4 py-8 text-center"
                                 >
                                     <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
-                                        <Bell
-                                            size={28}
-                                            className="text-gray-400 dark:text-gray-500"
-                                        />
+                                        <Bell size={28} className="text-gray-400 dark:text-gray-500" />
                                     </div>
                                     <p className="text-lg font-medium text-gray-800 dark:text-gray-200">No notifications</p>
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">You're all caught up!</p>
@@ -229,44 +229,22 @@ const NotificationDropdown = () => {
                             )}
                         </div>
 
-                        {notifications.length > 5 && (
+                        {notifications.length > 4 && (
                             <button
-                                onClick={() => setShowAll(!showAll)}
+                                onClick={handleShowAllToggle}
                                 className="dark:hover:bg-gray-750 sticky bottom-0 flex w-full items-center justify-center gap-2 border-t border-gray-200 bg-white py-3 text-sm font-medium text-blue-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-blue-400"
                             >
                                 {showAll ? (
                                     <>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M5 15l7-7 7 7"
-                                            />
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                                         </svg>
                                         Show less
                                     </>
                                 ) : (
                                     <>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            className="h-4 w-4"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M19 9l-7 7-7-7"
-                                            />
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                                         </svg>
                                         View all ({notifications.length})
                                     </>

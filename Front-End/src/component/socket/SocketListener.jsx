@@ -8,7 +8,7 @@ import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerCont
 const SocketListener = () => {
     const { role, linkId } = useAuth();
     const { setFiles } = useContext(FilesDisplayContext);
-    const { setNotify } = useContext(NotificationDisplayContext);
+    const { setNotify, fetchNotifications } = useContext(NotificationDisplayContext);
     const { setOfficerData, FetchOfficerFiles } = useContext(OfficerDisplayContext);
 
     const formatNotification = (data, fallbackMessage = "You have a new notification") => ({
@@ -34,13 +34,7 @@ const SocketListener = () => {
 
         // Notification when a document is updated
         const handleDocumentNotification = (notification) => {
-            const formatted = formatNotification(notification, "📄 Document updated.");
-            setNotify((prev) => {
-                const exists = prev.some((n) => n._id === formatted._id);
-                if (exists) return prev;
-                return [formatted, ...prev];
-            });
-
+            fetchNotifications();
             const updatedDoc = notification.data;
             if (!updatedDoc?._id) return;
 
@@ -49,9 +43,7 @@ const SocketListener = () => {
         };
 
         const handleNewDocumentNotification = (notification) => {
-            const formatted = formatNotification(notification, "📄 New document submitted to you.");
-            setNotify((prev) => [formatted, ...prev]);
-
+            fetchNotifications();
             const newDoc = notification.data;
             const oldDoc = notification.old;
 

@@ -68,7 +68,7 @@ export const OfficerDisplayProvider = ({ children }) => {
             setTotalOfficer(TotalOfficer);
             setOfficer(cleanedData);
 
-            return cleanedData; // ✅ important for refresh
+            return cleanedData; 
         } catch (error) {
             console.error("Error fetching data:", error);
         }

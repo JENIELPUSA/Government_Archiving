@@ -28,7 +28,6 @@ const UploadForm = () => {
     const [authorId, setAuthorId] = useState(null);
     const [customAuthor, setCustomAuthor] = useState("");
     const [dateOfResolution, setDateOfResolution] = useState("");
-    const [requiresDesignatedApprover, setRequiresDesignatedApprover] = useState(false);
     const [fileError, setFileError] = useState("");
     const [titleError, setTitleError] = useState("");
     const [isFormLoading, setFormLoading] = useState(true);
@@ -44,7 +43,7 @@ const UploadForm = () => {
     const [newAuthorEmail, setNewAuthorEmail] = useState("");
     const [newAuthorPosition, setNewAuthorPosition] = useState("");
     const [customAuthorError, setCustomAuthorError] = useState("");
-    const [checkboxError, setCheckboxError] = useState("");
+    const [approverError, setApproverError] = useState("");
 
     // PDF Preview Modal states
     const [showPdfModal, setShowPdfModal] = useState(false);
@@ -86,6 +85,7 @@ const UploadForm = () => {
     const selectedCategory = isCategory?.find((cat) => cat._id === category);
     const isResolution = selectedCategory?.category === "Resolution";
     const isOrdinance = selectedCategory?.category === "Ordinance";
+    const isResolutionOrOrdinance = isResolution || isOrdinance;
 
     useEffect(() => {
         if (!isOrdinance) {
@@ -96,7 +96,7 @@ const UploadForm = () => {
     }, [category, isOrdinance]);
 
     useEffect(() => {
-        setCheckboxError("");
+        setApproverError("");
     }, [category]);
 
     const handleFile = (file) => {
@@ -134,7 +134,7 @@ const UploadForm = () => {
         setTitleError("");
         setResolutionNumberError("");
         setAuthorError("");
-        setCheckboxError("");
+        setApproverError("");
         setUploadMessage("");
 
         let valid = true;
@@ -157,8 +157,9 @@ const UploadForm = () => {
             valid = false;
         }
 
-        if (isResolution && requiresDesignatedApprover && (!approver || !approver._id)) {
-            setCheckboxError("Please select an approver in the sidebar");
+        // Require approver for Resolution/Ordinance
+        if (isResolutionOrOrdinance && (!approver || !approver._id)) {
+            setApproverError("Please select an approver in the sidebar");
             valid = false;
         }
 
@@ -199,9 +200,11 @@ const UploadForm = () => {
 
         if (isResolution) {
             formData.append("resolutionNumber", resolutionNumber);
-            if (requiresDesignatedApprover && approver?._id) {
-                formData.append("approverID", approver._id);
-            }
+        }
+        
+        // Automatically include approver for Resolution/Ordinance
+        if (isResolutionOrOrdinance && approver?._id) {
+            formData.append("approverID", approver._id);
         }
 
         try {
@@ -211,7 +214,6 @@ const UploadForm = () => {
             const result = await AddFiles(formData);
             if (result.success) {
                 setUploadMessage("File uploaded successfully.");
-                // Reset form
                 setSelectedFile(null);
                 setTitle("");
                 setCategory("");
@@ -219,7 +221,6 @@ const UploadForm = () => {
                 setAuthorId(null);
                 setCustomAuthor("");
                 setDateOfResolution("");
-                setRequiresDesignatedApprover(false);
                 setResolutionNumber("");
                 setAuthorType("sbMember");
                 setNewAuthorFirstName("");
@@ -385,6 +386,16 @@ const UploadForm = () => {
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* Approver error message */}
+                            {isResolutionOrOrdinance && approverError && (
+                                <div className="mt-1.5 flex items-start rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                                    <div className="mr-2 mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                                        <FiX size={14} />
+                                    </div>
+                                    <p className="text-sm text-red-600 dark:text-red-400">{approverError}</p>
+                                </div>
+                            )}
                         </div>
                         {(isResolution || isOrdinance) && (
                             <div>
@@ -551,30 +562,6 @@ const UploadForm = () => {
                                 </div>
                             )}
                         </div>
-                        {isResolution && (
-                            <div className="pt-1">
-                                <div className="flex items-center">
-                                    <input
-                                        type="checkbox"
-                                        id="designatedApprover"
-                                        checked={requiresDesignatedApprover}
-                                        onChange={(e) => {
-                                            setRequiresDesignatedApprover(e.target.checked);
-                                            setCheckboxError("");
-                                        }}
-                                        className="h-4 w-4 rounded border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
-                                    />
-                                    <label
-                                        htmlFor="designatedApprover"
-                                        className="ml-2 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300"
-                                    >
-                                        <FiCheckSquare className="text-blue-500" />
-                                        Multiple {requiresDesignatedApprover && <span className="text-red-500">*</span>}
-                                    </label>
-                                </div>
-                                {checkboxError && <p className="mt-1.5 text-sm text-red-500">{checkboxError}</p>}
-                            </div>
-                        )}
                         <div>
                             <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 <FiBook className="text-blue-500" />
@@ -720,40 +707,40 @@ const UploadForm = () => {
                         )}
                     </div>
                 </div>
+
+                {/* PDF Preview Modal */}
+                <PdfPreviewModal
+                    showPdfModal={showPdfModal}
+                    setShowPdfModal={setShowPdfModal}
+                    pdfPreviewUrl={pdfPreviewUrl}
+                    setPdfPreviewUrl={setPdfPreviewUrl}
+                    isPdfLoading={isPdfLoading}
+                    title={title}
+                    selectedFile={selectedFile}
+                    fileInputRef={fileInputRef}
+                    handleFinalSubmit={handleFinalSubmit}
+                    isLoading={isLoading}
+                />
+
+                {/* Author Modal */}
+                <AuthorModal
+                    showAuthorModal={showAuthorModal}
+                    setShowAuthorModal={setShowAuthorModal}
+                    newAuthorFirstName={newAuthorFirstName}
+                    setNewAuthorFirstName={setNewAuthorFirstName}
+                    newAuthorLastName={newAuthorLastName}
+                    setNewAuthorLastName={setNewAuthorLastName}
+                    newAuthorMiddleName={newAuthorMiddleName}
+                    setNewAuthorMiddleName={setNewAuthorMiddleName}
+                    newAuthorEmail={newAuthorEmail}
+                    setNewAuthorEmail={setNewAuthorEmail}
+                    newAuthorPosition={newAuthorPosition}
+                    setNewAuthorPosition={setNewAuthorPosition}
+                    customAuthorError={customAuthorError}
+                    setCustomAuthorError={setCustomAuthorError}
+                    handleAddNewAuthor={handleAddNewAuthor}
+                />
             </div>
-
-            {/* PDF Preview Modal */}
-            <PdfPreviewModal
-                showPdfModal={showPdfModal}
-                setShowPdfModal={setShowPdfModal}
-                pdfPreviewUrl={pdfPreviewUrl}
-                setPdfPreviewUrl={setPdfPreviewUrl}
-                isPdfLoading={isPdfLoading}
-                title={title}
-                selectedFile={selectedFile}
-                fileInputRef={fileInputRef}
-                handleFinalSubmit={handleFinalSubmit}
-                isLoading={isLoading}
-            />
-
-            {/* Author Modal */}
-            <AuthorModal
-                showAuthorModal={showAuthorModal}
-                setShowAuthorModal={setShowAuthorModal}
-                newAuthorFirstName={newAuthorFirstName}
-                setNewAuthorFirstName={setNewAuthorFirstName}
-                newAuthorLastName={newAuthorLastName}
-                setNewAuthorLastName={setNewAuthorLastName}
-                newAuthorMiddleName={newAuthorMiddleName}
-                setNewAuthorMiddleName={setNewAuthorMiddleName}
-                newAuthorEmail={newAuthorEmail}
-                setNewAuthorEmail={setNewAuthorEmail}
-                newAuthorPosition={newAuthorPosition}
-                setNewAuthorPosition={setNewAuthorPosition}
-                customAuthorError={customAuthorError}
-                setCustomAuthorError={setCustomAuthorError}
-                handleAddNewAuthor={handleAddNewAuthor}
-            />
         </form>
     );
 };

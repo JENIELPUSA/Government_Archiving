@@ -8,14 +8,19 @@ export const NotificationDisplayProvider = ({ children }) => {
     const { authToken, linkId } = useAuth();
     const [notify, setNotify] = useState([]);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (showAll = false) => {
         if (!linkId || !authToken) return;
         try {
-            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/getByLink/${linkId}`, {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
+            const queryParams = showAll ? `?limit=all` : ``; 
+            const res = await axiosInstance.get(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Notification/getByLink/${linkId}${queryParams}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
                 },
-            });
+            );
+
             setNotify(res.data.data);
         } catch (err) {
             console.error("Error fetching notifications:", err);
@@ -59,6 +64,7 @@ export const NotificationDisplayProvider = ({ children }) => {
                 notify,
                 setNotify,
                 markNotificationAsRead,
+                fetchNotifications,
             }}
         >
             {children}

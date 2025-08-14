@@ -14,6 +14,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const DocumentDetailsPanel = ({ document, onClose }) => {
   const { MOveArchived } = useContext(FilesDisplayContext);
+
+  console.log("PANEL CATRGORY",document)
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -118,14 +120,6 @@ export const DocumentDetailsPanel = ({ document, onClose }) => {
                     </p>
                     <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
                       {document.category || "N/A"}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700/50">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Department
-                    </p>
-                    <p className="text-lg font-semibold text-gray-800 dark:text-gray-200">
-                      {document.department || "N/A"}
                     </p>
                   </div>
                   <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-700/50">

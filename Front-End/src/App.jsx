@@ -8,11 +8,11 @@ import PrivateRoute from "./component/PrivateRoute/PrivateRoute";
 import PublicRoute from "./component/PublicRoute/PublicRoute";
 import Login from "./component/Login/Login";
 import PdfViewer from "./component/PdfViewer/PdfViewer";
-import RecentDocument from "./component/AdminDashboard/RecentDocument/RecentDocument";
+import OldDocument from "./component/FolderComponents/FolderUI";
 import ArchiveLayout from "./component/AdminDashboard/Archive/ArchiveLayout";
 import DocumentLayout from "./component/AdminDashboard/Document/DocumentsSidebar/DocumentsLayout";
 import PublicAccessLayout from "./component/PublicView/Publicview";
-import ExpandPDFView from "./component/PublicAccess/ExpandPDFView";
+import ExpandPDFView from "./component/PublicView/ExpandPDFView";
 import CommentLayout from "./component/Comments/CommentLayout";
 import LogsAndAudit from "./component/LogsAudit/LogsAndAudit";
 import ResetPassword from "./component/Login/ResetPassword";
@@ -60,8 +60,8 @@ function App() {
                             element: <DocumentLayout />,
                         },
                         {
-                            path: "/dashboard/recent",
-                            element: <RecentDocument />,
+                            path: "/dashboard/OldFiles",
+                            element: <OldDocument />,
                         },
                         {
                             path: "/dashboard/user-management",

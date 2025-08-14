@@ -38,6 +38,11 @@ const ArchivingSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    oldFile: {
+      type: Boolean,
+      default: false,
+    },
+
     ArchivedStatus: {
       type: String,
       enum: ["Active", "Archived", "Deleted", "For Restore", "Pending Review"],
@@ -72,13 +77,17 @@ const ArchivingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Approver",
     },
+    folderID: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Folder",
+    },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
     },
     resolutionNumber: {
       type: String,
-      trim: true
+      trim: true,
     },
   },
   {

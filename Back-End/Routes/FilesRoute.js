@@ -54,4 +54,12 @@ router.get("/test", (req, res) => {
 
 router.route("/GetPublicData").post(FilesController.PublicDisplayController);
 
+router.route("/GetLatestBill").post(FilesController.getLatestBillsThisWeek);
+
+router.route("/GetArchivedData").post(authController.protect,FilesController.DisplayFilesArchive);
+
+router.route("/DocumentPerYear").post(FilesController.DisplayDocumentPerYear);
+
+
+
 module.exports = router;
