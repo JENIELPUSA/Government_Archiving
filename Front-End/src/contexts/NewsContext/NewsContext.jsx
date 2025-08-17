@@ -98,14 +98,16 @@ export const NewsDisplayProvider = ({ children }) => {
         }
     };
 
-    const DeleteSB = async (officerID) => {
+    const DeletePicture = async (officerID) => {
         try {
-            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/${officerID}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/News/${officerID}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
             if (response.data.status === "success") {
-                return { success: true, data: response.data.data };
+                setModalStatus("success");
+                setShowModal(true);
+                DisplayNews();
             } else {
                 setModalStatus("failed");
                 setShowModal(true);
@@ -116,16 +118,16 @@ export const NewsDisplayProvider = ({ children }) => {
         }
     };
 
-    const UpdateSbmember = async (dataID, values) => {
+    const UpdatePicture = async (dataID, values) => {
         try {
             const formData = new FormData();
             formData.append("title", values.title || "");
             formData.append("date", values.date || "");
             formData.append("excerpt", values.excerpt || "");
             formData.append("category", values.category || "");
-            if (values.image) formData.append("image", values.image);
+              if (values.image) formData.append("avatar", values.image);
 
-            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/${dataID}`, formData, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/News/${dataID}`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
@@ -133,7 +135,9 @@ export const NewsDisplayProvider = ({ children }) => {
             });
 
             if (response.data?.status === "success") {
-                return { success: true, data: response.data.data };
+                setModalStatus("success");
+                setShowModal(true);
+                DisplayNews();
             } else {
                 return { success: false, error: "Unexpected response from server." };
             }
@@ -153,14 +157,15 @@ export const NewsDisplayProvider = ({ children }) => {
             value={{
                 loading,
                 setLoading,
-                DeleteSB,
+                DeletePicture,
                 setCurrentPage,
                 currentPage,
                 totalPages,
                 DisplayNews,
-                UpdateSbmember,
+                UpdatePicture,
                 AddNotification,
                 pictures,
+                setPicture,
             }}
         >
             {children}

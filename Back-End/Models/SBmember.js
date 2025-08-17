@@ -11,10 +11,11 @@ const SBschema = new mongoose.Schema({
   detailInfo: String,
   email: {
     type: String,
-    required: true,
     unique: true,
     trim: true,
   },
+  term_from: { type: Date},
+  term_to: { type: Date},
   middle_name: String,
   Position: String,
   created_at: { type: Date, default: Date.now },

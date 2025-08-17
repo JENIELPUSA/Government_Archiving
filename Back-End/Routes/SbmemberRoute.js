@@ -5,7 +5,7 @@ const authController = require("./../Controller/authController");
 const upload = require("../middleware/imageUploader");
 router
   .route("/")
-  .get(SBmemberController.DisplaySBmember)
+  .get(authController.protect, SBmemberController.DisplaySBmember)
   .post(authController.protect, SBmemberController.createSBmember);
 router
   .route("/:id")
@@ -15,6 +15,9 @@ router
     upload.single("avatar"),
     SBmemberController.UpdateSBmember
   );
+router
+  .route("/AuthhorDropdown")
+  .get(authController.protect,SBmemberController.DisplaySBmemberInDropdown)
 
 
 module.exports = router;

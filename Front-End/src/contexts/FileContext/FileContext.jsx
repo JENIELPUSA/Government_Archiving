@@ -8,7 +8,8 @@ export const FilesDisplayContext = createContext();
 export const FilesDisplayProvider = ({ children }) => {
     const [customError, setCustomError] = useState("");
     const { authToken } = useContext(AuthContext);
-    const [loading, setLoading] = useState(true);
+    const [isTags,setTags]=useState([])
+    const [isLoading, setLoading] = useState(true);
     const [isLatestBill, setLatestBill] = useState([]);
     const [isFile, setFiles] = useState([]);
     const [showModal, setShowModal] = useState(false);
@@ -22,6 +23,7 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isActiveTags, setActiveTags] = useState([]);
     const [filters, setFilters] = useState({});
     const [isArchived, setArchived] = useState([]);
+    const [CountAll, setCountAll] = useState(0);
 
     const [isDeletedData, setDeletedData] = useState([]);
     const [isForRestoreData, setForRestoreData] = useState([]);
@@ -38,15 +40,27 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isPublic, setPublic] = useState({});
     const [isPublictotalpage, setPublictotalpage] = useState({});
     const [isPubliccurrentpage, setPubliccurrentpage] = useState({});
-    useEffect(() => {
-        if (!authToken) return;
+  useEffect(() => {
+    if (!authToken) return;
 
-        const fetchAll = async () => {
-            await Promise.all([FetchFiles(), fetchpublicdata(), FetchArchiveFiles(), fetchAchivedData()]);
-        };
+    const fetchAll = async () => {
+      try {
+        setLoading(true); // start loading
+        await Promise.all([
+          FetchFiles(),
+          fetchpublicdata(),
+          FetchArchiveFiles(),
+          fetchAchivedData(),
+        ]);
+      } catch (err) {
+        console.error("Error fetching data:", err);
+      } finally {
+        setLoading(false); // stop loading
+      }
+    };
 
-        fetchAll();
-    }, [authToken]);
+    fetchAll();
+  }, [authToken]);
 
     useEffect(() => {
         fetchpublicdata();
@@ -276,7 +290,8 @@ export const FilesDisplayProvider = ({ children }) => {
 
             if (response.data && response.data.status === "success") {
                 const newFile = response.data.data;
-                setFiles((prevFiles) => prevFiles.map((file) => (file._id === newFile._id ? newFile : file)));
+                fetchAchivedData();
+                FetchFiles();
                 setModalStatus("success");
                 setShowModal(true);
                 return { success: true, data: newFile };
@@ -372,7 +387,7 @@ export const FilesDisplayProvider = ({ children }) => {
                     },
                 });
 
-                const { deleted, forRestore, archived, public: publicData, counts, totalPages } = res.data;
+                const { deleted, forRestore, archived, public: publicData, counts, totalPages} = res.data;
 
                 setDeletedData(deleted);
                 setForRestoreData(forRestore);
@@ -390,62 +405,75 @@ export const FilesDisplayProvider = ({ children }) => {
         [authToken, currentPageDeleted, currentPageForRestore, currentPageArchived, currentPagePublic],
     );
 
-    const fetchAchivedData = async (queryParams = {}) => {
-        try {
-            const res = await axiosInstance.post(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetArchivedData`,
-                {},
-                {
-                    withCredentials: true,
-                    params: queryParams,
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                        "Cache-Control": "no-cache",
-                    },
-                },
-            );
-
-            const { currentPage, totalPages } = res.data;
-            const ArchivedData = res.data.data || [];
-            setArchived(ArchivedData);
-            setArchivedtotalpage(totalPages);
-            setArchivedcurrentpage(currentPage);
-        } catch (error) {
-            console.error("Error fetching archived data:", error);
-        }
-    };
-const fetchPublicDisplay = useCallback(async (queryParams = {}) => {
+const fetchAchivedData = useCallback(
+  async (queryParams = {}) => {
     try {
-        const res = await axiosInstance.post(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/DocumentPerYear`,
-            {},
-            {
-                withCredentials: true,
-                params: queryParams,
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                    "Cache-Control": "no-cache",
-                },
-            },
-        );
-
-        const ArchivedData = res.data || []; // array of year groups
-        setPublic(ArchivedData);
-
-        // Example: pag gusto mo lang first year’s pagination
-        if (ArchivedData.length > 0) {
-            setPublictotalpage(ArchivedData[0].totalPages || 1);
-            setPubliccurrentpage(ArchivedData[0].currentPage || 1);
-        } else {
-            setPublictotalpage(1);
-            setPubliccurrentpage(1);
+      queryParams.limit = 9;
+      const res = await axiosInstance.post(
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/GetArchivedData`,
+        {},
+        {
+          withCredentials: true,
+          params: queryParams,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            "Cache-Control": "no-cache",
+          },
         }
+      );
 
+      const { currentPage, totalPages, archivedStatusCounts, tags, counts } = res.data;
+      const ArchivedData = res.data.data || [];
+
+      console.log("Archived", counts);
+
+      setArchived(ArchivedData);
+      setArchivedtotalpage(totalPages);
+      setArchivedcurrentpage(currentPage);
+      setCountAll(counts);
+      setTags(tags);
+
+      console.log("check", archivedStatusCounts);
     } catch (error) {
-        console.error("Error fetching archived data:", error);
+      console.error("Error fetching archived data:", error);
     }
-}, [authToken]);
+  },
+  [authToken] // dependencies
+);
 
+    const fetchPublicDisplay = useCallback(
+        async (queryParams = {}) => {
+            try {
+                const res = await axiosInstance.post(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/DocumentPerYear`,
+                    {},
+                    {
+                        withCredentials: true,
+                        params: queryParams,
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            "Cache-Control": "no-cache",
+                        },
+                    },
+                );
+
+                const ArchivedData = res.data || []; // array of year groups
+                setPublic(ArchivedData);
+
+                // Example: pag gusto mo lang first year’s pagination
+                if (ArchivedData.length > 0) {
+                    setPublictotalpage(ArchivedData[0].totalPages || 1);
+                    setPubliccurrentpage(ArchivedData[0].currentPage || 1);
+                } else {
+                    setPublictotalpage(1);
+                    setPubliccurrentpage(1);
+                }
+            } catch (error) {
+                console.error("Error fetching archived data:", error);
+            }
+        },
+        [authToken],
+    );
 
     return (
         <FilesDisplayContext.Provider
@@ -485,6 +513,8 @@ const fetchPublicDisplay = useCallback(async (queryParams = {}) => {
                 Archivedtotalpage,
                 Archivedcurrentpage,
                 fetchPublicDisplay,
+                CountAll,
+                isTags,isLoading
             }}
         >
             {children}

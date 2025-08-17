@@ -350,12 +350,22 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
       return res.status(400).json({ error: "Invalid approver ID format" });
 
-    // File upload
+    if (
+      (category === "Resolution" || category === "Ordinance") &&
+      !approverID
+    ) {
+      return res.status(400).json({
+        error: `ApproverID is required for category "${category}"`,
+      });
+    }
+
+    // Build Cloudinary path
     const ext = path.extname(req.file.originalname);
     const baseName = path.basename(req.file.originalname, ext);
     const fileName = `${Date.now()}_${baseName}${ext}`;
     const folderPath = `Government Archiving/${sanitizeFolderName(category)}`;
 
+    // Upload to Cloudinary
     const streamUpload = () =>
       new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -384,6 +394,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       return res.status(500).json({ error: "File upload failed" });
     }
 
+    // Detect file type
     const typeMap = {
       ".pdf": "PDF",
       ".doc": "Word Document",
@@ -399,18 +410,16 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       ".zip": "ZIP",
       ".csv": "CSV",
     };
-
     const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
-    const fileSize = req.file.size;
 
-    // Build file data object dynamically
+    // Build file data
     const fileData = {
       title,
       resolutionNumber,
       category,
       summary,
       author,
-      fileSize,
+      fileSize: req.file.size,
       admin,
       approverID,
       status,
@@ -423,90 +432,46 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       fullText: fullTextType,
     };
 
-
-    console.log("OLDFILE",oldFile)
-
     if (oldFile === "true" || oldFile === true) {
       fileData.ArchivedStatus = "Archived";
       fileData.Archived = true;
     }
 
-    const newFile = new Files(fileData);
-
+    // Save file
     let savedFile;
     try {
-      savedFile = await newFile.save();
+      savedFile = await new Files(fileData);
+      await savedFile.save();
       console.log("File saved to database:", savedFile._id);
     } catch (dbErr) {
       console.error("Database save error:", dbErr);
       return res.status(500).json({ error: "Failed to save file to database" });
     }
 
-    // Activity log
+    // Log activity
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
     const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
 
-    const logPromise =
-      allowedRoles.includes(role) && savedFile
-        ? ActivityLog.create({
-            type: "CREATE",
-            action: "Uploaded a new file",
-            performedBy: req.user.linkId,
-            performedByModel: capitalizedRole,
-            file: savedFile._id,
-            message: `${capitalizedRole} uploaded file: '${title}'`,
-            level: "info",
-            ipAddress: req.ip,
-            userAgent: req.headers["user-agent"],
-          })
-        : Promise.resolve();
-
-    // Enrichment
-    const enrichmentPromise = Files.aggregate([
-      { $match: { _id: savedFile._id } },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryInfo",
-        },
-      },
-      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
-      {
-        $project: {
-          title: 1,
-          summary: 1,
-          author: 1,
-          fileUrl: 1,
-          fileName: 1,
-          folderPath: 1,
-          approverID: 1,
-          fullText: 1,
-          Archived: 1,
-          ArchivedStatus: 1,
-          status: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          fileSize: 1,
-          category: "$categoryInfo.category",
-          categoryID: "$categoryInfo._id",
-        },
-      },
-    ]);
-
-    const [_, enrichedFileResult] = await Promise.all([
-      logPromise,
-      enrichmentPromise,
-    ]);
-    const enrichedFile = enrichedFileResult[0];
+    if (allowedRoles.includes(role)) {
+      await ActivityLog.create({
+        type: "CREATE",
+        action: "Uploaded a new file",
+        performedBy: req.user.linkId,
+        performedByModel: capitalizedRole,
+        file: savedFile._id,
+        message: `${capitalizedRole} uploaded file: '${title}'`,
+        level: "info",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+    }
 
     // Notification for Pending
     if (savedFile.status === "Pending") {
       const fileId = savedFile._id;
       const fileTitle = savedFile.title || "Untitled Document";
-      const categoryTitle = enrichedFile.category || "Unknown Category";
+      const categoryTitle = savedFile.category || "Unknown Category";
       const messageText = `New document pending your approval: "${fileTitle}" from ${categoryTitle}`;
 
       const targetViewer =
@@ -531,7 +496,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           if (io) {
             const SendMessage = {
               message: messageText,
-              data: enrichedFile,
+              data: savedFile, // directly send savedFile instead of enrichedFile
               notificationId: notificationDoc._id,
               FileId: fileId,
               approverID: approverID,
@@ -558,13 +523,16 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
 
     res.status(201).json({
       status: "success",
-      data: enrichedFile,
+      data: savedFile,
     });
   } catch (err) {
     console.error("Unhandled error in createFiles:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+
+
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -1603,8 +1571,6 @@ exports.getFileForArchive = AsyncErrorHandler(async (req, res) => {
   const files = result[0].data || [];
   const totalCount = result[0].totalCount[0]?.count || 0;
   const totalPages = Math.ceil(totalCount / limit);
-
-  // Kunin counts per ArchivedStatus
   const statusCounts = await Files.aggregate([
     { $group: { _id: "$ArchivedStatus", count: { $sum: 1 } } },
   ]);
@@ -2182,8 +2148,6 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
 
 exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
   const defaultLimit = parseInt(req.query.limit) || 9;
-
-  // Parse per-category pagination from query string
   let pagePerCategory = {};
   try {
     pagePerCategory = req.query.page ? JSON.parse(req.query.page) : {};
@@ -2191,7 +2155,6 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     console.warn("Invalid page object, defaulting to 1 per category");
   }
 
-  // Destructure filters from query string
   const {
     title,
     tags,
@@ -2201,24 +2164,17 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     dateTo,
     ArchivedStatus,
     oldFile,
+    search,
   } = req.query;
 
-  // Build dynamic match stage
   const matchStage = {};
-
   if (ArchivedStatus) matchStage.ArchivedStatus = ArchivedStatus;
+  if (status) matchStage.status = status;
+  if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
 
-  if (oldFile !== undefined) {
-    matchStage.oldFile = oldFile === "true";
-  }
-
-  // ENHANCED TITLE SEARCH: Partial phrase matching with special character handling
   if (title) {
     const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    matchStage.title = {
-      $regex: escapedTitle,
-      $options: "i",
-    };
+    matchStage.title = { $regex: escapedTitle, $options: "i" };
   }
 
   if (tags) {
@@ -2227,8 +2183,6 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
       : tags.split(",").map((t) => t.trim().toLowerCase());
     if (tagArray.length > 0) matchStage.tags = { $in: tagArray };
   }
-
-  if (status) matchStage.status = status;
 
   if (category) matchStage.category = new mongoose.Types.ObjectId(category);
 
@@ -2242,49 +2196,14 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  // Aggregate with lookups
+  // --- Kunin lahat ng files at unwind lookups ---
   let files = await Files.aggregate([
     { $match: matchStage },
-    {
-      $lookup: {
-        from: "admins",
-        localField: "admin",
-        foreignField: "_id",
-        as: "adminInfo",
-      },
-    },
-    {
-      $lookup: {
-        from: "sbmembers",
-        localField: "author",
-        foreignField: "_id",
-        as: "authorInfo",
-      },
-    },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "categoryInfo",
-      },
-    },
-    {
-      $lookup: {
-        from: "officers",
-        localField: "officer",
-        foreignField: "_id",
-        as: "officerInfo",
-      },
-    },
-    {
-      $lookup: {
-        from: "admins",
-        localField: "archivedMetadata.archivedBy",
-        foreignField: "_id",
-        as: "archiverInfo",
-      },
-    },
+    { $lookup: { from: "admins", localField: "admin", foreignField: "_id", as: "adminInfo" } },
+    { $lookup: { from: "sbmembers", localField: "author", foreignField: "_id", as: "authorInfo" } },
+    { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "categoryInfo" } },
+    { $lookup: { from: "officers", localField: "officer", foreignField: "_id", as: "officerInfo" } },
+    { $lookup: { from: "admins", localField: "archivedMetadata.archivedBy", foreignField: "_id", as: "archiverInfo" } },
     { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
@@ -2293,7 +2212,18 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     { $sort: { createdAt: -1 } },
   ]).allowDiskUse(true);
 
-  // Group by category
+  // --- Optional search filter ---
+  if (search) {
+    const regex = new RegExp(search, "i");
+    files = files.filter((f) =>
+      regex.test(f.title) ||
+      regex.test(f.summary || "") ||
+      regex.test(f.tags?.join(",") || "") ||
+      regex.test(`${f.authorInfo?.first_name || ""} ${f.authorInfo?.last_name || ""}`)
+    );
+  }
+
+  // --- Paginate files per category ---
   const filesByCategory = {};
   files.forEach((file) => {
     const catId = file.categoryInfo?._id?.toString() || "uncategorized";
@@ -2301,9 +2231,15 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     filesByCategory[catId].push(file);
   });
 
-  // Apply per-category pagination or single-category page
+  // --- Kunin ActiveTags per category ---
+  const activeTagsPerCategory = {};
+  for (const [catId, catFiles] of Object.entries(filesByCategory)) {
+    activeTagsPerCategory[catId] = Array.from(
+      new Set(catFiles.flatMap(f => f.tags || []))
+    );
+  }
+
   const result = Object.entries(filesByCategory).map(([catId, catFiles]) => {
-    // Single-category pagination if category matches query
     const page =
       category && catId === category
         ? parseInt(req.query.page) || 1
@@ -2330,9 +2266,7 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
         tags: f.tags,
         createdAt: f.createdAt,
         updatedAt: f.updatedAt,
-        author: `${f.authorInfo?.first_name || ""} ${
-          f.authorInfo?.middle_name || ""
-        } ${f.authorInfo?.last_name || ""}`.trim(),
+        author: `${f.authorInfo?.first_name || ""} ${f.authorInfo?.middle_name || ""} ${f.authorInfo?.last_name || ""}`.trim(),
         category: f.categoryInfo?.category,
         categoryID: f.categoryInfo?._id,
         admin_first_name: f.adminInfo?.first_name,
@@ -2342,22 +2276,43 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
         officer_first_name: f.officerInfo?.first_name,
         officer_last_name: f.officerInfo?.last_name,
       })),
+      activeTags: activeTagsPerCategory[catId], // <-- lahat ng tags per category
     };
   });
+
+  const totalCounts = await Files.aggregate([
+    {
+      $facet: {
+        deleted: [{ $match: { ArchivedStatus: "Deleted" } }, { $count: "count" }],
+        forRestore: [{ $match: { ArchivedStatus: "For Restore" } }, { $count: "count" }],
+        archived: [{ $match: { ArchivedStatus: "Archived" } }, { $count: "count" }],
+        public: [{ $match: { ArchivedStatus: "Active", status: "Approved" } }, { $count: "count" }],
+      },
+    },
+    {
+      $project: {
+        deleted: { $ifNull: [{ $arrayElemAt: ["$deleted.count", 0] }, 0] },
+        forRestore: { $ifNull: [{ $arrayElemAt: ["$forRestore.count", 0] }, 0] },
+        archived: { $ifNull: [{ $arrayElemAt: ["$archived.count", 0] }, 0] },
+        public: { $ifNull: [{ $arrayElemAt: ["$public.count", 0] }, 0] },
+      },
+    },
+  ]);
+
+  const counts = totalCounts[0] || { deleted: 0, forRestore: 0, archived: 0, public: 0 };
 
   res.status(200).json({
     status: "success",
     data: result,
+    counts,
   });
 });
 
 exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  const limit = parseInt(req.query.limit) || 9;
 
   const { year, title, tags, category, oldFile, sort } = req.query;
-
-  // Always filter for Approved and Active
   const matchStage = { status: "Approved", ArchivedStatus: "Active" };
 
   if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
@@ -2438,14 +2393,21 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
     });
   }
 
-  // --- All years search ---
-  const distinctDates = await Files.distinct("dateOfResolution", matchStage);
-  const yearSet = new Set(distinctDates.map(d => new Date(d).getFullYear()));
-  const sortedYears = Array.from(yearSet).sort((a, b) => b - a);
+  // --- All years search with total count per year ---
+  const yearCounts = await Files.aggregate([
+    { $match: matchStage },
+    {
+      $group: {
+        _id: { $year: "$dateOfResolution" },
+        totalDocuments: { $sum: 1 },
+      },
+    },
+    { $sort: { "_id": -1 } },
+  ]);
 
   const results = [];
 
-  for (const y of sortedYears) {
+  for (const { _id: y, totalDocuments } of yearCounts) {
     const yearMatch = {
       ...matchStage,
       dateOfResolution: {
@@ -2454,8 +2416,6 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
       },
     };
 
-    const totalCount = await Files.countDocuments(yearMatch);
-    const totalPages = Math.ceil(totalCount / limit);
     const skip = (page - 1) * limit;
 
     const files = await Files.aggregate([
@@ -2501,9 +2461,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
     results.push({
       status: "success",
       year: y.toString(),
+      totalCount: totalDocuments, // <-- total count per year
       currentPage: page,
-      totalPages,
-      totalCount,
       results: formattedFiles.length,
       data: formattedFiles,
     });
@@ -2511,5 +2470,205 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 
   res.status(200).json(results);
 });
+
+
+exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
+  const { search, district, detailInfo, Position, term_from, term_to } = req.query;
+  const aggregationPipeline = [];
+
+  const matchStage = {};
+  if (district) {
+    matchStage.district = district;
+  }
+  if (detailInfo) {
+    matchStage.detailInfo = detailInfo;
+  }
+  if (Position) {
+    matchStage.Position = Position;
+  }
+
+  // Term date range filter
+  if (term_from || term_to) {
+    const queryFrom = term_from ? new Date(term_from) : null;
+    const queryTo = term_to ? new Date(term_to) : null;
+
+    if (queryTo) {
+      queryTo.setHours(23, 59, 59, 999);
+    }
+
+    if (queryFrom && queryTo) {
+
+      matchStage.$and = [
+        { term_from: { $lte: queryTo } },
+        { term_to: { $gte: queryFrom } }
+      ];
+    } else if (queryFrom) {
+      // kung may start date lang
+      matchStage.$or = [
+        { term_to: { $gte: queryFrom } },
+        { term_to: { $exists: false } }
+      ];
+    } else if (queryTo) {
+      // kung may end date lang
+      matchStage.$or = [
+        { term_from: { $lte: queryTo } },
+        { term_from: { $exists: false } }
+      ];
+    }
+  }
+
+  if (Object.keys(matchStage).length > 0) {
+    aggregationPipeline.push({ $match: matchStage });
+  }
+
+  aggregationPipeline.push(
+    {
+      $lookup: {
+        from: "files",
+        let: { authorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$author", "$$authorId"] },
+                  { $eq: ["$status", "Approved"] },
+                  {
+                    $or: [
+                      { $eq: ["$ArchivedStatus", "Archived"] },
+                      { $eq: ["$ArchivedStatus", "Active"] },
+                    ],
+                  },
+                ],
+              },
+            },
+          },
+        ],
+        as: "files",
+      },
+    },
+    {
+      $unwind: {
+        path: "$files",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "files.category",
+        foreignField: "_id",
+        as: "categoryInfo",
+      },
+    },
+    {
+      $unwind: {
+        path: "$categoryInfo",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        fullName: {
+          $concat: [
+            "$first_name",
+            " ",
+            { $ifNull: ["$middle_name", ""] },
+            " ",
+            "$last_name",
+          ],
+        },
+        "files.categoryName": "$categoryInfo.category",
+      },
+    }
+  );
+
+  if (search) {
+    aggregationPipeline.push({
+      $match: {
+        $or: [
+          { first_name: { $regex: search, $options: "i" } },
+          { middle_name: { $regex: search, $options: "i" } },
+          { last_name: { $regex: search, $options: "i" } },
+          { fullName: { $regex: search, $options: "i" } },
+          { "files.title": { $regex: search, $options: "i" } },
+          { Position: { $regex: search, $options: "i" } },
+        ],
+      },
+    });
+  }
+
+  aggregationPipeline.push(
+    {
+      $group: {
+        _id: "$_id",
+        fullName: { $first: "$fullName" },
+        district: { $first: "$district" },
+        detailInfo: { $first: "$detailInfo" },
+        Position: { $first: "$Position" },
+        term_from: { $first: "$term_from" },
+        term_to: { $first: "$term_to" },
+        memberInfo: { $first: "$$ROOT" },
+        files: {
+          $push: {
+            $cond: [
+              { $ne: ["$files._id", null] },
+              {
+                _id: "$files._id",
+                title: "$files.title",
+                summary: "$files.summary",
+                category: "$categoryInfo.category",
+                createdAt: "$files.createdAt",
+                status: "$files.status",
+                filePath: "$files.filePath",
+                resolutionNo: "$files.ResolutionNo",
+                dateOfResolution: "$files.dateOfResolution",
+                resolutionNumber: "$files.resolutionNumber",
+              },
+              "$$REMOVE",
+            ],
+          },
+        },
+        count: { $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] } },
+        resolutionCount: {
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+          },
+        },
+        ordinanceCount: {
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+          },
+        },
+      },
+    },
+    {
+      $sort: { fullName: 1 },
+    }
+  );
+
+  const AuthorsWithFiles = await SBmember.aggregate(
+    aggregationPipeline
+  ).allowDiskUse(true);
+
+  const totalCount = AuthorsWithFiles.length;
+  const limit = parseInt(req.query.limit) || 9;
+  const currentPage = parseInt(req.query.page) || 1;
+  const totalPages = Math.ceil(totalCount / limit);
+  const startIndex = (currentPage - 1) * limit;
+  const endIndex = currentPage * limit;
+  const paginatedData = AuthorsWithFiles.slice(startIndex, endIndex);
+
+  res.status(200).json({
+    status: "success",
+    currentPage,
+    totalPages,
+    data: paginatedData,
+  });
+});
+
+
+
+
 
 

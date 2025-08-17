@@ -3,9 +3,10 @@ import { ChevronLeft, ChevronRight, Folder, FileText, Calendar, User, Tag, Eye, 
 import { motion } from "framer-motion";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
-import defaultCover from "../../../../src/assets/billpicture.jpg"; 
+import defaultCover from "../../../../src/assets/billpicture.jpg";
+import { useNavigate } from "react-router-dom";
 
-const App = () => {
+const Home = () => {
     const mockPictures = [
         {
             id: 1,
@@ -46,9 +47,6 @@ const App = () => {
     ];
 
     const { isLatestBill } = useContext(FilesDisplayContext);
-
-    console.log("LatestBll", isLatestBill);
-
     const mockArchiveDocuments = [
         {
             id: 1,
@@ -141,55 +139,7 @@ const App = () => {
             views: 445,
         },
     ];
-
-    // SP Carousel data - combine events and documentation
-    const spCarouselData = [
-        {
-            id: 1,
-            title: "Environmental Leadership",
-            subtitle: "Leading the Way in Sustainable Development",
-            description:
-                "The Sangguniang Panlalawigan takes pride in spearheading environmental initiatives that protect our natural resources while promoting sustainable economic growth for all communities.",
-            events: mockPictures.filter((item) => item.category === "Environment"),
-            documentation: mockArchiveDocuments.filter((doc) => doc.tags.includes("Environment")),
-            image: "https://placehold.co/800x600/059669/FFFFFF?text=Environmental+Leadership",
-            bgGradient: "from-green-800 via-emerald-600 to-green-700",
-        },
-        {
-            id: 2,
-            title: "Economic Development",
-            subtitle: "Building Prosperity for Our Province",
-            description:
-                "Through strategic planning and innovative policies, we foster economic opportunities that benefit local businesses, promote tourism, and create sustainable livelihoods for our constituents.",
-            events: mockPictures.filter((item) => item.category === "Tourism" || item.category === "Economy"),
-            documentation: mockArchiveDocuments.filter((doc) => doc.tags.includes("Tourism") || doc.tags.includes("Economy")),
-            image: "https://placehold.co/800x600/0891b2/FFFFFF?text=Economic+Development",
-            bgGradient: "from-blue-800 via-cyan-600 to-blue-700",
-        },
-        {
-            id: 3,
-            title: "Youth Empowerment",
-            subtitle: "Investing in Tomorrow's Leaders",
-            description:
-                "Our commitment to youth development ensures that the next generation has access to quality education, skills training, and leadership opportunities that will shape our province's future.",
-            events: mockPictures.filter((item) => item.category === "Youth"),
-            documentation: mockArchiveDocuments.filter((doc) => doc.tags.includes("Youth") || doc.tags.includes("Education")),
-            image: "https://placehold.co/800x600/dc2626/FFFFFF?text=Youth+Empowerment",
-            bgGradient: "from-red-800 via-rose-600 to-red-700",
-        },
-        {
-            id: 4,
-            title: "Infrastructure Development",
-            subtitle: "Building the Foundation for Progress",
-            description:
-                "Strategic infrastructure investments in roads, utilities, and public facilities create the backbone for sustainable development and improved quality of life across all municipalities.",
-            events: mockPictures,
-            documentation: mockArchiveDocuments.filter((doc) => doc.tags.includes("Infrastructure") || doc.tags.includes("Planning")),
-            image: "https://placehold.co/800x600/7c3aed/FFFFFF?text=Infrastructure+Development",
-            bgGradient: "from-purple-800 via-violet-600 to-purple-700",
-        },
-    ];
-
+ const navigate = useNavigate();
     const { pictures } = useContext(NewsDisplayContext);
     const newsItems = pictures.filter((item) => item.category === "Carousel");
     const documentsummary = pictures.filter((item) => item.category === "Documentation");
@@ -197,15 +147,14 @@ const App = () => {
     const News = mockPictures;
 
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [spCarouselIndex, setSPCarouselIndex] = useState(0); // New state for SP carousel
+    const [spCarouselIndex, setSPCarouselIndex] = useState(0);
     const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
-    const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false); // New state for SP carousel hover
+    const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false);
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
     const [filterCategory, setFilterCategory] = useState("All");
     const [sortBy, setSortBy] = useState("date");
 
-    // Filter and search functionality
     const filteredDocuments = documentation.filter((doc) => {
         const matchesSearch =
             doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,6 +163,17 @@ const App = () => {
         const matchesCategory = filterCategory === "All" || doc.tags.includes(filterCategory);
         return matchesSearch && matchesCategory;
     });
+
+ 
+    const handdleVewDocument = (news) => {
+             navigate("/expand-pdf", {
+            state: {
+                fileId: news._id,
+                fileData: news,
+                from: "/documents",
+            },
+        });
+    };
 
     // Sort documents
     const sortedDocuments = [...filteredDocuments].sort((a, b) => {
@@ -241,11 +201,11 @@ const App = () => {
 
     // SP Carousel navigation functions
     const nextSPSlide = () => {
-        setSPCarouselIndex((prevIndex) => (prevIndex + 1) % spCarouselData.length);
+        setSPCarouselIndex((prevIndex) => (prevIndex + 1) % documentsummary.length);
     };
 
     const prevSPSlide = () => {
-        setSPCarouselIndex((prevIndex) => (prevIndex - 1 + spCarouselData.length) % spCarouselData.length);
+        setSPCarouselIndex((prevIndex) => (prevIndex - 1 + documentsummary.length) % documentsummary.length);
     };
 
     useEffect(() => {
@@ -264,7 +224,7 @@ const App = () => {
 
         const interval = setInterval(() => {
             nextSPSlide();
-        }, 6000); // Slower interval for SP carousel
+        }, 6000);
 
         return () => clearInterval(interval);
     }, [isHoveringSPCarousel]);
@@ -319,7 +279,7 @@ const App = () => {
     };
 
     const currentNews = newsItems.length > 0 ? newsItems[currentIndex] : null;
-    const currentSPSlide = spCarouselData[spCarouselIndex];
+    const currentSPSlide = documentsummary[spCarouselIndex];
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 antialiased">
@@ -407,7 +367,7 @@ const App = () => {
                     </motion.div>
                 </div>
 
-                {/* Enhanced SP Carousel Section */}
+                {/* Enhanced SP Carousel Section - Gradient Removed */}
                 <motion.div
                     className="relative bg-gray-100 text-gray-900"
                     onMouseEnter={() => setIsHoveringSPCarousel(true)}
@@ -416,7 +376,6 @@ const App = () => {
                 >
                     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="grid min-h-[600px] grid-cols-1 gap-0 lg:grid-cols-2">
-                            {/* Left Side - Dynamic Content */}
                             <motion.div
                                 key={spCarouselIndex + "content"}
                                 className="flex flex-col justify-center bg-white p-8 lg:p-12"
@@ -431,65 +390,39 @@ const App = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.6, delay: 0.1 }}
                                     >
-                                        {currentSPSlide.title}
+                                        {currentSPSlide?.title}
                                     </motion.h2>
-                                    <motion.h3
-                                        className="mb-4 text-xl font-semibold text-blue-600"
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.6, delay: 0.2 }}
-                                    >
-                                        {currentSPSlide.subtitle}
-                                    </motion.h3>
                                     <motion.p
                                         className="mb-8 text-lg text-gray-600"
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.6, delay: 0.3 }}
                                     >
-                                        {currentSPSlide.description}
+                                        {currentSPSlide?.excerpt}
                                     </motion.p>
-
-                                    <motion.div
-                                        className="mb-8 h-0.5 w-16 bg-red-600"
-                                        initial={{ width: 0 }}
-                                        animate={{ width: 64 }}
-                                        transition={{ duration: 0.6, delay: 0.4 }}
-                                    />
-
-                                    {/* Event Summary */}
-                                    <motion.div
-                                        className="space-y-4"
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ duration: 0.6, delay: 0.5 }}
-                                    ></motion.div>
                                 </div>
                             </motion.div>
-
-                            {/* Right Side - Dynamic Image with Gradient */}
                             <motion.div
                                 key={spCarouselIndex + "image"}
-                                className={`relative bg-gradient-to-br ${currentSPSlide.bgGradient} overflow-hidden`}
+                                className="relative overflow-hidden"
                                 initial={{ opacity: 0, x: 50 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.6, ease: "easeOut" }}
                             >
-                                <div className={`absolute inset-0 bg-gradient-to-br ${currentSPSlide.bgGradient}`}></div>
-                                <motion.img
-                                    src={currentSPSlide.image}
-                                    alt={currentSPSlide.title}
-                                    className="h-full w-full object-cover mix-blend-overlay"
-                                    initial={{ scale: 1.1 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ duration: 0.8, ease: "easeOut" }}
-                                />
-
-                                {/* Decorative elements */}
-                                <div className="absolute left-8 top-8 h-12 w-16 rounded bg-white bg-opacity-20"></div>
-                                <div className="absolute right-8 top-8 h-12 w-16 rounded bg-white bg-opacity-20"></div>
-                                <div className="absolute bottom-8 left-8 h-16 w-12 rounded bg-white bg-opacity-20"></div>
-                                <div className="absolute bottom-8 right-8 h-16 w-12 rounded bg-white bg-opacity-20"></div>
+                                {currentSPSlide?.avatar?.url ? (
+                                    <motion.img
+                                        src={currentSPSlide.avatar.url}
+                                        alt={currentSPSlide.title}
+                                        className="h-full w-full object-cover"
+                                        initial={{ scale: 1.1 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ duration: 0.8, ease: "easeOut" }}
+                                    />
+                                ) : (
+                                    <div className="flex h-full w-full items-center justify-center bg-gray-200">
+                                        <span className="text-gray-500">No Image Available</span>
+                                    </div>
+                                )}
                             </motion.div>
                         </div>
                     </div>
@@ -512,12 +445,12 @@ const App = () => {
 
                     {/* SP Carousel Indicators */}
                     <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 transform space-x-3">
-                        {spCarouselData.map((_, index) => (
+                        {documentsummary.map((_, index) => (
                             <button
                                 key={index}
                                 onClick={() => setSPCarouselIndex(index)}
                                 className={`h-3 w-3 rounded-full transition-all duration-300 ${
-                                    index === spCarouselIndex ? "w-8 bg-white" : "bg-white bg-opacity-50"
+                                    index === spCarouselIndex ? "w-8 bg-gray-800" : "bg-gray-400"
                                 }`}
                                 aria-label={`Go to SP slide ${index + 1}`}
                             />
@@ -569,8 +502,11 @@ const App = () => {
                                         <h3 className="mb-2 text-lg font-bold text-gray-900">{news.title}</h3>
                                         <p className="mb-4 text-sm text-gray-600">{news.excerpt}</p>
                                     </div>
-                                    <button className="mt-auto text-sm font-medium text-blue-900 transition-colors duration-200 hover:text-blue-700 hover:underline">
-                                        Read more
+                                    <button
+                                        onClick={() => handdleVewDocument(news)}
+                                        className="mt-auto text-sm font-medium text-blue-900 transition-colors duration-200 hover:text-blue-700 hover:underline"
+                                    >
+                                        Read Document
                                     </button>
                                 </div>
                             </motion.div>
@@ -665,4 +601,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default Home;

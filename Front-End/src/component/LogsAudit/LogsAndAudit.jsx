@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useContext } from "react";
 import { LogsAndAuditContext } from "../../contexts/LogsAndAuditContext/LogsAndAuditContext";
 import { Database } from "lucide-react";
+
 const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString();
@@ -286,24 +287,20 @@ const LogsAndAudit = () => {
                 />
             ));
         }
+        
+        // Fixed "No Audit Found" display
         return (
-            <tr>
-                <td
-                    colSpan="9"
-                    className="px-6 py-12 text-center"
-                >
-                    <div className="flex flex-col items-center justify-center">
-                        <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
-                            <Database className="h-10 w-10" />
-                        </div>
-                        <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">No Documents Available</h3>
-                        <p className="text-center text-gray-500 dark:text-gray-400">
-                            No audit logs found for the selected filters.
-                            <br />
-                        </p>
-                    </div>
-                </td>
-            </tr>
+            <div className="flex w-full flex-col items-center justify-center py-12">
+                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
+                    <Database className="h-10 w-10" />
+                </div>
+                <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
+                    No Audit Logs Found
+                </h3>
+                <p className="text-center text-gray-500 dark:text-gray-400">
+                    No audit logs found for the selected filters.
+                </p>
+            </div>
         );
     };
 
@@ -374,7 +371,7 @@ const LogsAndAudit = () => {
 
                         <div>{renderLogs()}</div>
 
-                        {totalPages >= 1 && (
+                        {totalPages >= 1 && currentLogs.length > 0 && (
                             <div className="relative mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-white px-2 py-4 dark:bg-gray-800">
                                 <button
                                     onClick={() => goToPage(currentPage - 1)}

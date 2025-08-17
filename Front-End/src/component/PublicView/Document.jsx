@@ -41,11 +41,14 @@ const Documents = ({ searchKeyword }) => {
         dataArray.forEach((group) => {
             const year = group.year || "Unknown";
             const existing = grouped[year]?.data || [];
+            const totalCount = group.totalCount || 0;
+            const totalPages = group.totalPages || Math.ceil(totalCount / 10) || 1;
+            
             grouped[year] = {
                 data: [...existing, ...(group.data || [])],
                 currentPage: group.currentPage || 1,
-                totalPages: group.totalPages || 1,
-                totalCount: group.totalCount || existing.length + (group.data?.length || 0),
+                totalPages: totalPages,
+                totalCount: totalCount,
             };
         });
 
@@ -64,7 +67,7 @@ const Documents = ({ searchKeyword }) => {
 
     const filteredData = useMemo(() => {
         if (selectedYear === "All Years") return billsByYear;
-        return { [selectedYear]: billsByYear[selectedYear] || { data: [], currentPage: 1, totalPages: 1 } };
+        return { [selectedYear]: billsByYear[selectedYear] || { data: [], currentPage: 1, totalPages: 1, totalCount: 0 } };
     }, [billsByYear, selectedYear]);
 
     const categories = useMemo(() => {
@@ -79,14 +82,7 @@ const Documents = ({ searchKeyword }) => {
 
         return [defaultCategory, ...categoryOptions];
     }, [isCategory]);
-
-    // Removed effect that auto-opens first year
-    // useEffect(() => {
-    //     if (sortedYears.length > 0 && !openYear) {
-    //         setOpenYear(sortedYears[0]);
-    //     }
-    // }, [sortedYears]);
-
+    
     const handleView = (file) => {
         navigate("/expand-pdf", {
             state: {
@@ -101,7 +97,6 @@ const Documents = ({ searchKeyword }) => {
         const isCurrentlyOpen = openYear === year;
         setOpenYear(isCurrentlyOpen ? null : year);
 
-        // Call fetchPublicDisplay only when hiding the year
         if (isCurrentlyOpen) {
             fetchPublicDisplay({
                 title: searchKeyword || null,
@@ -115,22 +110,11 @@ const Documents = ({ searchKeyword }) => {
         setLoadingStates((prev) => ({ ...prev, [year]: true }));
 
         try {
-            const newData = await fetchPublicDisplay({
+            await fetchPublicDisplay({
                 title: searchKeyword || null,
                 year: year === "Unknown" ? null : parseInt(year, 10),
                 category: selectedCategory,
                 page,
-            });
-
-            setAllYearsData((prev) => {
-                const existing = prev[year]?.data || [];
-                return {
-                    ...prev,
-                    [year]: {
-                        ...newData,
-                        data: [...existing, ...(newData.data || [])],
-                    },
-                };
             });
         } catch (error) {
             console.error(error);
@@ -235,8 +219,12 @@ const Documents = ({ searchKeyword }) => {
                             const yearFiles = yearData.data;
                             const currentPage = yearData.currentPage;
                             const totalPages = yearData.totalPages;
+                            const totalCount = yearData.totalCount || 0;
                             const isLoading = loadingStates[year];
                             const isOpen = openYear === year;
+
+                            const startIndex = (currentPage - 1) * 10 + 1;
+                            const endIndex = Math.min(currentPage * 10, totalCount);
 
                             return (
                                 <div
@@ -252,8 +240,8 @@ const Documents = ({ searchKeyword }) => {
                                                 {year === "Unknown" ? "?" : year.substring(2)}
                                             </span>
                                             <span>
-                                                {year} • {yearFiles.length} document
-                                                {yearFiles.length !== 1 ? "s" : ""}
+                                                {year} • {totalCount} document
+                                                {totalCount !== 1 ? "s" : ""}
                                                 {isLoading && (
                                                     <span className="ml-2 inline-flex">
                                                         <Loader
@@ -345,8 +333,7 @@ const Documents = ({ searchKeyword }) => {
                                             {isOpen && totalPages > 1 && (
                                                 <div className="mb-6 mt-2 flex flex-col items-center justify-between gap-4 px-6 sm:flex-row">
                                                     <div className="text-sm text-gray-600">
-                                                        Showing {(currentPage - 1) * 10 + 1} to {Math.min(currentPage * 10, yearFiles.length)} of{" "}
-                                                        {yearFiles.length} documents
+                                                        Showing {startIndex} to {endIndex} of {totalCount} documents
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button

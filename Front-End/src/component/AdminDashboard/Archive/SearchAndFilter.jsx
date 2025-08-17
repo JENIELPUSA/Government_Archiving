@@ -1,4 +1,3 @@
-// SearchAndFilter.jsx
 import React from 'react';
 import { FaSearch, FaTimes, FaTag } from 'react-icons/fa';
 
@@ -14,6 +13,9 @@ export const SearchAndFilter = ({
     showTagSuggestions,
     setShowTagSuggestions
 }) => {
+
+
+    console.log("Tags in Filter Pass",allTags)
     const filteredTagSuggestions = allTags.filter(tag =>
         tag.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -26,18 +28,18 @@ export const SearchAndFilter = ({
                     <FaSearch className="text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Search documents or tags..." // Updated placeholder
+                        placeholder="Search documents or tags..."
                         className="ml-2 min-w-[200px] bg-transparent focus:outline-none dark:text-white"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setShowTagSuggestions(true)}
-                        onBlur={() => setTimeout(() => setShowTagSuggestions(false), 100)} // Delay to allow tag click
+                        onBlur={() => setTimeout(() => setShowTagSuggestions(false), 100)}
                     />
                     {searchQuery && (
                         <button 
                             onClick={() => setSearchQuery("")}
                             className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-                            aria-label="Clear search query" // Added for accessibility
+                            aria-label="Clear search query"
                         >
                             <FaTimes />
                         </button>
@@ -45,12 +47,12 @@ export const SearchAndFilter = ({
                 </div>
                 
                 {/* Tag suggestions dropdown */}
-                {showTagSuggestions && searchQuery && filteredTagSuggestions.length > 0 && ( // Added searchQuery condition
+                {showTagSuggestions && searchQuery && filteredTagSuggestions.length > 0 && (
                     <div className="absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
                         <div className="p-2">
-                            <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Matching Tags</h3> {/* Updated heading */}
+                            <h3 className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">Matching Tags</h3>
                             <div className="flex flex-wrap gap-1">
-                                {filteredTagSuggestions.map(tag => ( // Used filteredTagSuggestions
+                                {filteredTagSuggestions.map(tag => (
                                     <button
                                         key={tag}
                                         className={`rounded-full px-2 py-1 text-xs ${
@@ -60,8 +62,8 @@ export const SearchAndFilter = ({
                                         }`}
                                         onClick={() => {
                                             toggleTag(tag);
-                                            setSearchQuery(""); // Clear search query after selecting a tag
-                                            setShowTagSuggestions(false); // Close suggestions
+                                            setSearchQuery("");
+                                            setShowTagSuggestions(false);
                                         }}
                                     >
                                         {tag}
@@ -85,8 +87,8 @@ export const SearchAndFilter = ({
                 <button 
                     onClick={() => setIsFilterOpen(!isFilterOpen)}
                     className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 shadow-sm hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
-                    aria-expanded={isFilterOpen} // Added for accessibility
-                    aria-controls="filter-dropdown" // Added for accessibility
+                    aria-expanded={isFilterOpen}
+                    aria-controls="filter-dropdown"
                 >
                     <FaTag className="text-blue-500" />
                     <span className="font-medium text-gray-700 dark:text-gray-200">Filter</span>
@@ -156,7 +158,7 @@ export const SearchAndFilter = ({
                                                     toggleTag(tag);
                                                 }}
                                                 className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                aria-label={`Remove tag ${tag}`} // Added for accessibility
+                                                aria-label={`Remove tag ${tag}`}
                                             >
                                                 <FaTimes size={12} />
                                             </button>

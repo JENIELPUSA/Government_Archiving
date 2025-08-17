@@ -134,6 +134,8 @@ function SBmember() {
                     detailInfo: newMemberData.detailInfo,
                     district: newMemberData.district,
                     email: newMemberData.email,
+                    term_from: newMemberData.term_from,
+                    term_to: newMemberData.term_to,
                 };
                 result = await AddSbData(memberToAdd);
             }

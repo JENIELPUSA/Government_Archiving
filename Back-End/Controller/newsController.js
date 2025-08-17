@@ -6,11 +6,7 @@ const sharp = require("sharp");
 const cloudinary = require("../Utils/cloudinary");
 
 exports.AddNews = AsyncErrorHandler(async (req, res) => {
-  console.log("req.body:", req.body);
-  console.log("req.file:", req.file);
   const requiredFields = ["title", "date", "excerpt", "category"];
-
-  // Check missing required fields
   const missingFields = requiredFields.filter((field) => !req.body[field]);
   if (missingFields.length > 0) {
     return res.status(400).json({
@@ -28,22 +24,33 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
+  // Check category limit
+  const categoryLimits = {
+    Carousel: 5,
+    Documentation: 10,
+  };
+
+  if (categoryLimits[category]) {
+    const currentCount = await News.countDocuments({ category });
+    if (currentCount >= categoryLimits[category]) {
+      return res.status(400).json({
+        message: `Cannot add more than ${categoryLimits[category]} items in category ${category}.`,
+      });
+    }
+  }
+
   let imageData = { url: "", public_id: "" };
 
-  // If multer uploaded a file with field name "avatar"
   if (req.file) {
-    // Resize and convert image buffer using sharp
     const resizedBuffer = await sharp(req.file.buffer)
       .resize({ width: 512 })
       .jpeg({ quality: 80 })
       .toBuffer();
 
-    // Convert resized buffer to base64 for cloudinary upload
     const base64Image = `data:${
       req.file.mimetype
     };base64,${resizedBuffer.toString("base64")}`;
 
-    // Upload to Cloudinary under specific folder
     const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
       folder: "Government Archiving/News",
     });
@@ -63,13 +70,11 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     avatar: imageData,
   });
 
-  // Send success response with created news
   return res.status(201).json({
     status: "Success",
     news: newNews,
   });
 });
-
 exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -135,56 +140,56 @@ exports.UpdateNews = async (req, res) => {
   const NewsID = req.params.id;
 
   try {
-    let uploadPromise;
     let avatar;
 
     if (req.file) {
-      // Prepare Cloudinary upload promise
-      const base64Image = `data:${
-        req.file.mimetype
-      };base64,${req.file.buffer.toString("base64")}`;
-      uploadPromise = cloudinary.uploader.upload(base64Image, {
-        folder: "Government Archiving/Profile",
-      });
+      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+        "base64"
+      )}`;
 
-      // Delete old avatar in background (non-blocking)
-      News.findById(NewsID).then((oldRecord) => {
-        if (oldRecord?.avatar?.public_id) {
-          cloudinary.uploader
-            .destroy(oldRecord.avatar.public_id)
-            .catch((err) => {
-              console.error("Failed to delete old image from Cloudinary:", err);
-            });
-        }
-      });
-    }
+      let uploadedResponse;
+      try {
+        uploadedResponse = await cloudinary.uploader.upload(base64Image, {
+          folder: "Government Archiving/Profile",
+        });
+      } catch (uploadErr) {
+        console.error("Cloudinary upload failed:", uploadErr);
+        return res.status(500).json({ error: "Failed to upload image." });
+      }
 
-    // Wait for Cloudinary upload if there is a file
-    if (uploadPromise) {
-      const uploadedResponse = await uploadPromise;
       avatar = {
         public_id: uploadedResponse.public_id,
         url: uploadedResponse.secure_url,
       };
+
+      // Delete old avatar in background (optional, non-blocking)
+      News.findById(NewsID).then((oldRecord) => {
+        if (oldRecord?.avatar?.public_id) {
+          cloudinary.uploader
+            .destroy(oldRecord.avatar.public_id)
+            .catch((err) =>
+              console.error("Failed to delete old image from Cloudinary:", err)
+            );
+        }
+      });
     }
 
+    // Update database only after successful upload (or if no new file)
     const updateData = {
-      first_name: req.body.first_name,
-      last_name: req.body.last_name,
-      middle_name: req.body.middle_name,
-      email: req.body.email,
-      Position: req.body.Position,
+      title: req.body.title,
+      date: req.body.date,
+      excerpt: req.body.excerpt,
+      category: req.body.category,
       detailInfo: req.body.detailInfo,
-      ...(avatar && { avatar }), // Add avatar only if updated
+      ...(avatar && { avatar }), // include avatar only if uploaded
     };
 
-    // Single query for update
     const updatedNews = await News.findByIdAndUpdate(NewsID, updateData, {
       new: true,
     });
 
     if (!updatedNews) {
-      return res.status(404).json({ error: "SB Member not found" });
+      return res.status(404).json({ error: "News not found" });
     }
 
     res.json({ status: "success", data: updatedNews });
@@ -193,6 +198,7 @@ exports.UpdateNews = async (req, res) => {
     res.status(500).json({ error: "Something went wrong." });
   }
 };
+
 
 exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
   const NewsID = req.params.id;
@@ -210,17 +216,9 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
       await cloudinary.uploader.destroy(existingSB.avatar.public_id);
     } catch (error) {
       console.error("Cloudinary deletion failed:", error);
-      // optionally continue even if deletion fails
     }
   }
 
-  // 🗑 Delete linked login
-  const userLogin = await UserLoginSchema.findOne({ linkedId: NewsID });
-  if (userLogin) {
-    await UserLoginSchema.findByIdAndDelete(userLogin._id);
-  }
-
-  // 🗑 Delete admin record
   await News.findByIdAndDelete(NewsID);
 
   res.status(200).json({

@@ -8,11 +8,9 @@ const ErrorController = require("./Controller/errorController");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
-const usersroutes = require("./Routes/UserRoutes");
 
 const AdminRoute = require("./Routes/AdminRoute");
 
-const PatientDentalRoute = require("./Routes/PatientDentalRoute");
 
 const Notification = require("./Routes/NotificationRoute");
 
@@ -27,8 +25,6 @@ const FilesRoute = require ("./Routes/FilesRoute")
 const authentic = require("./Routes/authRouter");
 
 const RatingRoute = require("./Routes/RatingRoute")
-
-const DepartmentRoute = require("./Routes/DepatmentRoute")
 
 const CategoryFileRouter = require("./Routes/CategoryFileRouter")
 
@@ -87,14 +83,11 @@ if (process.env.NODE_ENV === "development") {
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-app.use("/api/v1/users", usersroutes);
 app.use("/api/v1/authentication", authentic);
-app.use("/api/v1/Patient", PatientDentalRoute);
 app.use("/api/v1/Admin", AdminRoute);
 app.use("/api/v1/Notification", Notification);
 app.use("/api/v1/LogsAudit", Logs);
 app.use("/api/v1/Files", FilesRoute);
-app.use("/api/v1/Department", DepartmentRoute);
 app.use("/api/v1/Comments", Comments);
 app.use("/api/v1/Ratings", RatingRoute);
 app.use("/api/v1/Category", CategoryFileRouter);

@@ -19,11 +19,8 @@ exports.DisplaySBmember = AsyncErrorHandler(async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 5;
         const skip = (page - 1) * limit;
-
         const { search = "", dateFrom, dateTo } = req.query;
-
         const matchStage = {};
-
         const hasDateFrom = dateFrom && dateFrom.trim() !== "";
         const hasDateTo = dateTo && dateTo.trim() !== "";
 
@@ -77,7 +74,9 @@ exports.DisplaySBmember = AsyncErrorHandler(async (req, res) => {
                     first_name: 1,
                     middle_name: 1,
                     last_name: 1,
-                    detailInfo: 1, // ✨ Idinagdag ang detailInfo
+                    detailInfo: 1,
+                    term_from:1,
+                    term_to:1,
                     email: 1,
                     Position: 1,
                     created_at: 1,
@@ -113,6 +112,65 @@ exports.DisplaySBmember = AsyncErrorHandler(async (req, res) => {
         });
     }
 });
+
+
+exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
+  try {
+    const { search = "" } = req.query;
+
+    const pipeline = [
+      {
+        $addFields: {
+          full_name: {
+            $concat: [
+              { $ifNull: ["$first_name", ""] },
+              " ",
+              { $ifNull: ["$middle_name", ""] },
+              " ",
+              { $ifNull: ["$last_name", ""] },
+            ],
+          },
+        },
+      },
+      ...(search.trim()
+        ? [
+            {
+              $match: {
+                full_name: { $regex: new RegExp(search.trim(), "i") },
+              },
+            },
+          ]
+        : []),
+      {
+        $sort: { full_name: 1 },
+      },
+      {
+        $project: {
+          _id: 1,
+          full_name: 1,
+          Position: 1, // <-- idinagdag
+        },
+      },
+    ];
+
+    const members = await SBmember.aggregate(pipeline);
+
+    res.status(200).json({
+      status: "success",
+      data: members,
+      totalMembers: members.length,
+    });
+  } catch (error) {
+    console.error("Error fetching all SB members:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching all SB members.",
+      error: error.message,
+    });
+  }
+});
+
+
 
 exports.UpdateSBmember = async (req, res) => {
   const SbmemberID = req.params.id;

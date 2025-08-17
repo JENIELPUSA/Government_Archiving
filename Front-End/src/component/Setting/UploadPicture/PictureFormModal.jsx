@@ -13,15 +13,13 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
   const [errors, setErrors] = useState({});
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
-
-  // useEffect and helper functions remain the same
   useEffect(() => {
     if (picture) {
       setTitle(picture.title || '');
       setDate(picture.date ? picture.date.slice(0, 10) : '');
       setExcerpt(picture.excerpt || '');
       setCategory(picture.category || '');
-      setImagePreview(picture.imageUrl || '');
+      setImagePreview(picture.avatar?.url || '');
       setImageFile(null);
     } else {
       resetForm();

@@ -13,7 +13,9 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [isSBMember, setSBMember] = useState([]);
+      const [isDropdown, setDropdown] = useState([]);
     const [isGroupFiles, setGroupFiles] = useState([]);
+    const [isGroupPublicAuthor, setGroupPublicAuthor] = useState([]);
     const [totalPages, setTotalPages] = useState(1);
     const [currentPage, setCurrentPage] = useState(1);
     const limit = 9;
@@ -46,7 +48,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 params,
             });
 
-            const { totalPages, currentPage} = res.data;
+            const { totalPages, currentPage } = res.data;
             setGroupFiles(res.data.data);
             setTotalPages(totalPages);
             setCurrentPage(currentPage);
@@ -56,11 +58,53 @@ export const SbMemberDisplayProvider = ({ children }) => {
     }, []);
 
 
+    const FetchDropdown = useCallback(async () => {
+        if (!authToken) return;
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/AuthhorDropdown`, {
+                withCredentials: true,
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+            setDropdown(res.data.data);
+        } catch (error) {
+            console.error("Error fetching SB member:", error);
+        }
+    }, [authToken]);
+
+
+
+const DisplayPublicAuthor = useCallback(
+  async (queryParams = {}) => {
+    try {
+      const res = await axiosInstance.post(
+        `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/PublicGetAuthorwithFiles`,
+        {},
+        {
+          withCredentials: true,
+          params: queryParams,
+          headers: {
+            "Cache-Control": "no-cache",
+          },
+        }
+      );
+
+      const { totalPages, currentPage } = res.data;
+      setGroupPublicAuthor(res.data.data);
+
+      setTotalPages(totalPages);
+      setCurrentPage(currentPage);
+    } catch (error) {
+      console.error("Error fetching archived data:", error);
+    }
+  },
+  [setGroupPublicAuthor, setTotalPages, setCurrentPage] // dependencies
+);
+
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true);
             try {
-                await Promise.all([DisplayPerSb(), FetchDisplaySbMember()]);
+                await Promise.all([DisplayPerSb(), FetchDisplaySbMember(), DisplayPublicAuthor(),FetchDropdown()]);
             } catch (err) {
                 console.error("Error fetching SB data", err);
             } finally {
@@ -69,7 +113,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
         };
 
         fetchAllData();
-    }, [DisplayPerSb, FetchDisplaySbMember]);
+    }, [DisplayPerSb, FetchDisplaySbMember,DisplayPublicAuthor]);
 
     const AddSbData = async (values) => {
         console.log("CONTXET", values);
@@ -79,6 +123,8 @@ export const SbMemberDisplayProvider = ({ children }) => {
             formData.append("last_name", values.last_name || "");
             formData.append("email", values.email || "");
             formData.append("Position", values.Position || "");
+            formData.append("term_from", values.term_from || "");
+            formData.append("term_to", values.term_to || "");
             formData.append("role", "sbmember");
 
             if (values.middle_name) {
@@ -189,8 +235,9 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 AddSbData,
                 isSBMember,
                 isGroupFiles,
-                DisplayPerSb,
+                DisplayPerSb,setTotalPages,
                 UpdateSbmember,
+                isGroupPublicAuthor,DisplayPublicAuthor,isDropdown
             }}
         >
             {children}

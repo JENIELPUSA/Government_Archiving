@@ -14,7 +14,7 @@ router
 
 router
   .route("/FilesWithAuthor")
-  .get(FilesController.getAllAuthorsWithFiles);
+  .get(authController.protect,FilesController.getAllAuthorsWithFiles);
 
 
 router
@@ -59,6 +59,11 @@ router.route("/GetLatestBill").post(FilesController.getLatestBillsThisWeek);
 router.route("/GetArchivedData").post(authController.protect,FilesController.DisplayFilesArchive);
 
 router.route("/DocumentPerYear").post(FilesController.DisplayDocumentPerYear);
+
+
+router
+  .route("/PublicGetAuthorwithFiles")
+  .post(FilesController.PublicGetAuthorwithFiles);
 
 
 

@@ -51,6 +51,8 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       middle_name,
       detailInfo,
       district,
+      term_from,
+      term_to,
     } = req.body;
 
     const defaultPassword = "123456789";
@@ -135,6 +137,8 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       first_name,
       last_name,
       middle_name,
+      term_from,
+      term_to,
       detailInfo,
       district,
       email,
@@ -306,7 +310,6 @@ exports.login = AsyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  // ✅ Generate token with role and linkId
   const token = signToken(user._id, user.role, linkId);
 
   req.session.userId = user._id;

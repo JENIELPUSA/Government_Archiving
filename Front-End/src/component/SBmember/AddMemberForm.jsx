@@ -10,6 +10,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
     position: "councilor",
     district: "",
     email: "",
+    term_from: "",
+    term_to: "",
     avatar: null,
     preview: null,
   });
@@ -26,6 +28,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
         position: memberToEdit.Position || "councilor",
         district: memberToEdit.district || "",
         email: memberToEdit.memberInfo.email || "",
+        term_from: memberToEdit.memberInfo?.term_from || "",
+        term_to: memberToEdit.memberInfo?.term_to || "",
         avatar: null,
         preview: memberToEdit.memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg",
       });
@@ -38,6 +42,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
         position: "councilor",
         district: "",
         email: "",
+        term_from: "",
+        term_to: "",
         avatar: null,
         preview: null,
       });
@@ -73,8 +79,11 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
     e.preventDefault();
     setIsLoading(true);
 
+
+
     try {
       const memberData = memberToEdit ? { ...newMember, _id: memberToEdit._id } : newMember;
+      console.log("DATA check",memberData)
       await onAddMember(memberData);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -282,6 +291,40 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                       isLoading ? "cursor-not-allowed opacity-50" : ""
                     }`}
                     required
+                  />
+                </div>
+                
+                {/* Term From */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Term From
+                  </label>
+                  <input
+                    type="date"
+                    name="term_from"
+                    value={newMember.term_from}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+                      isLoading ? "cursor-not-allowed opacity-50" : ""
+                    }`}
+                  />
+                </div>
+
+                {/* Term To */}
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Term To
+                  </label>
+                  <input
+                    type="date"
+                    name="term_to"
+                    value={newMember.term_to}
+                    onChange={handleInputChange}
+                    disabled={isLoading}
+                    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+                      isLoading ? "cursor-not-allowed opacity-50" : ""
+                    }`}
                   />
                 </div>
               </div>
