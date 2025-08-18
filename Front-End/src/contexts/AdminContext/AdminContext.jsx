@@ -39,7 +39,6 @@ export const AdminDisplayProvider = ({ children }) => {
             const AdminData = res.data.data;
             setAdmin(AdminData);
             setTotalAdmin(TotalAdmin);
-            console.log("data", AdminData);
         } catch (error) {
             console.error("Error fetching data:", error);
         }

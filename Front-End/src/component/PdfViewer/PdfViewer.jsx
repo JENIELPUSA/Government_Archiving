@@ -121,6 +121,34 @@ const PdfViewer = () => {
         setShowNoteModal(true);
     };
 
+const handlePrint = async () => {
+    try {
+        const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none";
+        iframe.src = url;
+        document.body.appendChild(iframe);
+
+        iframe.onload = () => {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            
+            // Tanggalin ang iframe at i-revoke ang URL kapag sarado na ang print dialog
+            iframe.contentWindow.onafterprint = () => {
+                document.body.removeChild(iframe);
+                URL.revokeObjectURL(url);
+            };
+        };
+    } catch (err) {
+        console.error("❌ Error during PDF print:", err);
+        alert("May error habang nagpi-print ng PDF. Tingnan ang console.");
+    }
+};
+
+
     const handleZoomIn = () => setScale((prev) => prev + 0.2);
     const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5)); // Minimum scale ng 0.5
 
@@ -406,6 +434,7 @@ const PdfViewer = () => {
             {/* Sidebar - nasa kanan */}
             <div className="w-[300px]">
                 <Sidebar
+                    onPrint={handlePrint}
                     onZoomIn={handleZoomIn}
                     onZoomOut={handleZoomOut}
                     onDownload={handleDownload}

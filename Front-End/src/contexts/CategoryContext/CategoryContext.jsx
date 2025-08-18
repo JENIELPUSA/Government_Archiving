@@ -33,13 +33,6 @@ export const CategoryDisplayProvider = ({ children }) => {
         fetchCategory();
     }, [authToken]);
 
-    useEffect(() => {
-        if (customError) {
-            setModalStatus("failed");
-            setShowModal(true);
-        }
-    }, [customError]);
-
     const AddCategory = async (values) => {
         try {
             const res = await axiosInstance.post(
@@ -58,6 +51,8 @@ export const CategoryDisplayProvider = ({ children }) => {
                 setCategory((prevUsers) => [...prevUsers, res.data.data]);
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -87,6 +82,8 @@ export const CategoryDisplayProvider = ({ children }) => {
                 setShowModal(true);
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -109,6 +106,8 @@ export const CategoryDisplayProvider = ({ children }) => {
                 setCategory((prevUsers) => prevUsers.filter((user) => user._id !== BrandId));
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {

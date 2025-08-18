@@ -12,10 +12,10 @@ const deleteOldNotifications = async () => {
       createdAt: { $lt: daysAgo },
     });
 
-    console.log(`✅ Deleted ${result.deletedCount} old notifications.`);
+    console.log(`Deleted ${result.deletedCount} old notifications.`);
     return result.deletedCount;
   } else {
-    console.log("⚠️ Optimization is disabled or invalid setting.");
+    console.log("Optimization is disabled or invalid setting.");
     return 0;
   }
 };

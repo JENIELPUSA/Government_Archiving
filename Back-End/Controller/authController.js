@@ -57,7 +57,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const defaultPassword = "123456789";
 
-    // 🔹 Required fields mapping by role
     const requiredFieldsByRole = {
       officer: ["first_name", "middle_name", "last_name", "email", "gender"],
       admin: ["first_name", "middle_name", "last_name", "email", "gender"],
@@ -66,7 +65,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     };
 
     const requiredFields = requiredFieldsByRole[role];
-
     if (!requiredFields) {
       return res.status(400).json({
         message:
@@ -74,7 +72,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // 🔸 Validate required fields
     const missingFields = [];
     requiredFields.forEach((field) => {
       if (!req.body[field]) {
@@ -90,7 +87,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // 🔹 Check if user already exists
     const existingUser = await UserLogin.findOne({ username: email });
     if (existingUser) {
       return res.status(400).json({
@@ -98,7 +94,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // 🔸 Handle image upload if avatar is present
     let avatarUploadPromise = Promise.resolve({ url: "", public_id: "" });
 
     if (req.file) {
@@ -120,10 +115,8 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
         }));
     }
 
-    // 🔹 Wait for avatar upload to finish
     const avatar = await avatarUploadPromise;
 
-    // 🔸 Define models by role
     const profileModels = {
       admin: Admin,
       officer: Officer,
@@ -151,24 +144,40 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     }
 
     const linkedRecord = await profileModel.create(profileData);
-    const [newUserLogin] = await Promise.all([
-      UserLogin.create({
-        avatar,
-        first_name,
-        last_name,
-        username: email,
-        contact_number,
-        password: defaultPassword,
-        role,
-        linkedId: linkedRecord._id,
-        isVerified: true,
-      }),
-      sendEmail({
+
+    // 👉 Create user login record
+    const newUserLogin = await UserLogin.create({
+      avatar,
+      first_name,
+      last_name,
+      username: email,
+      contact_number,
+      password: defaultPassword,
+      role,
+      linkedId: linkedRecord._id,
+      isVerified: true,
+    });
+
+    // 👉 Send email only if NOT sbmember
+    if (role !== "sbmember") {
+      await sendEmail({
         email,
         subject: "Your Account Credentials",
         text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
-      }),
-    ]);
+      });
+    }
+
+    // 🔥 socket emit all
+    const io = req.app.get("io");
+    io.emit("newUserSignup", {
+      user: {
+        id: newUserLogin._id,
+        first_name: newUserLogin.first_name,
+        last_name: newUserLogin.last_name,
+        role: newUserLogin.role,
+      },
+      profile: linkedRecord,
+    });
 
     return res.status(201).json({
       status: "Success",

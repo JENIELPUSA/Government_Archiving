@@ -4,12 +4,14 @@ import socket from "../socket.js";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext.jsx";
 import { NotificationDisplayContext } from "../../contexts/NotificationContext/NotificationContext.jsx";
 import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext.jsx";
+import { SbMemberDisplayContext } from "../../contexts/SbContext/SbContext.jsx";
 
 const SocketListener = () => {
     const { role, linkId } = useAuth();
     const { setFiles } = useContext(FilesDisplayContext);
     const { setNotify, fetchNotifications } = useContext(NotificationDisplayContext);
     const { setOfficerData, FetchOfficerFiles } = useContext(OfficerDisplayContext);
+    const { FetchDropdown } = useContext(SbMemberDisplayContext);
 
     const formatNotification = (data, fallbackMessage = "You have a new notification") => ({
         _id: data._id || (data.data && data.data._id) || Math.random().toString(36).substr(2, 9),
@@ -23,7 +25,6 @@ const SocketListener = () => {
         ],
     });
 
-    // Register user with socket
     useEffect(() => {
         if (!linkId || !role) return;
         socket.emit("register-user", linkId, role);
@@ -40,6 +41,10 @@ const SocketListener = () => {
 
             setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
             FetchOfficerFiles();
+        };
+
+        const handleSigup = async () => {
+            await FetchDropdown();
         };
 
         const handleNewDocumentNotification = (notification) => {
@@ -67,6 +72,7 @@ const SocketListener = () => {
             FetchOfficerFiles();
         };
 
+        socket.on("newUserSignup", handleSigup);
         socket.on("SentDocumentNotification", handleDocumentNotification);
         socket.on("SentNewDocuNotification", handleNewDocumentNotification);
         socket.on("UpdateFileData", handleUpdateFileData);

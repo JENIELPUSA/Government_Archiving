@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import ProfileCard from "./ProfileCard";
 import AddMemberForm from "./AddMemberForm";
 import LoadingOverlay from "../../ReusableFolder/LoadingOverlay";
 import { SbMemberDisplayContext } from "../../contexts/SbContext/SbContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-import { Database } from "lucide-react";
+import { Database, ChevronDown, ChevronUp } from "lucide-react";
 import StatusVerification from "../../ReusableFolder/StatusModal";
 import { useDebounce } from "use-debounce";
 
@@ -24,21 +24,161 @@ const SkeletonCard = () => (
     </div>
 );
 
+const TermFolder = ({
+    termGroup,
+    isExpanded,
+    onToggle,
+    onEdit,
+    onDelete,
+    positionFilter,
+    searchTerm,
+    onTermPageChange,
+    loading
+}) => {
+    // Filter members within this term folder (client-side)
+    const filteredMembers = useMemo(() => {
+        if (!termGroup.members || !Array.isArray(termGroup.members)) return [];
+
+        return termGroup.members.filter(member => {
+            // Position filter
+            if (positionFilter === "withPosition" && (!member.Position || member.Position.trim() === "")) return false;
+            if (positionFilter === "withoutPosition" && (member.Position && member.Position.trim() !== "")) return false;
+            
+            // Search term filter
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const fullName = member.fullName || `${member.first_name} ${member.last_name}` || "";
+                if (!fullName.toLowerCase().includes(searchLower)) return false;
+            }
+
+            return true;
+        });
+    }, [termGroup.members, positionFilter, searchTerm]);
+
+    const getPaginationNumbers = () => {
+        const pageNumbers = [];
+        if (termGroup.totalPages <= 7) {
+            for (let i = 1; i <= termGroup.totalPages; i++) {
+                pageNumbers.push(i);
+            }
+        } else {
+            pageNumbers.push(1);
+            const left = Math.max(termGroup.currentPage - 1, 2);
+            const right = Math.min(termGroup.currentPage + 1, termGroup.totalPages - 1);
+            if (left > 2) pageNumbers.push("...");
+            for (let i = left; i <= right; i++) {
+                pageNumbers.push(i);
+            }
+            if (right < termGroup.totalPages - 1) pageNumbers.push("...");
+            pageNumbers.push(termGroup.totalPages);
+        }
+        return pageNumbers;
+    };
+
+    const renderPageNumbers = () =>
+        getPaginationNumbers().map((page, index) =>
+            page === "..." ? (
+                <span
+                    key={`ellipsis-${index}`}
+                    className="px-2 text-gray-500 dark:text-gray-400"
+                >
+                    ...
+                </span>
+            ) : (
+                <button
+                    key={`page-${page}`}
+                    onClick={() => onTermPageChange(termGroup.term_from, termGroup.term_to, page)}
+                    className={`rounded px-3 py-1 ${
+                        termGroup.currentPage === page
+                            ? "bg-blue-500 text-white"
+                            : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                >
+                    {page}
+                </button>
+            )
+        );
+
+    // If there are no members after client-side filtering, hide the folder
+    if (!termGroup.term_from || !termGroup.term_to) return null; // <-- TERM VALIDATION
+    if (filteredMembers.length === 0 && searchTerm) return null;
+
+    return (
+        <div className="mb-6 rounded-lg border border-gray-200 bg-white shadow dark:border-gray-700 dark:bg-gray-800">
+            <div
+                className="flex cursor-pointer items-center justify-between p-4"
+                onClick={() => onToggle(termGroup)}
+            >
+                <h3 className="dark:text-white text-lg font-semibold">
+                    Term: {termGroup.term_from} - {termGroup.term_to}
+                </h3>
+                <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
+                    {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                </button>
+            </div>
+
+            {isExpanded && (
+                <>
+                    <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 lg:grid-cols-3">
+                        {loading ? (
+                            Array.from({ length: 3 }).map((_, idx) => <SkeletonCard key={`skeleton-${idx}`} />)
+                        ) : (
+                            filteredMembers.map(member => (
+                                <ProfileCard
+                                    key={member._id}
+                                    member={member}
+                                    onEdit={onEdit}
+                                    onDelete={onDelete}
+                                />
+                            ))
+                        )}
+                    </div>
+
+                    {termGroup.totalPages > 1 && (
+                        <div className="mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-gray-50 px-4 py-3 dark:bg-gray-700">
+                            <button
+                                onClick={() => onTermPageChange(termGroup.term_from, termGroup.term_to, termGroup.currentPage - 1)}
+                                disabled={termGroup.currentPage === 1}
+                                className={`rounded px-3 py-1 ${
+                                    termGroup.currentPage === 1
+                                        ? "cursor-not-allowed opacity-50"
+                                        : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
+                                }`}
+                            >
+                                Prev
+                            </button>
+                            {renderPageNumbers()}
+                            <button
+                                onClick={() => onTermPageChange(termGroup.term_from, termGroup.term_to, termGroup.currentPage + 1)}
+                                disabled={termGroup.currentPage === termGroup.totalPages}
+                                className={`rounded px-3 py-1 ${
+                                    termGroup.currentPage === termGroup.totalPages
+                                        ? "cursor-not-allowed opacity-50"
+                                        : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
+                                }`}
+                            >
+                                Next
+                            </button>
+                        </div>
+                    )}
+                </>
+            )}
+        </div>
+    );
+};
+
 function SBmember() {
     const {
         isGroupFiles,
         DeleteSB,
         AddSbData,
-        setCurrentPage,
-        currentPage,
-        totalPages,
         DisplayPerSb,
         UpdateSbmember,
         customError,
         loading,
         setLoading,
     } = useContext(SbMemberDisplayContext);
-    const [members, setMembers] = useState([]);
+
     const [isVerification, setVerification] = useState(false);
     const [showAddForm, setShowAddForm] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
@@ -47,38 +187,59 @@ function SBmember() {
     const [modalStatus, setModalStatus] = useState("success");
     const [isDeleteID, setDeleteID] = useState(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [positionFilter, setPositionFilter] = useState("all"); // New state for position filter
-
+    const [positionFilter, setPositionFilter] = useState("all");
+    const [expandedTerm, setExpandedTerm] = useState(null);
     const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
+    const [isPaginated, setIsPaginated] = useState(false);
 
     useEffect(() => {
-        setMembers(isGroupFiles || []);
-        if (isGroupFiles.length > 0) {
+        const initialFetch = async () => {
+            setLoading(true);
+            await DisplayPerSb();
+            setLoading(false);
             setIsInitialLoad(false);
-        }
-    }, [isGroupFiles]);
+        };
+        initialFetch();
+    }, []);
 
     useEffect(() => {
-        if (typeof DisplayPerSb === "function") {
-            console.log("Fetching data with search term:", debouncedSearchTerm, "and page:", currentPage);
-            DisplayPerSb(currentPage, debouncedSearchTerm);
-        }
-    }, [currentPage, debouncedSearchTerm]);
+        const fetchFilteredData = async () => {
+            if (isInitialLoad) return;
+            setLoading(true);
+            await DisplayPerSb({ search: debouncedSearchTerm });
+            setLoading(false);
+        };
+        fetchFilteredData();
+    }, [debouncedSearchTerm, positionFilter, DisplayPerSb]);
 
-    useEffect(() => {
-        if (currentPage > totalPages && totalPages > 0) {
-            setCurrentPage(1);
-        } else if (totalPages === 0 && currentPage !== 1) {
-            setCurrentPage(1);
-        }
-    }, [totalPages, currentPage, setCurrentPage]);
+    const handleTermPageChange = async (term_from, term_to, page) => {
+        const termGroup = isGroupFiles.find(
+            group => group.term_from === term_from && group.term_to === term_to
+        );
+        if (!termGroup || page < 1 || page > termGroup.totalPages) return;
 
-    const goToPage = async (page) => {
-        if (loading || page < 1 || page > totalPages) return;
         setLoading(true);
-        await setCurrentPage(page);
+        const pageParam = `pageTerm${term_from}`;
+        await DisplayPerSb({ term_from, term_to, [pageParam]: page, search: debouncedSearchTerm });
         setLoading(false);
+        setIsPaginated(true);
     };
+
+    const handleToggleTerm = async (termGroup) => {
+        const termKey = `${termGroup.term_from}-${termGroup.term_to}`;
+        if (expandedTerm === termKey) {
+            setExpandedTerm(null);
+            if (isPaginated) {
+                setLoading(true);
+                await DisplayPerSb();
+                setLoading(false);
+                setIsPaginated(false);
+            }
+        } else {
+            setExpandedTerm(termKey);
+        }
+    };
+    
     const handleEdit = (member) => {
         setMemberToEdit(member);
         setShowAddForm(true);
@@ -104,7 +265,7 @@ function SBmember() {
                 setModalStatus("success");
                 setDeleteID(null);
                 setVerification(false);
-                DisplayPerSb(currentPage, searchTerm);
+                await DisplayPerSb();
             } else {
                 setModalStatus("failed");
             }
@@ -118,7 +279,6 @@ function SBmember() {
     };
 
     const handleAddOrUpdateMember = async (newMemberData) => {
-        console.log("conosle", newMemberData);
         setLoading(true);
         try {
             let result;
@@ -143,7 +303,7 @@ function SBmember() {
             if (result?.success) {
                 setModalStatus("success");
                 setShowModal(true);
-                DisplayPerSb(currentPage, searchTerm);
+                await DisplayPerSb();
             } else {
                 setModalStatus("failed");
                 setShowModal(true);
@@ -158,64 +318,6 @@ function SBmember() {
         }
     };
 
-    // Filter members based on position status
-    const filteredMembers = members
-        .filter((member) => member && member._id)
-        .filter((member) => {
-            if (positionFilter === "withPosition") {
-                return member.Position && member.Position.trim() !== "";
-            } else if (positionFilter === "withoutPosition") {
-                return !member.Position || member.Position.trim() === "";
-            }
-            return true; // 'all' filter
-        });
-
-    const getPaginationNumbers = () => {
-        const pageNumbers = [];
-        const maxVisible = 5;
-        if (totalPages <= 7) {
-            for (let i = 1; i <= totalPages; i++) {
-                pageNumbers.push(i);
-            }
-        } else {
-            pageNumbers.push(1);
-            const left = Math.max(currentPage - 1, 2);
-            const right = Math.min(currentPage + 1, totalPages - 1);
-            if (left > 2) pageNumbers.push("...");
-            for (let i = left; i <= right; i++) {
-                pageNumbers.push(i);
-            }
-            if (right < totalPages - 1) pageNumbers.push("...");
-            pageNumbers.push(totalPages);
-        }
-        return pageNumbers;
-    };
-
-    const renderPageNumbers = () =>
-        getPaginationNumbers().map((page, index) =>
-            page === "..." ? (
-                <span
-                    key={`ellipsis-${index}`}
-                    className="px-2 text-gray-500 dark:text-gray-400"
-                >
-                    ...
-                </span>
-            ) : (
-                <button
-                    key={`page-${page}`}
-                    onClick={() => goToPage(page)}
-                    disabled={loading}
-                    className={`rounded px-3 py-1 ${
-                        currentPage === page
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-                    } ${loading ? "cursor-not-allowed opacity-50" : ""}`}
-                >
-                    {page}
-                </button>
-            ),
-        );
-
     return (
         <>
             <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
@@ -223,54 +325,11 @@ function SBmember() {
                     <div className="flex flex-col gap-6 lg:flex-row">
                         <main className="flex-1">
                             <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-                                {/* POSITION FILTER RADIO BUTTONS */}
-                                <div className="flex w-full items-center space-x-4 md:w-auto">
-                                    <span className="text-gray-700 dark:text-gray-300">Position:</span>
-                                    <div className="flex items-center space-x-2">
-                                        <label className="inline-flex items-center">
-                                            <input
-                                                type="radio"
-                                                value="all"
-                                                checked={positionFilter === "all"}
-                                                onChange={() => setPositionFilter("all")}
-                                                disabled={loading}
-                                                className="form-radio h-4 w-4 text-blue-600"
-                                            />
-                                            <span className="ml-2 dark:text-white">All</span>
-                                        </label>
-                                        <label className="inline-flex items-center">
-                                            <input
-                                                type="radio"
-                                                value="withPosition"
-                                                checked={positionFilter === "withPosition"}
-                                                onChange={() => setPositionFilter("withPosition")}
-                                                disabled={loading}
-                                                className="form-radio h-4 w-4 text-blue-600"
-                                            />
-                                            <span className="ml-2 dark:text-white">With Position</span>
-                                        </label>
-                                        <label className="inline-flex items-center">
-                                            <input
-                                                type="radio"
-                                                value="withoutPosition"
-                                                checked={positionFilter === "withoutPosition"}
-                                                onChange={() => setPositionFilter("withoutPosition")}
-                                                disabled={loading}
-                                                className="form-radio h-4 w-4 text-blue-600"
-                                            />
-                                            <span className="ml-2 dark:text-white">Without Position</span>
-                                        </label>
-                                    </div>
-                                </div>
-
                                 <input
                                     type="text"
                                     placeholder="Search by name..."
                                     value={searchTerm}
-                                    onChange={(e) => {
-                                        setSearchTerm(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                     disabled={loading}
                                     className={`w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-black focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white md:w-1/3 ${
                                         loading ? "cursor-not-allowed opacity-50" : ""
@@ -302,23 +361,44 @@ function SBmember() {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            <div className="space-y-6">
                                 {loading && isInitialLoad ? (
-                                    Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={`skeleton-${index}`} />)
+                                    Array.from({ length: 2 }).map((_, index) => (
+                                        <div key={`skeleton-folder-${index}`} className="rounded-lg border border-gray-200 bg-white p-4 shadow dark:border-gray-700 dark:bg-gray-800">
+                                            <div className="mb-4 flex items-center justify-between">
+                                                <div className="h-6 w-1/4 rounded bg-gray-300 dark:bg-gray-700"></div>
+                                                <div className="h-6 w-6 rounded bg-gray-300 dark:bg-gray-700"></div>
+                                            </div>
+                                            <div className="dark:text-white grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                                {Array.from({ length: 3 }).map((_, idx) => <SkeletonCard key={`skeleton-${index}-${idx}`} />)}
+                                            </div>
+                                        </div>
+                                    ))
                                 ) : (
                                     <>
-                                        {/* Data Loaded State */}
-                                        {filteredMembers.length > 0 ? (
-                                            filteredMembers.map((member) => (
-                                                <ProfileCard
-                                                    key={member._id}
-                                                    member={member}
-                                                    onEdit={handleEdit}
-                                                    onDelete={handleDelete}
-                                                />
-                                            ))
+                                        {isGroupFiles.filter(termGroup => termGroup.term_from && termGroup.term_to).length > 0 ? (
+                                            isGroupFiles
+                                                .filter(termGroup => termGroup.term_from && termGroup.term_to)
+                                                .map(termGroup => {
+                                                    const termKey = `${termGroup.term_from}-${termGroup.term_to}`;
+                                                    return (
+                                                        <TermFolder
+                                                            key={termKey}
+                                                             className="dark:text-white"
+                                                            termGroup={termGroup}
+                                                            isExpanded={expandedTerm === termKey}
+                                                            onToggle={handleToggleTerm}
+                                                            onEdit={handleEdit}
+                                                            onDelete={handleDelete}
+                                                            positionFilter={positionFilter}
+                                                            searchTerm={debouncedSearchTerm}
+                                                            onTermPageChange={handleTermPageChange}
+                                                            loading={loading}
+                                                        />
+                                                    );
+                                                })
                                         ) : (
-                                            <div className="col-span-3 flex min-h-[600px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                                            <div className="flex min-h-[600px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
                                                 <Database className="mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />
                                                 <p className="text-gray-500 dark:text-gray-400">No members found matching your criteria</p>
                                             </div>
@@ -326,30 +406,6 @@ function SBmember() {
                                     </>
                                 )}
                             </div>
-
-                            {totalPages >= 1 && (
-                                <div className="mt-4 flex items-center justify-end space-x-2 rounded-b-lg bg-white px-2 py-4 dark:bg-gray-800">
-                                    <button
-                                        onClick={() => goToPage(currentPage - 1)}
-                                        disabled={currentPage === 1 || loading}
-                                        className={`rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 ${
-                                            currentPage === 1 || loading ? "cursor-not-allowed opacity-50" : ""
-                                        }`}
-                                    >
-                                        Prev
-                                    </button>
-                                    {renderPageNumbers()}
-                                    <button
-                                        onClick={() => goToPage(currentPage + 1)}
-                                        disabled={currentPage === totalPages || loading}
-                                        className={`rounded bg-gray-200 px-3 py-1 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 ${
-                                            currentPage === totalPages || loading ? "cursor-not-allowed opacity-50" : ""
-                                        }`}
-                                    >
-                                        Next
-                                    </button>
-                                </div>
-                            )}
                         </main>
                     </div>
                 </div>

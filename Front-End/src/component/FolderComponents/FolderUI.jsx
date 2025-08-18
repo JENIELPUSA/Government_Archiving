@@ -61,22 +61,19 @@ const FolderCreationUI = () => {
     const [showTypeSuggestions, setShowTypeSuggestions] = useState(false);
     const [fileDateFrom, setFileDateFrom] = useState("");
     const [fileDateTo, setFileDateTo] = useState("");
-    const [openFileMenu, setOpenFileMenu] = useState(null); // Track which file's menu is open
+    const [openFileMenu, setOpenFileMenu] = useState(null);
     const navigate = useNavigate();
 
     const fileTypeOptions = ["ordinance", "image", "video", "audio", "archive", "pdf", "document", "spreadsheet"];
 
-    // Handle folder search
     const handleFolderSearch = (value) => {
         setSearchTerm(value);
     };
 
-    // Handle file search
     const handleFileSearch = (value) => {
         setFileSearchTerm(value);
     };
 
-    // Handle file type suggestions
     useEffect(() => {
         if (fileTypeInput.length > 0) {
             const filtered = fileTypeOptions.filter((type) => type.toLowerCase().includes(fileTypeInput.toLowerCase()));
@@ -87,7 +84,16 @@ const FolderCreationUI = () => {
         }
     }, [fileTypeInput]);
 
-    // Fetch folders with debounce
+    const Success = () => {
+        fetchSpecificData(openFolder._id, {
+            search: "",
+            type: "",
+            dateFrom: "",
+            dateTo: "",
+            page: 1,
+        });
+    };
+
     useEffect(() => {
         const timer = setTimeout(() => {
             fetchfolder({
@@ -99,7 +105,6 @@ const FolderCreationUI = () => {
         return () => clearTimeout(timer);
     }, [searchTerm, folderCurrentPage]);
 
-    // Fetch files with debounce
     useEffect(() => {
         if (openFolder) {
             const timer = setTimeout(() => {
@@ -180,9 +185,18 @@ const FolderCreationUI = () => {
     };
 
     const handleDeleteFiles = async (id) => {
-        await MOveArchived(id, "Deleted");
+        const result = await MOveArchived(id, "Deleted");
+        if(result.success){
+            fetchSpecificData(openFolder._id, {
+            search: "",
+            type: "",
+            dateFrom: "",
+            dateTo: "",
+            page: 1,
+        });
+        }
     };
-    
+
     const colors = [
         {
             name: "blue",
@@ -313,7 +327,6 @@ const FolderCreationUI = () => {
         setIsUploadModalOpen(false);
     };
 
-    // Reset file filters
     const resetFileFilters = () => {
         setFileSearchTerm("");
         setFileTypeInput("");
@@ -328,13 +341,11 @@ const FolderCreationUI = () => {
         });
     };
 
-    // Reset folder filters
     const resetFolderFilters = () => {
         setSearchTerm("");
         setFolderCurrentPage(1);
     };
 
-    // Loading screen when opening folder
     if (isOpening && openingFolderId) {
         const folder = foldersToDisplay.find((f) => f._id === openingFolderId);
         const colorClasses = getColorClasses(folder?.color);
@@ -774,6 +785,7 @@ const FolderCreationUI = () => {
                         isOpen={isUploadModalOpen}
                         onClose={closeUploadModal}
                         folderId={openFolder._id}
+                        isSuccess={Success}
                     />
                 )}
             </div>
@@ -1155,7 +1167,6 @@ const FolderCreationUI = () => {
                                 </div>
                             )}
 
-                            {/* Pagination for folders */}
                             {folderTotalPages >= 1 && (
                                 <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
                                     <span className="text-sm text-gray-600 dark:text-gray-400">

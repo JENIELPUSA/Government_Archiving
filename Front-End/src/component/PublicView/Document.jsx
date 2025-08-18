@@ -9,11 +9,12 @@ const Documents = ({ searchKeyword }) => {
     const navigate = useNavigate();
     const { isCategory } = useContext(CategoryContext);
     const { isPublic, fetchPublicDisplay, loading } = useContext(FilesDisplayContext);
-
     const [selectedYear, setSelectedYear] = useState("All Years");
     const [selectedCategory, setSelectedCategory] = useState("");
     const [openYear, setOpenYear] = useState(null);
     const [loadingStates, setLoadingStates] = useState({});
+    const [isPaginatedAction, setIsPaginatedAction] = useState(false);
+
     const debouncedFetch = useMemo(
         () =>
             debounce((params) => {
@@ -23,6 +24,8 @@ const Documents = ({ searchKeyword }) => {
     );
 
     useEffect(() => {
+        setIsPaginatedAction(false);
+
         debouncedFetch({
             title: searchKeyword || null,
             category: selectedCategory,
@@ -43,7 +46,7 @@ const Documents = ({ searchKeyword }) => {
             const existing = grouped[year]?.data || [];
             const totalCount = group.totalCount || 0;
             const totalPages = group.totalPages || Math.ceil(totalCount / 10) || 1;
-            
+
             grouped[year] = {
                 data: [...existing, ...(group.data || [])],
                 currentPage: group.currentPage || 1,
@@ -82,7 +85,7 @@ const Documents = ({ searchKeyword }) => {
 
         return [defaultCategory, ...categoryOptions];
     }, [isCategory]);
-    
+
     const handleView = (file) => {
         navigate("/expand-pdf", {
             state: {
@@ -96,17 +99,14 @@ const Documents = ({ searchKeyword }) => {
     const toggleYear = (year) => {
         const isCurrentlyOpen = openYear === year;
         setOpenYear(isCurrentlyOpen ? null : year);
-
-        if (isCurrentlyOpen) {
-            fetchPublicDisplay({
-                title: searchKeyword || null,
-                category: selectedCategory,
-                page: 1,
-            });
+        if (isCurrentlyOpen && isPaginatedAction) {
+            fetchPublicDisplay();
+            setIsPaginatedAction(false);
         }
     };
 
     const handlePageChange = async (year, page) => {
+        setIsPaginatedAction(true);
         setLoadingStates((prev) => ({ ...prev, [year]: true }));
 
         try {
@@ -138,7 +138,6 @@ const Documents = ({ searchKeyword }) => {
             <h1 className="mb-6 text-3xl font-bold text-blue-800">DOCUMENTS</h1>
 
             <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                {/* Year Filter */}
                 <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
                     <label
                         htmlFor="year-select"
@@ -194,7 +193,7 @@ const Documents = ({ searchKeyword }) => {
             </div>
 
             {/* Document List */}
-            {loading && Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
+            {loading && !isPaginatedAction && Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
                 <div className="py-12 text-center">
                     <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-800 border-t-transparent"></div>
                     <p className="mt-4 text-lg text-gray-600">Loading documents...</p>

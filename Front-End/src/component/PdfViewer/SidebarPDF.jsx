@@ -1,16 +1,9 @@
 import React, { useContext } from "react";
-import {
-    ZoomIn,
-    ZoomOut,
-    Send,
-    ArrowLeft,
-    ArrowRight,
-    Download,
-    CheckCircle,
-} from "lucide-react";
+import { ZoomIn, ZoomOut, Printer, ArrowLeft, ArrowRight, Download, CheckCircle } from "lucide-react";
 import { Document, Page } from "react-pdf";
 import { AuthContext } from "../../contexts/AuthContext";
 const Sidebar = ({
+    onPrint,
     onZoomIn,
     onZoomOut,
     onDownload,
@@ -20,13 +13,12 @@ const Sidebar = ({
     setPageNumber,
     fileUrl,
     fileData,
-    onPreview,
     ApprovedReview,
 }) => {
     const { role } = useContext(AuthContext);
 
     return (
-        <nav className="print-hidden left-0 top-0  mb-8 flex max-h-[100vh] w-64 flex-col gap-4 overflow-y-auto rounded-[2rem] border-r bg-white/60 p-4 text-black shadow-[inset_0_2px_4px_rgba(255,255,255,0.2)] backdrop-blur-md dark:border-blue-700 dark:bg-slate-800/50 dark:text-white dark:backdrop-blur-md">
+        <nav className="print-hidden left-0 top-0 mb-8 flex max-h-[100vh] w-64 flex-col gap-4 overflow-y-auto rounded-[2rem] border-r bg-white/60 p-4 text-black shadow-[inset_0_2px_4px_rgba(255,255,255,0.2)] backdrop-blur-md dark:border-blue-700 dark:bg-slate-800/50 dark:text-white dark:backdrop-blur-md">
             <div className="flex flex-col gap-3">
                 <div className="grid grid-cols-2 gap-2">
                     <button
@@ -82,6 +74,15 @@ const Sidebar = ({
                 >
                     <Download className="h-5 w-5" />
                 </button>
+
+                <button
+                    onClick={onPrint}
+                    className="flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-yellow-700"
+                    title="Download"
+                >
+                    <Printer className="h-5 w-5" />
+                </button>
+
                 {role !== "admin" &&
                     (role === "officer" || fileData.status === "Pending") &&
                     fileData.status !== "Rejected" &&

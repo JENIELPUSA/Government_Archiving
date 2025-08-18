@@ -8,11 +8,11 @@ import { ApproverDisplayContext } from "../../../contexts/ApproverContext/Approv
 import PdfPreviewModal from "./PDFReview";
 import AuthorModal from "./AuthorComponents";
 
-const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
+const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const { approver } = useContext(ApproverDisplayContext);
-    const { isSBMember, AddSbData } = useContext(SbMemberDisplayContext);
+    const { isDropdown, AddSbData } = useContext(SbMemberDisplayContext);
     const { AddFiles, customError } = useContext(FilesDisplayContext);
     const { linkId } = useContext(AuthContext);
     const { isCategory } = useContext(CategoryContext);
@@ -44,19 +44,12 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
     const [newAuthorPosition, setNewAuthorPosition] = useState("");
     const [customAuthorError, setCustomAuthorError] = useState("");
     const [checkboxError, setCheckboxError] = useState("");
-
-    // PDF Preview Modal states
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
     const [isPdfLoading, setIsPdfLoading] = useState(false);
-
-    // Author Modal state
     const [showAuthorModal, setShowAuthorModal] = useState(false);
 
     const ALLOWED_FILE_TYPES = ["application/pdf"];
-
-    console.log(folderId);
-
     useEffect(() => {
         const timer = setTimeout(() => {
             setFormLoading(false);
@@ -115,6 +108,10 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
         setSelectedFile(file);
         setUploadMessage("");
     };
+
+    const handleCloseAuthor=()=>{
+        setShowAuthorModal(false)
+    }
 
     const handleFileChange = (e) => handleFile(e.target.files[0]);
 
@@ -201,6 +198,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
             const result = await AddFiles(formData);
             if (result.success) {
                 setUploadMessage("File uploaded successfully.");
+                isSuccess();
                 setSelectedFile(null);
                 setTitle("");
                 setCategory("");
@@ -274,14 +272,14 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
         setAuthorError("");
     };
 
-    const selectedMember = isSBMember?.find((member) => member._id === authorId);
+    const selectedMember = isDropdown?.find((member) => member._id === authorId);
 
     // Main Modal Wrapper
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[999] flex items-center justify-center overflow-y-auto bg-black bg-opacity-50 backdrop-blur-sm">
-            <div className="relative w-full max-w-7xl overflow-hidden rounded-2xl bg-gradient-to-br from-white/50 to-blue-50/30 p-6 shadow-xl backdrop-blur-xl transition-all duration-300 dark:from-slate-800/70 dark:to-slate-900/80 dark:ring-1 dark:ring-gray-900">
+            <div className="relative w-full max-w-7xl overflow-visible rounded-2xl bg-gradient-to-br from-white/50 to-blue-50/30 p-6 shadow-xl backdrop-blur-xl transition-all duration-300 dark:from-slate-800/70 dark:to-slate-900/80 dark:ring-1 dark:ring-gray-900">
                 <button
                     type="button"
                     onClick={onClose}
@@ -448,7 +446,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                                                     {selectedMember ? (
                                                         <div className="text-left">
                                                             <div className="font-medium">
-                                                                {selectedMember.first_name} {selectedMember.last_name}
+                                                                {selectedMember.full_name} 
                                                             </div>
                                                             <div className="mt-0.5 text-xs text-gray-500">{selectedMember.Position}</div>
                                                         </div>
@@ -462,7 +460,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                                             </button>
 
                                             {isAuthorDropdownOpen && (
-                                                <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
+                                                <div className="absolute z-[999] mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
                                                     <div className="border-b border-gray-200 p-4 dark:border-gray-600">
                                                         <div className="mb-4 flex items-center gap-4">
                                                             <label className="flex items-center gap-2 text-sm">
@@ -487,12 +485,12 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                                                             </label>
                                                         </div>
 
-                                                        {isSBMember && isSBMember.length > 0 && (
+                                                        {isDropdown && isDropdown.length > 0 && (
                                                             <div className="max-h-60 overflow-y-auto border-t border-gray-200 dark:border-gray-600">
                                                                 <div className="px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500">
                                                                     SB Members
                                                                 </div>
-                                                                {isSBMember.map((member) => (
+                                                                {isDropdown.map((member) => (
                                                                     <div
                                                                         key={member._id}
                                                                         onClick={() => {
@@ -504,7 +502,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                                                                         className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                                                                     >
                                                                         <div className="font-medium">
-                                                                            {member.first_name} {member.last_name}
+                                                                            {member.full_name}
                                                                         </div>
                                                                         <div className="mt-1 text-xs text-gray-500">{member.Position}</div>
                                                                     </div>
@@ -676,12 +674,10 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                     isLoading={isLoading}
                 />
             )}
-
-            {showAuthorModal && (
                 <AuthorModal
-                    isOpen={showAuthorModal}
-                    onClose={() => setShowAuthorModal(false)}
-                    onAddAuthor={handleAddNewAuthor}
+                    showAuthorModal={showAuthorModal}
+                    onClose={handleCloseAuthor}
+                    handleAddNewAuthor={handleAddNewAuthor}
                     newAuthorFirstName={newAuthorFirstName}
                     setNewAuthorFirstName={setNewAuthorFirstName}
                     newAuthorLastName={newAuthorLastName}
@@ -695,7 +691,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId }) => {
                     customAuthorError={customAuthorError}
                     setCustomAuthorError={setCustomAuthorError}
                 />
-            )}
+            
         </div>
     );
 };

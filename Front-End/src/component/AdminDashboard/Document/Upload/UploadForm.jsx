@@ -7,10 +7,14 @@ import { SbMemberDisplayContext } from "../../../../contexts/SbContext/SbContext
 import { FiUploadCloud, FiFileText, FiUser, FiBook, FiTag, FiCalendar, FiX, FiCheckSquare, FiPlus, FiHash, FiChevronDown } from "react-icons/fi";
 import { ApproverDisplayContext } from "../../../../contexts/ApproverContext/ApproverContext";
 import PdfPreviewModal from "./PdfPreviewModal";
+import AuthorModal from "./AuthorModal";
 
 const UploadForm = () => {
+    const [authorType, setAuthorType] = useState("sbMember");
+    const [customAuthor, setCustomAuthor] = useState("");
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
+    const [customAuthorError, setCustomAuthorError] = useState("");
     const { approver } = useContext(ApproverDisplayContext);
     const { isDropdown, AddSbData } = useContext(SbMemberDisplayContext);
     const { AddFiles, customError } = useContext(FilesDisplayContext);
@@ -35,6 +39,13 @@ const UploadForm = () => {
     const [isAuthorDropdownOpen, setIsAuthorDropdownOpen] = useState(false);
     const authorDropdownRef = useRef(null);
     const [approverError, setApproverError] = useState("");
+    const [showAuthorModal, setShowAuthorModal] = useState(false);
+    const [newAuthorFirstName, setNewAuthorFirstName] = useState("");
+    const [newAuthorLastName, setNewAuthorLastName] = useState("");
+    const [newAuthorMiddleName, setNewAuthorMiddleName] = useState("");
+    const [newAuthorEmail, setNewAuthorEmail] = useState("");
+    const [newAuthorPosition, setNewAuthorPosition] = useState("");
+    const [customAuthorId, setCustomAuthorId] = useState(null); // NEW: Track custom author ID
 
     // PDF Preview Modal states
     const [showPdfModal, setShowPdfModal] = useState(false);
@@ -78,6 +89,8 @@ const UploadForm = () => {
     useEffect(() => {
         if (!isOrdinance) {
             setAuthorId(null);
+            setCustomAuthorId(null); // NEW: Clear custom author ID
+            setCustomAuthor(""); // NEW: Clear custom author name
             setAuthorError("");
         }
     }, [category, isOrdinance]);
@@ -115,6 +128,52 @@ const UploadForm = () => {
         }
     };
 
+    const handleAddNewAuthor = async () => {
+        if (!newAuthorFirstName.trim() || !newAuthorLastName.trim()) {
+            setCustomAuthorError("First Name and Last Name are required");
+            return;
+        }
+
+        let authorDisplayName = `${newAuthorFirstName} ${newAuthorLastName}`;
+        if (newAuthorMiddleName.trim()) {
+            authorDisplayName = `${newAuthorFirstName} ${newAuthorMiddleName} ${newAuthorLastName}`;
+        }
+
+        if (newAuthorPosition.trim()) {
+            authorDisplayName += ` - ${newAuthorPosition.trim()}`;
+        }
+
+        if (newAuthorEmail.trim()) {
+            authorDisplayName += ` | ${newAuthorEmail.trim()}`;
+        }
+
+        const authorData = {
+            authorDisplayName,
+            first_name: newAuthorFirstName,
+            last_name: newAuthorLastName,
+            middle_name: newAuthorMiddleName,
+            email: newAuthorEmail,
+            Position: newAuthorPosition,
+        };
+        
+        const result = await AddSbData(authorData);
+        
+        if (result && result.data) {
+            setCustomAuthor(authorDisplayName);
+            setCustomAuthorId(result.data._id); // NEW: Store new author ID
+            setAuthorId(null); // Clear SB member selection
+        }
+
+        setNewAuthorFirstName("");
+        setNewAuthorLastName("");
+        setNewAuthorMiddleName("");
+        setNewAuthorEmail("");
+        setNewAuthorPosition("");
+
+        setShowAuthorModal(false);
+        setAuthorError("");
+    };
+
     const handleUpload = async (e) => {
         e.preventDefault();
         setFileError("");
@@ -139,7 +198,8 @@ const UploadForm = () => {
             valid = false;
         }
 
-        if (isOrdinance && !authorId) {
+        // UPDATED: Check for either SB member or custom author
+        if (isOrdinance && !authorId && !customAuthorId) {
             setAuthorError("Please select an author");
             valid = false;
         }
@@ -179,14 +239,18 @@ const UploadForm = () => {
         formData.append("summary", summary);
         formData.append("admin", linkId);
         formData.append("dateOfResolution", dateOfResolution);
+        
+        // UPDATED: Include either SB member or custom author
         if (authorId) {
             formData.append("author", authorId);
+        } else if (customAuthorId) {
+            formData.append("author", customAuthorId);
         }
 
         if (isResolution) {
             formData.append("resolutionNumber", resolutionNumber);
         }
-        
+
         // Automatically include approver for Resolution/Ordinance
         if (isResolutionOrOrdinance && approver?._id) {
             formData.append("approverID", approver._id);
@@ -204,6 +268,8 @@ const UploadForm = () => {
                 setCategory("");
                 setSummary("");
                 setAuthorId(null);
+                setCustomAuthorId(null); // NEW: Reset custom author ID
+                setCustomAuthor(""); // NEW: Reset custom author name
                 setDateOfResolution("");
                 setResolutionNumber("");
                 setModalStatus("success");
@@ -222,8 +288,7 @@ const UploadForm = () => {
         }
     };
 
-    // Find selected author for display
-    const selectedAuthor = isDropdown?.find((author) => author._id === authorId);
+    const selectedMember = isDropdown?.find((member) => member._id === authorId);
 
     return (
         <form
@@ -316,7 +381,7 @@ const UploadForm = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             {/* Approver error message */}
                             {isResolutionOrOrdinance && approverError && (
                                 <div className="mt-1.5 flex items-start rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
@@ -357,10 +422,13 @@ const UploadForm = () => {
                                 )}
                             </div>
                         )}
-                        <div>
-                            <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <FiUser className="text-blue-500" />
-                                Author <span className="text-red-500">*</span>
+                        {/* Author Field */}
+                        <div className="flex flex-col">
+                            <label className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                <div className="flex items-center gap-1">
+                                    <FiUser className="text-blue-500" />
+                                    Author <span className="text-red-500">*</span>
+                                </div>
                             </label>
                             {isFormLoading ? (
                                 <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
@@ -372,21 +440,27 @@ const UploadForm = () => {
                                     <button
                                         type="button"
                                         onClick={() => setIsAuthorDropdownOpen(!isAuthorDropdownOpen)}
-                                        className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 pl-10 text-left shadow-sm transition-all focus:outline-none focus:ring-2 ${
+                                        className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left shadow-sm transition-all focus:outline-none focus:ring-2 ${
                                             authorError
                                                 ? "border-red-400 focus:ring-red-300 dark:border-red-500"
                                                 : "border-gray-300 focus:border-blue-400 focus:ring-blue-300 dark:border-gray-600"
                                         } dark:bg-gray-700/50 dark:text-gray-200`}
                                     >
                                         <div className="flex items-center">
-                                            <FiUser className="mr-2 text-gray-400" />
-                                            {selectedAuthor ? (
+                                            {selectedMember ? (
                                                 <div className="text-left">
-                                                    <div className="font-medium">{selectedAuthor.full_name}</div>
-                                                    <div className="mt-0.5 text-xs text-gray-500">{selectedAuthor.Position}</div>
+                                                    <div className="font-medium">
+                                                        {selectedMember.full_name}
+                                                    </div>
+                                                    <div className="mt-0.5 text-xs text-gray-500">{selectedMember.Position}</div>
+                                                </div>
+                                            ) : customAuthor ? (
+                                                <div className="text-left">
+                                                    <div className="font-medium">{customAuthor}</div>
+                                                    <div className="mt-0.5 text-xs text-gray-500">Custom Author</div>
                                                 </div>
                                             ) : (
-                                                <span>Select Author</span>
+                                                <span className="text-gray-500 dark:text-gray-400">Select Author</span>
                                             )}
                                         </div>
                                         <FiChevronDown className={`transition-transform ${isAuthorDropdownOpen ? "rotate-180" : ""}`} />
@@ -394,30 +468,78 @@ const UploadForm = () => {
 
                                     {isAuthorDropdownOpen && (
                                         <div className="absolute z-20 mt-1 w-full rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800">
-                                            <div className="max-h-60 overflow-y-auto border-t border-gray-200 dark:border-gray-600">
-                                                <div className="px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500">
-                                                    Authors
-                                                </div>
-                                                {isDropdown && isDropdown.length > 0 ? (
-                                                    isDropdown.map((author) => (
-                                                        <div
-                                                            key={author._id}
-                                                            onClick={() => {
-                                                                setAuthorId(author._id);
-                                                                setIsAuthorDropdownOpen(false);
+                                            <div className="border-b border-gray-200 p-4 dark:border-gray-600">
+                                                <div className="mb-4 flex items-center gap-4">
+                                                    <label className="flex items-center gap-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            name="authorType"
+                                                            checked={authorType === "sbMember"}
+                                                            onChange={() => setAuthorType("sbMember")}
+                                                            className="h-4 w-4 text-blue-600"
+                                                        />
+                                                        SB Member
+                                                    </label>
+                                                    <label className="flex items-center gap-2 text-sm">
+                                                        <input
+                                                            type="radio"
+                                                            name="authorType"
+                                                            checked={authorType === "none"}
+                                                            onChange={() => {
+                                                                setAuthorType("none");
+                                                                setAuthorId(null);
+                                                                setCustomAuthorId(null);
+                                                                setCustomAuthor("");
                                                                 setAuthorError("");
                                                             }}
-                                                            className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                        >
-                                                            <div className="font-medium">{author.full_name}</div>
-                                                            <div className="mt-1 text-xs text-gray-500">{author.Position}</div>
+                                                            className="h-4 w-4 text-blue-600"
+                                                        />
+                                                        None
+                                                    </label>
+                                                </div>
+
+                                                {isDropdown && isDropdown.length > 0 && (
+                                                    <div className="max-h-60 overflow-y-auto border-t border-gray-200 dark:border-gray-600">
+                                                        <div className="px-4 py-2 text-xs font-medium uppercase tracking-wider text-gray-500">
+                                                            SB Members
                                                         </div>
-                                                    ))
-                                                ) : (
-                                                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                                                        No authors available
+                                                        {isDropdown.map((member) => (
+                                                            <div
+                                                                key={member._id}
+                                                                onClick={() => {
+                                                                    setAuthorId(member._id);
+                                                                    setCustomAuthorId(null); // Clear custom author
+                                                                    setCustomAuthor(""); // Clear custom author name
+                                                                    setIsAuthorDropdownOpen(false);
+                                                                    setAuthorError("");
+                                                                }}
+                                                                className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
+                                                            >
+                                                                <div className="font-medium">
+                                                                    {member.full_name}
+                                                                </div>
+                                                                <div className="mt-1 text-xs text-gray-500">{member.Position}</div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 )}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setNewAuthorFirstName("");
+                                                        setNewAuthorLastName("");
+                                                        setNewAuthorMiddleName("");
+                                                        setNewAuthorEmail("");
+                                                        setNewAuthorPosition("");
+                                                        setShowAuthorModal(true);
+                                                        setIsAuthorDropdownOpen(false);
+                                                    }}
+                                                    className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-gray-200 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                                                >
+                                                    <FiPlus size={16} />
+                                                    Add Custom Author
+                                                </button>
                                             </div>
                                         </div>
                                     )}
@@ -605,6 +727,26 @@ const UploadForm = () => {
                     handleFinalSubmit={handleFinalSubmit}
                     isLoading={isLoading}
                 />
+
+                {showAuthorModal && (
+                    <AuthorModal
+                        showAuthorModal={showAuthorModal}
+                        onClose={() => setShowAuthorModal(false)}
+                        handleAddNewAuthor={handleAddNewAuthor}
+                        newAuthorFirstName={newAuthorFirstName}
+                        setNewAuthorFirstName={setNewAuthorFirstName}
+                        newAuthorLastName={newAuthorLastName}
+                        setNewAuthorLastName={setNewAuthorLastName}
+                        newAuthorMiddleName={newAuthorMiddleName}
+                        setNewAuthorMiddleName={setNewAuthorMiddleName}
+                        newAuthorEmail={newAuthorEmail}
+                        setNewAuthorEmail={setNewAuthorEmail}
+                        newAuthorPosition={newAuthorPosition}
+                        setNewAuthorPosition={setNewAuthorPosition}
+                        customAuthorError={customAuthorError}
+                        setCustomAuthorError={setCustomAuthorError}
+                    />
+                )}
             </div>
         </form>
     );

@@ -6,22 +6,22 @@ import _ from "lodash";
 
 // Skeleton Loading Components
 const SkeletonCard = () => (
-  <div className="flex items-start bg-white p-4 shadow-sm">
-    <div className="mr-4 h-44 w-28 bg-gray-200 animate-pulse rounded"></div>
-    <div className="flex-grow">
-      <div className="mb-3 h-5 w-3/4 bg-gray-200 animate-pulse rounded"></div>
-      <div className="mb-2 h-4 w-1/2 bg-gray-200 animate-pulse rounded"></div>
-      <div className="mb-2 h-4 w-2/3 bg-gray-200 animate-pulse rounded"></div>
-      <div className="mt-4 h-4 w-1/3 bg-gray-200 animate-pulse rounded"></div>
+    <div className="flex items-start bg-white p-4 shadow-sm">
+        <div className="mr-4 h-44 w-28 animate-pulse rounded bg-gray-200"></div>
+        <div className="flex-grow">
+            <div className="mb-3 h-5 w-3/4 animate-pulse rounded bg-gray-200"></div>
+            <div className="mb-2 h-4 w-1/2 animate-pulse rounded bg-gray-200"></div>
+            <div className="mb-2 h-4 w-2/3 animate-pulse rounded bg-gray-200"></div>
+            <div className="mt-4 h-4 w-1/3 animate-pulse rounded bg-gray-200"></div>
+        </div>
     </div>
-  </div>
 );
 
 const SkeletonFilter = () => (
-  <div className="animate-pulse">
-    <div className="mb-2 h-4 w-1/3 bg-gray-200 rounded"></div>
-    <div className="h-12 w-full bg-gray-200 rounded-md"></div>
-  </div>
+    <div className="animate-pulse">
+        <div className="mb-2 h-4 w-1/3 rounded bg-gray-200"></div>
+        <div className="h-12 w-full rounded-md bg-gray-200"></div>
+    </div>
 );
 
 const MemberCard = ({ member, openModal }) => (
@@ -153,6 +153,8 @@ const App = () => {
         setIsModalOpen(false);
         setSelectedMember(null);
     };
+
+    console.log("isGroupPublicAuthor", isGroupPublicAuthor);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -407,23 +409,20 @@ const App = () => {
                                     </div>
                                 </div>
                             </div>
-
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">
                                     <FaCalendarAlt className="mr-1 inline" />
                                     From
                                 </label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <FaCalendarAlt className="text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="date"
-                                        value={fromDate}
-                                        onChange={(e) => setFromDate(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 p-3 pl-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
+                                <input
+                                    type="number"
+                                    value={fromDate}
+                                    onChange={(e) => setFromDate(e.target.value)}
+                                    placeholder="YYYY"
+                                    min={1900} // pwede palitan depende sa kailangan
+                                    max={2100}
+                                    className="w-full rounded-md border border-gray-300 p-3 pl-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
                             </div>
 
                             <div>
@@ -431,17 +430,15 @@ const App = () => {
                                     <FaCalendarAlt className="mr-1 inline" />
                                     To
                                 </label>
-                                <div className="relative">
-                                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                        <FaCalendarAlt className="text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="date"
-                                        value={toDate}
-                                        onChange={(e) => setToDate(e.target.value)}
-                                        className="w-full rounded-md border border-gray-300 p-3 pl-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                </div>
+                                <input
+                                    type="number"
+                                    value={toDate}
+                                    onChange={(e) => setToDate(e.target.value)}
+                                    placeholder="YYYY"
+                                    min={1900}
+                                    max={2100}
+                                    className="w-full rounded-md border border-gray-300 p-3 pl-10 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
                             </div>
                         </>
                     )}

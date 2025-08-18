@@ -9,6 +9,9 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const { memberInfo, files = [], count } = member;
 
+
+
+    console.log("member",member)
     const resolutionCount = files.filter((file) => file.category === "Resolution").length;
     const ordinanceCount = files.filter((file) => file.category === "Ordinance").length;
 
@@ -17,9 +20,6 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
             setIsModalOpen(true);
         }
     };
-
-    console.log("trace", memberInfo);
-
     const closeModal = () => setIsModalOpen(false);
 
     const onDeletehandle = () => {
@@ -50,7 +50,7 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
                     <div className="w-full p-3 md:w-2/3 md:p-4 lg:p-6">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <h5 className="line-clamp-1 text-lg font-bold text-gray-800 dark:text-gray-100 sm:text-xl md:text-2xl">
-                                {memberInfo?.fullName}
+                                {member.fullName}
                             </h5>
                             <div className="flex gap-2">
                                 {/* Edit Button - now calls handleEditClick */}

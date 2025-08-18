@@ -117,62 +117,6 @@ const StorageSettings = () => {
             </div>
 
             <div className="space-y-6">
-                {/* Storage Usage */}
-                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                    <div className="mb-4 flex flex-wrap items-center justify-between">
-                        <h4 className="font-semibold text-gray-700 dark:text-gray-300">Storage Usage</h4>
-                        <span className="font-medium text-blue-600 dark:text-blue-400">{currentStorageQuotaPercent}% of 1TB used</span>
-                    </div>
-                    <div className="relative pt-1">
-                        <div className="mb-1 flex justify-between text-sm text-gray-500 dark:text-gray-400">
-                            <span>0 GB</span>
-                            <span>1 TB</span>
-                        </div>
-                        <div className="h-4 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div
-                                className="relative h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
-                                style={{ width: `${currentStorageQuotaPercent}%` }}
-                            >
-                                {parseFloat(currentStorageQuotaPercent) > 0 && parseFloat(currentStorageQuotaPercent) > 15 && (
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-white">{currentStorageQuotaPercent}% used</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-4 flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <FaInfoCircle className="mr-2 flex-shrink-0" />
-                        <span>Upgrade plan for more storage capacity</span>
-                    </div>
-                </div>
-
-                {/* Storage Allocation */}
-                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-                    <h4 className="mb-5 font-semibold text-gray-700 dark:text-gray-300">Storage Allocation</h4>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        {allocationData.map((item, idx) => (
-                            <div
-                                key={idx}
-                                className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md dark:border-gray-700"
-                            >
-                                <div className="mb-3 text-lg font-bold text-gray-800 dark:text-gray-200">{item.label}</div>
-                                <div className="mb-2 flex items-center justify-between">
-                                    <span className="text-sm text-gray-500 dark:text-gray-400">Usage</span>
-                                    <span className="font-medium">{item.value}</span>
-                                </div>
-                                <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                                    <div
-                                        className={`h-full ${item.color} rounded-full`}
-                                        style={{ width: `${item.percent}%` }}
-                                    ></div>
-                                </div>
-                                <div className="mt-1 text-right text-sm text-gray-500 dark:text-gray-400">{item.percent}%</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
                 {/* Optimization */}
                 <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                     <h4 className="mb-5 font-semibold text-gray-700 dark:text-gray-300">Storage Optimization</h4>

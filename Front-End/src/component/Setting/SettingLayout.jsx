@@ -46,8 +46,7 @@ const SettingsPage = () => {
                         approvers={approver}
                         setApprover={setApprover}
                     />
-
-                    {/* Picture Upload Component */}
+                    <StorageSettings/>
                     <PictureUploadSettings />
                 </motion.div>
             </div>

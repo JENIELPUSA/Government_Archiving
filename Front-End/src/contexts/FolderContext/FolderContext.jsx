@@ -17,7 +17,7 @@ export const FolderDisplayProvider = ({ children }) => {
     const [isfolderFiles, setFolderFiles] = useState("");
     const [totalPages, setTotalPages] = useState(1);
     const [currentPage, setCurrentPage] = useState(1);
-     const [totalFolderPages, setTotalFolderPages] = useState(1);
+    const [totalFolderPages, setTotalFolderPages] = useState(1);
     const [currentFolderPage, setCurrentFolderPage] = useState(1);
 
     const fetchfolder = useCallback(
@@ -51,13 +51,6 @@ export const FolderDisplayProvider = ({ children }) => {
         }
     }, [authToken, fetchfolder]);
 
-    useEffect(() => {
-        if (customError) {
-            setModalStatus("failed");
-            setShowModal(true);
-        }
-    }, [customError]);
-
     const AddFolder = async (values) => {
         try {
             const res = await axiosInstance.post(
@@ -78,6 +71,8 @@ export const FolderDisplayProvider = ({ children }) => {
                 setShowModal(true);
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -101,6 +96,8 @@ export const FolderDisplayProvider = ({ children }) => {
                 setShowModal(true);
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -122,6 +119,8 @@ export const FolderDisplayProvider = ({ children }) => {
                 setFolder((prev) => prev.filter((f) => f._id !== folderId));
                 return { success: true, data: newData };
             } else {
+                setModalStatus("failed");
+                setShowModal(true);
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
@@ -130,36 +129,35 @@ export const FolderDisplayProvider = ({ children }) => {
         }
     };
 
-const fetchSpecificData = useCallback(
-    async (folderID, params = {}) => {
-        if (!authToken || !folderID) return; 
-        setIsLoadingFiles(true);
-        setError(null);
+    const fetchSpecificData = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
 
-        try {
-            const res = await axiosInstance.get(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getFilesByFolderId/${folderID}`,
-                {
-                    withCredentials: true,
-                    params,
-                    headers: { Authorization: `Bearer ${authToken}` },
-                },
-            );
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getFilesByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
 
-            const { totalPages, currentPage } = res.data;
-            setFolderFiles(res.data.data);
-            setTotalPages(totalPages);
-            setCurrentPage(currentPage);
-        } catch (error) {
-            console.error("Error fetching files:", error);
-            setError("Failed to fetch files.");
-        } finally {
-            setIsLoadingFiles(false);
-        }
-    },
-    [authToken],
-);
-
+                const { totalPages, currentPage } = res.data;
+                setFolderFiles(res.data.data);
+                setTotalPages(totalPages);
+                setCurrentPage(currentPage);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
 
     return (
         <FolderContext.Provider
@@ -178,7 +176,10 @@ const fetchSpecificData = useCallback(
                 isLoadingFiles,
                 totalPages,
                 currentPage,
-                setCurrentPage,totalFolderPages,setCurrentFolderPage,currentFolderPage
+                setCurrentPage,
+                totalFolderPages,
+                setCurrentFolderPage,
+                currentFolderPage,
             }}
         >
             {children}

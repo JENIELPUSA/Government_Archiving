@@ -2,6 +2,38 @@ const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const Folder = require("./../Models/FolderSchema");
 const Files = require("./../Models/File");
 const mongoose = require("mongoose");
+
+exports.deleteFolder = AsyncErrorHandler(async (req, res, next) => {
+  const folderId = req.params.id;
+
+  // Check kung existing ang folder
+  const FolderDoc = await Folder.findById(folderId);
+  if (!FolderDoc) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Folder not found.",
+    });
+  }
+
+  // 🔎 Check kung may Files na naka-link sa folder na ito
+  const linkedFiles = await Files.findOne({ folderID: folderId });
+
+  if (linkedFiles) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Folder cannot be deleted because it has linked files.",
+    });
+  }
+
+  // Walang naka-link → pwede i-delete
+  await Folder.findByIdAndDelete(folderId);
+
+  res.status(200).json({
+    status: "success",
+    message: "Folder deleted successfully.",
+  });
+});
+
 exports.createFolder = AsyncErrorHandler(async (req, res) => {
   console.log("req.body:", req.body);
   const Folders = await Folder.create(req.body);
@@ -58,23 +90,6 @@ exports.UpdateFolder = AsyncErrorHandler(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     data: updateFolder,
-  });
-});
-
-exports.deleteFolder = AsyncErrorHandler(async (req, res, next) => {
-  const FolderDoc = await Folder.findById(req.params.id);
-
-  if (!FolderDoc) {
-    return res.status(404).json({
-      status: "fail",
-      message: "Folder not found.",
-    });
-  }
-  await Folder.findByIdAndDelete(req.params.id);
-
-  res.status(200).json({
-    status: "success",
-    data: null,
   });
 });
 

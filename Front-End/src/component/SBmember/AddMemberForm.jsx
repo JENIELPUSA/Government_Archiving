@@ -83,7 +83,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
 
     try {
       const memberData = memberToEdit ? { ...newMember, _id: memberToEdit._id } : newMember;
-      console.log("DATA check",memberData)
       await onAddMember(memberData);
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -294,39 +293,49 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                   />
                 </div>
                 
-                {/* Term From */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Term From
-                  </label>
-                  <input
-                    type="date"
-                    name="term_from"
-                    value={newMember.term_from}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
-                      isLoading ? "cursor-not-allowed opacity-50" : ""
-                    }`}
-                  />
-                </div>
+{/* Term From */}
+<div className="col-span-1">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    Term From
+  </label>
+  <select
+    name="term_from"
+    value={newMember.term_from}
+    onChange={handleInputChange}
+    disabled={isLoading}
+    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+      isLoading ? "cursor-not-allowed opacity-50" : ""
+    }`}
+  >
+    <option value="">Select Year</option>
+    {Array.from({ length: 20 }, (_, i) => {
+      const year = new Date().getFullYear() - i;
+      return <option key={year} value={year}>{year}</option>;
+    })}
+  </select>
+</div>
 
-                {/* Term To */}
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Term To
-                  </label>
-                  <input
-                    type="date"
-                    name="term_to"
-                    value={newMember.term_to}
-                    onChange={handleInputChange}
-                    disabled={isLoading}
-                    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
-                      isLoading ? "cursor-not-allowed opacity-50" : ""
-                    }`}
-                  />
-                </div>
+<div className="col-span-1">
+  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+    Term To
+  </label>
+  <select
+    name="term_to"
+    value={newMember.term_to}
+    onChange={handleInputChange}
+    disabled={isLoading}
+    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+      isLoading ? "cursor-not-allowed opacity-50" : ""
+    }`}
+  >
+    <option value="">Select Year</option>
+    {Array.from({ length: 20 }, (_, i) => {
+      const year = new Date().getFullYear() + i; // pataas mula current year
+      return <option key={year} value={year}>{year}</option>;
+    })}
+  </select>
+</div>
+
               </div>
 
               {/* Additional Info */}

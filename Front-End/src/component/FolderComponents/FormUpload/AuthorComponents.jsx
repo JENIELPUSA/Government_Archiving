@@ -2,7 +2,7 @@ import React from "react";
 import { FiX, FiMail } from "react-icons/fi";
 const AuthorComponent = ({
   showAuthorModal,
-  setShowAuthorModal,
+  onClose,
   newAuthorFirstName,
   setNewAuthorFirstName,
   newAuthorLastName,
@@ -29,7 +29,7 @@ const AuthorComponent = ({
             </h3>
             <button
               type="button"
-              onClick={() => setShowAuthorModal(false)}
+              onClick={onClose}
               className="rounded-full p-1 text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
             >
               <FiX size={24} />
@@ -128,7 +128,7 @@ const AuthorComponent = ({
             <div className="flex gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => setShowAuthorModal(false)}
+                onClick={onClose}
                 className="flex-1 rounded-lg bg-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               >
                 Cancel

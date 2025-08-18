@@ -6,7 +6,7 @@ import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
 import { FileText, Folder, File, User, X, Save } from "lucide-react";
 
 const EditDocumentModal = ({ show, document, onSave, onClose }) => {
-  const { isSBMember } = useContext(SbMemberDisplayContext);
+  const { isDropdown } = useContext(SbMemberDisplayContext);
   const { UpdateFiles } = useContext(FilesDisplayContext);
   const { isCategory } = useContext(CategoryContext);
   const [editedDoc, setEditedDoc] = useState({});
@@ -183,12 +183,12 @@ const EditDocumentModal = ({ show, document, onSave, onClose }) => {
                     <option value="" disabled>
                       Select SB Member
                     </option>
-                    {isSBMember?.map((member) => (
+                    {isDropdown?.map((member) => (
                       <option
                         key={member._id}
-                        value={`${member.first_name} ${member.last_name}`}
+                        value={`${member._id}`}
                       >
-                        {member.first_name} {member.last_name}
+                        {member.full_name}
                       </option>
                     ))}
                   </select>
