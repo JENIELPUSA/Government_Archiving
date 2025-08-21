@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Edit, Trash, Plus, ChevronLeft, ChevronRight, User,Database } from "lucide-react";
+import { Edit, Trash, Plus, ChevronLeft, ChevronRight, User, Database } from "lucide-react";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import AddUserModal from "./AddUserModal";
 import "react-toastify/dist/ReactToastify.css";
@@ -92,6 +92,19 @@ const UserTable = () => {
             setLoading(false);
         }
     };
+    const getAvatarUrl = (avatar) => {
+        if (!avatar || !avatar.url) return null;
+        
+        if (avatar.url.startsWith('http')) {
+            return avatar.url;
+        }
+
+        const baseURL = import.meta.env.VITE_REACT_APP_BACKEND_BASEURL || '';
+        const formattedBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+        const formattedAvatarURL = avatar.url.startsWith('/') ? avatar.url : `/${avatar.url}`;
+        
+        return `${formattedBaseURL}${formattedAvatarURL}`;
+    };
 
     return (
         <div className="relative w-full space-y-6">
@@ -134,47 +147,61 @@ const UserTable = () => {
                         {isPageChanging || loading ? (
                             [...Array(ITEMS_PER_PAGE)].map((_, i) => <UserRowSkeleton key={i} />)
                         ) : currentAdmins.length > 0 ? (
-                            currentAdmins.map((user) => (
-                                <tr
-                                    key={user.id || user._id}
-                                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                                >
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                        {user.avatar ? (
-                                            <img
-                                                src={user.avatar.url}
-                                                alt="User Avatar"
-                                                className="h-10 w-10 rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400">
+                            currentAdmins.map((user) => {
+                                const avatarUrl = getAvatarUrl(user.avatar);
+                                return (
+                                    <tr
+                                        key={user.id || user._id}
+                                        className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                                    >
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
+                                            {avatarUrl ? (
+                                                <img
+                                                    src={avatarUrl}
+                                                    alt="User Avatar"
+                                                    className="h-10 w-10 rounded-full object-cover"
+                                                    onError={(e) => {
+                                                        // If image fails to load, show default avatar
+                                                        e.target.style.display = 'none';
+                                                        e.target.nextSibling.style.display = 'flex';
+                                                    }}
+                                                />
+                                            ) : (
+                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400">
+                                                    <User size={18} />
+                                                </div>
+                                            )}
+                                            {/* Fallback avatar that's hidden by default */}
+                                            <div 
+                                                className="hidden h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400"
+                                            >
                                                 <User size={18} />
                                             </div>
-                                        )}
-                                    </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{`${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`}</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.gender}</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.email}</td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
-                                        <div className="flex justify-center gap-3">
-                                            <button
-                                                onClick={() => handleEdit(user)}
-                                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                                title="Edit"
-                                            >
-                                                <Edit size={18} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(user.id || user._id)}
-                                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                                title="Delete"
-                                            >
-                                                <Trash size={18} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
+                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{`${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.gender}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.email}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
+                                            <div className="flex justify-center gap-3">
+                                                <button
+                                                    onClick={() => handleEdit(user)}
+                                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={18} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(user.id || user._id)}
+                                                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                                    title="Delete"
+                                                >
+                                                    <Trash size={18} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
                                 <td

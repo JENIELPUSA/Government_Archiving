@@ -2,8 +2,10 @@ const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const SBmember = require("../Models/SBmember");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
 const cloudinary = require("../Utils/cloudinary");
+const fs = require('fs/promises'); // For async file operations
+const path = require('path');
 
-
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 exports.createSBmember = AsyncErrorHandler(async (req, res) => {
   const newSBmember = await SBmember.create(req.body);
 
@@ -176,35 +178,34 @@ exports.UpdateSBmember = async (req, res) => {
   const SbmemberID = req.params.id;
 
   try {
-    let uploadPromise;
-    let avatar;
+    // 1. Hanapin ang SB member record para makuha ang lumang avatar path
+    const oldRecord = await SBmember.findById(SbmemberID);
+    if (!oldRecord) {
+      return res.status(404).json({ error: "SB Member not found" });
+    }
+
+    let avatarPath = oldRecord.avatar?.url || null;
 
     if (req.file) {
-      // Prepare Cloudinary upload promise
-      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
-      uploadPromise = cloudinary.uploader.upload(base64Image, {
-        folder: "Government Archiving/Profile",
-      });
+      // Dito, gamitin ang req.file.path na galing sa multer.diskStorage
+      const newFilePath = req.file.path;
+      const fileName = path.basename(newFilePath);
+      avatarPath = `/uploads/${fileName}`;
 
-      // Delete old avatar in background (non-blocking)
-      SBmember.findById(SbmemberID).then((oldRecord) => {
-        if (oldRecord?.avatar?.public_id) {
-          cloudinary.uploader.destroy(oldRecord.avatar.public_id).catch((err) => {
-            console.error("Failed to delete old image from Cloudinary:", err);
-          });
+      // Step 1: I-delete ang lumang avatar
+      if (oldRecord.avatar?.url) {
+        const oldFileName = path.basename(oldRecord.avatar.url);
+        const oldFilePath = path.join(uploadsDir, oldFileName);
+        
+        try {
+          await fs.unlink(oldFilePath);
+        } catch (err) {
+          console.error("Failed to delete old image:", err.message);
         }
-      });
+      }
     }
 
-    // Wait for Cloudinary upload if there is a file
-    if (uploadPromise) {
-      const uploadedResponse = await uploadPromise;
-      avatar = {
-        public_id: uploadedResponse.public_id,
-        url: uploadedResponse.secure_url,
-      };
-    }
-
+    // Step 2: I-update ang database record
     const updateData = {
       first_name: req.body.first_name,
       last_name: req.body.last_name,
@@ -212,14 +213,14 @@ exports.UpdateSBmember = async (req, res) => {
       email: req.body.email,
       Position: req.body.Position,
       detailInfo: req.body.detailInfo,
-      ...(avatar && { avatar }), // Add avatar only if updated
+      // I-update lang ang avatar kung may bagong file
+      ...(req.file && { avatar: { url: avatarPath } }),
     };
 
-    // Single query for update
     const updatedSBmember = await SBmember.findByIdAndUpdate(SbmemberID, updateData, { new: true });
 
     if (!updatedSBmember) {
-      return res.status(404).json({ error: "SB Member not found" });
+      return res.status(404).json({ error: "SB Member not found after update" });
     }
 
     res.json({ status: "success", data: updatedSBmember });
@@ -241,12 +242,16 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 
-  if (existingSB.avatar && existingSB.avatar.public_id) {
+  // 🗑 Delete the local image file if it exists
+  if (existingSB.avatar && existingSB.avatar.url) {
+    const fileName = path.basename(existingSB.avatar.url);
+    const filePath = path.join(uploadsDir, fileName);
+
     try {
-      await cloudinary.uploader.destroy(existingSB.avatar.public_id);
+      await fs.unlink(filePath);
     } catch (error) {
-      console.error("Cloudinary deletion failed:", error);
-      // optionally continue even if deletion fails
+      console.error("Local file deletion failed:", error);
+      // It's okay to continue if the file deletion fails.
     }
   }
 
@@ -256,7 +261,7 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
     await UserLoginSchema.findByIdAndDelete(userLogin._id);
   }
 
-  // 🗑 Delete admin record
+  // 🗑 Delete the SB member record
   await SBmember.findByIdAndDelete(SbmemberID);
 
   res.status(200).json({

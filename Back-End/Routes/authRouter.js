@@ -1,7 +1,7 @@
 const express = require('express');
 const authController = require('../Controller/authController');
 const router = express.Router();
-const upload = require("../middleware/imageUploader");
+const upload = require("../middleware/fileUploader");
 router.route('/signup')
 .post(upload.single("avatar"),authController.signup);
 

@@ -63,7 +63,7 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      maxAge: 24 * 60 * 60 * 1000, 
     },
   })
 );
@@ -81,7 +81,10 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+//importante ito para pag view ng picture sa table .etcc..
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
+app.use('/uploads', express.static(uploadsDir));
 
 app.use("/api/v1/authentication", authentic);
 app.use("/api/v1/Admin", AdminRoute);

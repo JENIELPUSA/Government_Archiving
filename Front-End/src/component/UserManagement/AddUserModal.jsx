@@ -21,17 +21,37 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit }) => {
     last_name: "",
     email: "",
     gender: "",
-    avatar: null, // Idinagdag para sa File object
-    avatarPreview: null, // Idinagdag para sa preview URL
+    avatar: null, // Ito ang File object na ia-upload
+    avatarPreview: null, // Ito ang URL na gagamitin sa <img> tag
   };
 
   const [formData, setFormData] = useState(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const fileInputRef = useRef(null); // Reference para sa file input
+  const fileInputRef = useRef(null);
+
+  // Helper function para makuha ang tamang URL ng avatar
+  const getAvatarUrl = (avatar) => {
+    if (!avatar || !avatar.url) return null;
+
+    // Kung ang URL ay may 'http' na, ibig sabihin galing ito sa web
+    if (avatar.url.startsWith('http')) {
+      return avatar.url;
+    }
+
+    // Para sa mga local files (e.g., '/uploads/12.JPG')
+    const baseURL = import.meta.env.VITE_REACT_APP_BACKEND_BASEURL || '';
+    const formattedBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+    const formattedAvatarURL = avatar.url.startsWith('/') ? avatar.url : `/${avatar.url}`;
+    
+    return `${formattedBaseURL}${formattedAvatarURL}`;
+  };
 
   useEffect(() => {
     if (isEditing) {
+      // Gamitin ang getAvatarUrl function para sa tamang preview URL
+      const avatarPreviewUrl = getAvatarUrl(editableUser.avatar);
+
       setFormData({
         _id: editableUser._id,
         first_name: editableUser.first_name || "",
@@ -39,14 +59,13 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit }) => {
         last_name: editableUser.last_name || "",
         email: editableUser.email || "",
         gender: editableUser.gender || "",
-        avatar: null, // Walang file na kasama sa simula para iwas-conflict
-        // Gamitin ang kasalukuyang avatar URL ng user para sa preview
-        avatarPreview: editableUser.avatar?.url || "https://i.pravatar.cc/150?img=64",
+        avatar: null, // Walang file sa pag-edit
+        avatarPreview: avatarPreviewUrl,
       });
     } else {
       setFormData(initialFormState);
     }
-  }, [editableUser]);
+  }, [editableUser, isEditing]);
 
   const onFormChange = (e) => {
     const { name, value } = e.target;
@@ -56,11 +75,16 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit }) => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setFormData((prevData) => ({
-        ...prevData,
-        avatar: file,
-        avatarPreview: URL.createObjectURL(file), 
-      }));
+      // Gumamit ng FileReader para sa instant preview ng bagong file
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData((prevData) => ({
+          ...prevData,
+          avatar: file,
+          avatarPreview: reader.result, // Ito ay Base64 string para sa preview
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -151,8 +175,8 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit }) => {
               disabled={isSubmitting}
             />
           </div>
-
-          {/* Form Fields */}
+          
+          {/* ... iba pang form fields (hindi binago) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
             {/* First Name */}
             <div className="relative">

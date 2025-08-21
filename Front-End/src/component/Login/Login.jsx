@@ -4,7 +4,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import "react-toastify/dist/ReactToastify.css";
 import LoadingIntro from "../../ReusableFolder/loadingIntro";
 import ForgotPassword from "../Login/ForgotPassword";
-import { UserDisplayContext } from "../../contexts/UserContext/userContext";
 import logo from "@/assets/logo-login.png";
 import { FolderArchive, Lock, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,7 +26,7 @@ export default function AuthForm() {
 
     const navigate = useNavigate();
     const { login } = useAuth();
-    const { isUser } = useContext(UserDisplayContext);
+
 
     const handleInput = useCallback((event) => {
         const { name, value } = event.target;
