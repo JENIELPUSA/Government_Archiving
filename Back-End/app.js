@@ -58,6 +58,11 @@ console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
 
 
 console.log("Setting up MongoStore with URL:", process.env.CONN_STR);
+const testStore = MongoStore.create({
+  mongoUrl: "mongodb+srv://admin:FV0X2MY5DafZ4kUJ@cluster0.qpiekbv.mongodb.net/Government_Archiving_System?retryWrites=true&w=majority",
+});
+
+console.log("MongoStore initialized:", testStore.client.s.url);
 
 app.use(
   session({
@@ -66,7 +71,7 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.CONN_STR,
-      ttl: 24 * 60 * 60, 
+      ttl: 24 * 60 * 60, // 24 hours in seconds
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
