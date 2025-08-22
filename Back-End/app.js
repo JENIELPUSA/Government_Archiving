@@ -62,7 +62,7 @@ const testStore = MongoStore.create({
   mongoUrl: "mongodb+srv://admin:FV0X2MY5DafZ4kUJ@cluster0.qpiekbv.mongodb.net/Government_Archiving_System?retryWrites=true&w=majority",
 });
 
-console.log("MongoStore initialized:", testStore.client.s.url);
+console.log("MongoStore URL:", process.env.CONN_STR);
 
 app.use(
   session({
