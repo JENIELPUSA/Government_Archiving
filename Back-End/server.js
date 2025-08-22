@@ -7,7 +7,7 @@ const socketIo = require("socket.io");
 const app = require("./app");
 const scheduleRetentionJob = require("./Utils/CronJobs/retentionJob");
 const initDefaultUser = require("./Controller/initDefaultUser");
-//para pagkuha ng ipAddress
+
 app.set("trust proxy", true);
 
 process.on("uncaughtException", (err) => {
@@ -16,7 +16,6 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
-// Create HTTP server and integrate with Socket.io
 const server = http.createServer(app);
 
 const io = socketIo(server, {
