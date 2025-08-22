@@ -8,6 +8,7 @@ const app = require("./app");
 const scheduleRetentionJob = require("./Utils/CronJobs/retentionJob");
 const initDefaultUser = require("./Controller/initDefaultUser");
 
+
 app.set("trust proxy", true);
 
 process.on("uncaughtException", (err) => {
@@ -106,7 +107,7 @@ mongoose
     process.exit(1);
   });
   
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000;
 server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
