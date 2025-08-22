@@ -50,26 +50,33 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.set("trust proxy", true);
 
+const mongoUrl = process.env.NODE_ENV === "development"
+  ? process.env.LOCAL_CONN_STR    // local MongoDB
+  : process.env.CONN_STR;         // production MongoDB
+
 app.use(
   session({
     secret: process.env.SECRET_STR,
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.CONN_STR,
-      ttl: 24 * 60 * 60, // 24 hours in seconds
+      mongoUrl,
+      ttl: 24 * 60 * 60, // 24 hours
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, 
+      maxAge: 24 * 60 * 60 * 1000,
     },
   })
 );
+
+const allowedOrigin = process.env.FRONTEND_URL || "*";
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: allowedOrigin,
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
   })
