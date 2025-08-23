@@ -555,14 +555,10 @@ const OfficerDashboard = () => {
                                             <strong>Summary:</strong> {selectedDocument.summary}
                                         </p>
                                         <p>
-                                            <strong>Author:</strong> {selectedDocument.author}
+                                            <strong>Author:</strong> {selectedDocument.authorName}
                                         </p>
                                         <p>
                                             <strong>Category:</strong> {selectedDocument.category}
-                                        </p>
-                                        <p>
-                                            <strong>Officer In Charge:</strong> {selectedDocument.officer_first_name}{" "}
-                                            {selectedDocument.officer_last_name}
                                         </p>
                                         <p>
                                             <strong>Status:</strong>

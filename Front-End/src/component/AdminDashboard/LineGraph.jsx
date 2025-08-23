@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
 } from 'recharts';
 
-function LineGraph({isFileData}) {
+function LineGraph({ isFileData }) {
   const [chartData, setChartData] = useState([]);
 
   const allMonths = [
@@ -12,7 +19,7 @@ function LineGraph({isFileData}) {
   ];
 
   useEffect(() => {
-    if (isFileData && isFileData) {
+    if (isFileData) {
       const processedData = processApplicationData(isFileData);
       setChartData(processedData);
     }
@@ -57,12 +64,14 @@ function LineGraph({isFileData}) {
             <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
             <XAxis
               dataKey="name"
-              tick={{ fill: '#4B5563' }}
-              className="dark:text-gray-300"
+              tick={{ fill: '#4B5563', fontSize: 12 }}
+              axisLine={{ stroke: '#ccc' }}
+              tickLine={{ stroke: '#ccc' }}
             />
             <YAxis
-              tick={{ fill: '#4B5563' }}
-              className="dark:text-gray-300"
+              tick={{ fill: '#4B5563', fontSize: 12 }}
+              axisLine={{ stroke: '#ccc' }}
+              tickLine={{ stroke: '#ccc' }}
               allowDecimals={false}
             />
             <Tooltip

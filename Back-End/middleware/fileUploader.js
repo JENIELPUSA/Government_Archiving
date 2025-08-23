@@ -1,10 +1,13 @@
 const multer = require("multer");
 const path = require("path");
+
+// Memory storage for all environments
 const storage = multer.memoryStorage();
 
+// File filter
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
-  const extname = allowedTypes.test(path.extname(file.originalname));
+  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
   const mimetype = file.mimetype.startsWith("application/");
 
   if (extname && mimetype) {
@@ -17,9 +20,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
-  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
 module.exports = upload;

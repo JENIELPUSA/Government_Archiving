@@ -5,9 +5,7 @@ import axios from "axios";
 import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min?worker";
 import Sidebar from "./SidebarPDF"; // Siguraduhin na tama ang path
-import { ResizableBox } from "react-resizable";
 import { AuthContext } from "../../contexts/AuthContext";
-import { DepartmentContext } from "../../contexts/DepartmentContext/DepartmentContext";
 import ApprovedRejectForm from "../PdfViewer/ApproveRejectForm";
 import approvedImage from "../../assets/logobond.png";
 import Notes from "../../component/PdfViewer/notecomponents";
@@ -22,7 +20,6 @@ const PdfViewer = () => {
     const { FetchOfficerFiles } = useContext(OfficerDisplayContext);
     const navigate = useNavigate();
     const location = useLocation();
-    const { isCategory } = useContext(DepartmentContext); // isCategory is not used in the provided code
     const fileData = location.state?.fileData;
     const { authToken } = useContext(AuthContext);
     const { fileId } = useParams();

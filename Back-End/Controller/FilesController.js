@@ -11,6 +11,8 @@ const UserLoginSchema = require("../Models/LogInDentalSchema");
 const Category = require("../Models/CategorySchema");
 const SBmember = require("../Models/SBmember");
 const { ObjectId } = require("mongodb");
+const fs = require("fs");
+const ftp = require("basic-ftp");
 const sanitizeFolderName = (name) => {
   return name
     .replace(/[^a-zA-Z0-9\s]/g, "")
@@ -350,51 +352,50 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
       return res.status(400).json({ error: "Invalid approver ID format" });
 
-    if (
-      (category === "Resolution" || category === "Ordinance") &&
-      !approverID
-    ) {
-      return res.status(400).json({
-        error: `ApproverID is required for category "${category}"`,
-      });
-    }
+    if ((category === "Resolution" || category === "Ordinance") && !approverID)
+      return res.status(400).json({ error: `ApproverID is required for category "${category}"` });
 
-    // Build Cloudinary path
     const ext = path.extname(req.file.originalname);
-    const baseName = path.basename(req.file.originalname, ext);
-    const fileName = `${Date.now()}_${baseName}${ext}`;
-    const folderPath = `Government Archiving/${sanitizeFolderName(category)}`;
+    const fileName = `${Date.now()}_${req.file.originalname}`;
+    let fileUrl;
+    let fileSize = req.file.size;
 
-    // Upload to Cloudinary
-    const streamUpload = () =>
-      new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: folderPath,
-            resource_type: "raw",
-            public_id: fileName.replace(ext, ""),
-            use_filename: true,
-            unique_filename: false,
-            access_mode: "public",
-          },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-      });
+    const sanitizedCategory = category.replace(/[^a-zA-Z0-9_-]/g, "");
 
-    let result;
-    try {
-      result = await streamUpload();
-      console.log("File uploaded to Cloudinary:", result.secure_url);
-    } catch (uploadErr) {
-      console.error("Cloudinary upload failed:", uploadErr);
-      return res.status(500).json({ error: "File upload failed" });
+    if (process.env.NODE_ENV === "development") {
+      const uploadDir = path.join(__dirname, "../uploads", sanitizedCategory);
+      fs.mkdirSync(uploadDir, { recursive: true });
+      const filePath = path.join(uploadDir, fileName);
+      fs.writeFileSync(filePath, req.file.buffer);
+
+      fileUrl = `/uploads/${sanitizedCategory}/${fileName}`;
+      console.log("📂 File saved locally:", filePath);
+    } else {
+      const client = new ftp.Client();
+      try {
+        await client.access({
+          host: process.env.FTP_HOST,
+          user: process.env.FTP_USER,
+          password: process.env.FTP_PASSWORD,
+        });
+
+        const baseRemoteDir = `/public_html/uploads`;
+        const categoryRemoteDir = `${baseRemoteDir}/${sanitizedCategory}`;
+        const remotePath = `${categoryRemoteDir}/${fileName}`;
+
+        await client.ensureDir(categoryRemoteDir);
+        await client.uploadFrom(req.file.buffer, remotePath);
+
+        fileUrl = `https://${process.env.FRONTEND_URL}/uploads/${sanitizedCategory}/${fileName}`;
+        console.log("🌐 File uploaded to Hostinger:", fileUrl);
+      } catch (ftpErr) {
+        console.error("FTP upload failed:", ftpErr);
+        return res.status(500).json({ error: "Failed to upload file to server" });
+      } finally {
+        client.close();
+      }
     }
 
-    // Detect file type
     const typeMap = {
       ".pdf": "PDF",
       ".doc": "Word Document",
@@ -403,140 +404,40 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       ".xlsx": "Excel Spreadsheet",
       ".ppt": "PowerPoint Presentation",
       ".pptx": "PowerPoint Presentation",
-      ".jpg": "Image",
-      ".jpeg": "Image",
-      ".png": "Image",
-      ".txt": "Text",
-      ".zip": "ZIP",
-      ".csv": "CSV",
+      ".txt": "Text File",
     };
     const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
 
-    // Build file data
     const fileData = {
       title,
       resolutionNumber,
       category,
       summary,
       author,
-      fileSize: req.file.size,
+      fileSize,
       admin,
       approverID,
       status,
       dateOfResolution,
-      fileUrl: result.secure_url,
+      fileUrl,
       fileName,
       oldFile,
       folderID,
-      folderPath,
+      folderPath: `/uploads/${sanitizedCategory}`,
       fullText: fullTextType,
     };
 
-    let categoryName = null;
-    if (mongoose.Types.ObjectId.isValid(category)) {
-      const categoryDoc = await Category.findById(category).lean();
-      categoryName = categoryDoc?.category; 
-    }
-    if (oldFile === "true" || oldFile === true) {
-      if (categoryName === "Resolution" || categoryName === "Ordinance") {
-        fileData.status = "Approved";
-        fileData.ArchivedStatus = "Active";
-      } else {
-        fileData.ArchivedStatus = "Archived";
-      }
-    }
-    let savedFile;
-    try {
-      savedFile = await new Files(fileData);
-      await savedFile.save();
-      console.log("File saved to database:", savedFile._id);
-    } catch (dbErr) {
-      console.error("Database save error:", dbErr);
-      return res.status(500).json({ error: "Failed to save file to database" });
-    }
+    const savedFile = await new Files(fileData);
+    await savedFile.save();
+    console.log("✅ File saved to DB:", savedFile._id);
 
-    // Log activity
-    const allowedRoles = ["admin", "officer"];
-    const role = req.user?.role?.toLowerCase();
-    const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
-
-    if (allowedRoles.includes(role)) {
-      await ActivityLog.create({
-        type: "CREATE",
-        action: "Uploaded a new file",
-        performedBy: req.user.linkId,
-        performedByModel: capitalizedRole,
-        file: savedFile._id,
-        message: `${capitalizedRole} uploaded file: '${title}'`,
-        level: "info",
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-      });
-    }
-
-    // Notification for Pending
-    if (savedFile.status === "Pending") {
-      const fileId = savedFile._id;
-      const fileTitle = savedFile.title || "Untitled Document";
-      const categoryTitle = savedFile.category || "Unknown Category";
-      const messageText = `New document pending your approval: "${fileTitle}" from ${categoryTitle}`;
-
-      const targetViewer =
-        approverID && mongoose.Types.ObjectId.isValid(approverID)
-          ? approverID
-          : author;
-
-      if (mongoose.Types.ObjectId.isValid(targetViewer)) {
-        const viewersArray = [
-          { user: targetViewer, isRead: false, isApprover: !!approverID },
-        ];
-
-        if (approverID) {
-          const notificationDoc = await Notification.create({
-            message: messageText,
-            viewers: viewersArray,
-            FileId: fileId,
-            relatedApprover: approverID,
-          });
-
-          const io = req.app.get("io");
-          if (io) {
-            const SendMessage = {
-              message: messageText,
-              data: savedFile, // directly send savedFile instead of enrichedFile
-              notificationId: notificationDoc._id,
-              FileId: fileId,
-              approverID: approverID,
-            };
-
-            const receiver = global.connectedUsers?.[targetViewer];
-            if (receiver) {
-              io.to(receiver.socketId).emit(
-                "SentDocumentNotification",
-                SendMessage
-              );
-              console.log(
-                `📨 Sent real-time notification to USER (${targetViewer})`
-              );
-            } else {
-              console.log(
-                `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
-              );
-            }
-          }
-        }
-      }
-    }
-
-    res.status(201).json({
-      status: "success",
-      data: savedFile,
-    });
+    res.status(201).json({ status: "success", data: savedFile });
   } catch (err) {
     console.error("Unhandled error in createFiles:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -717,15 +618,16 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
       $gte: startOfDay,
       $lte: endOfDay,
     },
+    ArchivedStatus: { $ne: "For Restore" },
   });
 
   const now = new Date();
   const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday (0) as start
+  startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0, 0, 0, 0);
 
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
   const latestBill = await Files.find({
@@ -894,7 +796,10 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         let: { authorId: "$_id" },
         pipeline: [
           {
-            $match: { $expr: { $eq: ["$author", "$$authorId"] } },
+            $match: {
+              $expr: { $eq: ["$author", "$$authorId"] },
+              ArchivedStatus: { $ne: "For Restore" },
+            },
           },
         ],
         as: "files",
@@ -1635,7 +1540,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   const oldFile = await Files.findByIdAndUpdate(
     fileId,
     {
-      ArchivedStatus: "Archived",
+      ArchivedStatus: "For Restore",
       archivedMetadata: {
         dateArchived: new Date(),
         archivedBy: admin,
@@ -1810,7 +1715,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
-  console.log("getOfficer controller");
   const officerId = req.user.linkId;
   const limit = parseInt(req.query.limit) || 5;
   const pagePending = parseInt(req.query.pagePending) || 1;
@@ -2617,7 +2521,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to } = req.query;
+  const { search, district, detailInfo, Position, term_from, term_to } =
+    req.query;
   const aggregationPipeline = [];
 
   const matchStage = {};
@@ -2634,7 +2539,6 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     matchStage.term_from = fromYear;
     matchStage.term_to = toYear;
   } else if (fromYear) {
-
     matchStage.term_from = fromYear;
   }
 
@@ -2744,18 +2648,23 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         },
         count: { $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] } },
         resolutionCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+          },
         },
         ordinanceCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+          },
         },
       },
     },
     { $sort: { fullName: 1 } }
   );
 
-
-  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+  const AuthorsWithFiles = await SBmember.aggregate(
+    aggregationPipeline
+  ).allowDiskUse(true);
   const totalCount = AuthorsWithFiles.length;
   const limit = parseInt(req.query.limit) || 9;
   const currentPage = parseInt(req.query.page) || 1;
@@ -2771,7 +2680,3 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
-
-
-
-
