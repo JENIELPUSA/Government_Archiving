@@ -1,13 +1,15 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const News = require("../Models/newsItemsSchema");
-const UserLoginSchema = require("../Models/LogInDentalSchema");
-const Files = require("../Models/File")
+const path = require("path");
+const fs = require("fs/promises"); 
 const sharp = require("sharp");
 const cloudinary = require("../Utils/cloudinary");
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
 
 exports.AddNews = AsyncErrorHandler(async (req, res) => {
   const requiredFields = ["title", "date", "excerpt", "category"];
   const missingFields = requiredFields.filter((field) => !req.body[field]);
+
   if (missingFields.length > 0) {
     return res.status(400).json({
       message: `Missing required fields: ${missingFields.join(", ")}`,
@@ -16,7 +18,6 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 
   let { title, date, excerpt, category } = req.body;
 
-  // Convert date string to Date object if necessary
   if (typeof date === "string") {
     date = new Date(date);
     if (isNaN(date.getTime())) {
@@ -24,7 +25,6 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  // Check category limit
   const categoryLimits = {
     Carousel: 5,
     Documentation: 10,
@@ -39,29 +39,15 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  let imageData = { url: "", public_id: "" };
+  let imageData = { url: "" };
 
   if (req.file) {
-    const resizedBuffer = await sharp(req.file.buffer)
-      .resize({ width: 512 })
-      .jpeg({ quality: 80 })
-      .toBuffer();
-
-    const base64Image = `data:${
-      req.file.mimetype
-    };base64,${resizedBuffer.toString("base64")}`;
-
-    const uploadedResponse = await cloudinary.uploader.upload(base64Image, {
-      folder: "Government Archiving/News",
-    });
-
-    imageData = {
-      url: uploadedResponse.secure_url,
-      public_id: uploadedResponse.public_id,
-    };
+    // Multer (diskStorage) has already saved the file.
+    // We just need to get the file path and save it to the database.
+    const fileName = path.basename(req.file.path);
+    imageData.url = `/uploads/${fileName}`;
   }
 
-  // Create new News document
   const newNews = await News.create({
     title,
     date,
@@ -140,59 +126,53 @@ exports.UpdateNews = async (req, res) => {
   const NewsID = req.params.id;
 
   try {
-    let avatar;
-
-    if (req.file) {
-      const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString(
-        "base64"
-      )}`;
-
-      let uploadedResponse;
-      try {
-        uploadedResponse = await cloudinary.uploader.upload(base64Image, {
-          folder: "Government Archiving/Profile",
-        });
-      } catch (uploadErr) {
-        console.error("Cloudinary upload failed:", uploadErr);
-        return res.status(500).json({ error: "Failed to upload image." });
-      }
-
-      avatar = {
-        public_id: uploadedResponse.public_id,
-        url: uploadedResponse.secure_url,
-      };
-
-      // Delete old avatar in background (optional, non-blocking)
-      News.findById(NewsID).then((oldRecord) => {
-        if (oldRecord?.avatar?.public_id) {
-          cloudinary.uploader
-            .destroy(oldRecord.avatar.public_id)
-            .catch((err) =>
-              console.error("Failed to delete old image from Cloudinary:", err)
-            );
-        }
-      });
+    const oldRecord = await News.findById(NewsID);
+    if (!oldRecord) {
+      return res.status(404).json({ error: "News not found" });
     }
 
-    // Update database only after successful upload (or if no new file)
+    let avatarData = oldRecord.avatar || null;
+
+    if (req.file) {
+      // Tanggalin ang lumang file kung mayroon
+      if (oldRecord.avatar?.url) {
+        const oldFileName = path.basename(oldRecord.avatar.url);
+        const oldFilePath = path.join(uploadsDir, oldFileName);
+        
+        try {
+          // Gumamit ng fs.promises.unlink para async ang pag-delete
+          await fs.unlink(oldFilePath);
+        } catch (err) {
+          // I-log ang error pero huwag mag-crash kung hindi ma-delete ang lumang file
+          console.error("Failed to delete old image:", err.message);
+        }
+      }
+
+      // I-save ang bagong file sa local storage
+      const newFilePath = req.file.path; // Galing ito sa multer.diskStorage
+      const fileName = path.basename(newFilePath);
+      avatarData = { url: `/uploads/${fileName}` };
+    }
+
+    // I-update ang database record
     const updateData = {
       title: req.body.title,
       date: req.body.date,
       excerpt: req.body.excerpt,
       category: req.body.category,
       detailInfo: req.body.detailInfo,
-      ...(avatar && { avatar }), // include avatar only if uploaded
+      // I-update lang ang avatar kung may bagong file
+      avatar: avatarData,
     };
 
-    const updatedNews = await News.findByIdAndUpdate(NewsID, updateData, {
-      new: true,
-    });
+    const updatedNews = await News.findByIdAndUpdate(NewsID, updateData, { new: true });
 
     if (!updatedNews) {
-      return res.status(404).json({ error: "News not found" });
+      return res.status(404).json({ error: "News not found after update" });
     }
 
     res.json({ status: "success", data: updatedNews });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Something went wrong." });
@@ -203,27 +183,34 @@ exports.UpdateNews = async (req, res) => {
 exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
   const NewsID = req.params.id;
 
-  const existingSB = await News.findById(NewsID);
-  if (!existingSB) {
+  const existingNews = await News.findById(NewsID);
+  if (!existingNews) {
     return res.status(404).json({
       status: "fail",
-      message: "Officer not found.",
+      message: "News not found.",
     });
   }
 
-  if (existingSB.avatar && existingSB.avatar.public_id) {
+  // Tanggalin ang lokal na image file kung mayroon
+  if (existingNews.avatar && existingNews.avatar.url) {
+    const fileName = path.basename(existingNews.avatar.url);
+    const filePath = path.join(uploadsDir, fileName);
+
     try {
-      await cloudinary.uploader.destroy(existingSB.avatar.public_id);
+      await fs.unlink(filePath);
     } catch (error) {
-      console.error("Cloudinary deletion failed:", error);
+      console.error("Local file deletion failed:", error);
+      // It's okay to continue even if the file deletion fails,
+      // as the primary goal is to remove the database record.
     }
   }
 
+  // Tanggalin ang database record
   await News.findByIdAndDelete(NewsID);
 
   res.status(200).json({
     status: "success",
-    message: "Officer and related login deleted successfully.",
+    message: "News and related image deleted successfully.",
     data: null,
   });
 });

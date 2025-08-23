@@ -3,7 +3,7 @@ const express = require("express");
 const router = express.Router();//express router
 const AdminController=require('../Controller/AdminController')
 const authController = require('./../Controller/authController')
-const upload = require("../middleware/imageUploader");
+const upload = require("../middleware/fileUploader");
 router.route('/')
     .get(authController.protect,AdminController.DisplayAdmin)
     router.route('/Profile')
