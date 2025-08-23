@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Responsive Web Site",
   "main": "app.js",
+   "type": "module", 
   "dependencies": {
     "@headlessui/react": "^2.2.2",
     "@react-three/drei": "^10.0.7",

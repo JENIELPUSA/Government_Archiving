@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router(); 
 const NewsController = require("../Controller/newsController");
 const authController = require("./../Controller/authController");
-const upload = require("../middleware/imageUploader");
+const upload = require("../middleware/fileUploader");
 router
   .route("/")
   .get(NewsController.DisplayNews)

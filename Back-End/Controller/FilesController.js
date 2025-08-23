@@ -1,5 +1,6 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const Files = require("../Models/File");
+const fs = require("fs");
 const path = require("path");
 const cloudinary = require("../Utils/cloudinary");
 const streamifier = require("streamifier");
@@ -17,7 +18,7 @@ const sanitizeFolderName = (name) => {
     .replace(/\s+/g, "_")
     .trim();
 };
-
+const uploadsDir = path.join(__dirname, "..", "..", "uploads");
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
     const updateData = { ...req.body };
@@ -359,42 +360,15 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // Build Cloudinary path
-    const ext = path.extname(req.file.originalname);
-    const baseName = path.basename(req.file.originalname, ext);
-    const fileName = `${Date.now()}_${baseName}${ext}`;
-    const folderPath = `Government Archiving/${sanitizeFolderName(category)}`;
+    // Ito ang bagong code na gagamit ng Hostinger storage
+    const fileUrl = `/uploads/${req.file.filename}`;
+    const fileName = req.file.filename;
+    const fileSize = req.file.size;
 
-    // Upload to Cloudinary
-    const streamUpload = () =>
-      new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: folderPath,
-            resource_type: "raw",
-            public_id: fileName.replace(ext, ""),
-            use_filename: true,
-            unique_filename: false,
-            access_mode: "public",
-          },
-          (error, result) => {
-            if (result) resolve(result);
-            else reject(error);
-          }
-        );
-        streamifier.createReadStream(req.file.buffer).pipe(stream);
-      });
-
-    let result;
-    try {
-      result = await streamUpload();
-      console.log("File uploaded to Cloudinary:", result.secure_url);
-    } catch (uploadErr) {
-      console.error("Cloudinary upload failed:", uploadErr);
-      return res.status(500).json({ error: "File upload failed" });
-    }
+    console.log("File saved to Hostinger:", fileUrl);
 
     // Detect file type
+    const ext = path.extname(req.file.originalname);
     const typeMap = {
       ".pdf": "PDF",
       ".doc": "Word Document",
@@ -411,24 +385,21 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       ".csv": "CSV",
     };
     const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
-
-    // Build file data
     const fileData = {
       title,
       resolutionNumber,
       category,
       summary,
       author,
-      fileSize: req.file.size,
+      fileSize: fileSize,
       admin,
       approverID,
       status,
       dateOfResolution,
-      fileUrl: result.secure_url,
+      fileUrl: fileUrl,
       fileName,
       oldFile,
       folderID,
-      folderPath,
       fullText: fullTextType,
     };
 
@@ -503,7 +474,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           if (io) {
             const SendMessage = {
               message: messageText,
-              data: savedFile, // directly send savedFile instead of enrichedFile
+              data: savedFile,
               notificationId: notificationDoc._id,
               FileId: fileId,
               approverID: approverID,
@@ -1047,20 +1018,27 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedTerms,
   });
 });
-
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const file = await Files.findById(id);
-    if (!file) return res.status(404).json({ message: "File not found." });
 
-    const cloudinaryUrl = file.fileUrl;
+    if (!file) {
+      return res.status(404).json({ message: "File not found." });
+    }
 
+    const localFilePath = path.join(__dirname, "..", "..", file.fileUrl);
+
+    // I-verify kung ang file ay nag-eexist sa disk
+    if (!fs.existsSync(localFilePath)) {
+      return res.status(404).json({ message: "File not found on server." });
+    }
+
+    // Ang logic para sa Activity Log ay mananatili
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role;
     if (role && allowedRoles.includes(role.toLowerCase())) {
       const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-
       await ActivityLog.create({
         type: "REVIEW",
         action: "Accessed a file",
@@ -1076,20 +1054,18 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // Proceed with streaming regardless of role
-    const response = await axios({
-      method: "GET",
-      url: cloudinaryUrl,
-      responseType: "stream",
-    });
+    // Basahin ang file mula sa disk at i-stream ito sa response
+    const fileStream = fs.createReadStream(localFilePath);
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    return response.data.pipe(res);
+
+    // I-pipe ang stream sa response
+    return fileStream.pipe(res);
   } catch (error) {
-    console.error("Cloudinary streaming failed:", error.message);
-    res.status(error.response?.status || 500).json({
-      message: "Cloudinary streaming failed",
+    console.error("File streaming failed:", error.message);
+    res.status(500).json({
+      message: "File streaming failed",
       error: error.message,
     });
   }
@@ -1099,12 +1075,52 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const file = await Files.findById(id);
-    if (!file) return res.status(404).json({ message: "File not found." });
-    return res.redirect(file.fileUrl);
+
+    if (!file) {
+      return res.status(404).json({ message: "File not found." });
+    }
+
+    // Buuin ang tamang local file path
+    // Tiyakin na ang path ay tumuturo sa tamang lokasyon
+    const localFilePath = path.join(__dirname, "..", "..", file.fileUrl);
+
+    // I-verify kung ang file ay nag-eexist sa disk
+    if (!fs.existsSync(localFilePath)) {
+      return res.status(404).json({ message: "File not found on server." });
+    }
+
+    // Ang logic para sa Activity Log ay mananatili
+    const allowedRoles = ["admin", "officer"];
+    const role = req.user?.role;
+    if (role && allowedRoles.includes(role.toLowerCase())) {
+      const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
+      await ActivityLog.create({
+        type: "REVIEW",
+        action: "Accessed a file",
+        performedBy: req.user.linkId,
+        performedByModel: capitalizedRole,
+        file: file._id,
+        message: `${capitalizedRole} accessed file: '${
+          file.title || file.fileName
+        }'`,
+        level: "info",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+    }
+
+    // Basahin ang file mula sa disk at i-stream ito sa response
+    const fileStream = fs.createReadStream(localFilePath);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+
+    // I-pipe ang stream sa response
+    return fileStream.pipe(res);
   } catch (error) {
-    console.error("Redirect to Cloudinary failed:", error.message);
+    console.error("File streaming failed:", error.message);
     res.status(500).json({
-      message: "Error redirecting to Cloudinary",
+      message: "File streaming failed",
       error: error.message,
     });
   }
@@ -1115,28 +1131,12 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
   if (!file)
     return res.status(404).json({ status: "fail", message: "File not found" });
 
-  // Get department ID as folder name
-  const department =
-    typeof file.department === "object" && file.department !== null
-      ? file.department._id || file.department.id
-      : file.department;
-
-  // Remove file extension from filename
-  const ext = path.extname(file.fileName);
-  const baseFileName = file.fileName.replace(ext, "");
-
-  // Final Cloudinary public ID
-  const publicId = `Government Archiving/${department}/${baseFileName}`;
-  console.log("Deleting from Cloudinary:", publicId);
+  const filePath = path.join(uploadsDir, file.fileName);
 
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "raw", // or "auto" if needed
-    });
-
-    if (result.result !== "ok") {
-      console.warn("Cloudinary destroy failed:", result);
-    }
+    // Tanggalin ang lokal na file
+    await fs.unlink(filePath);
+    console.log("Deleted local file:", filePath);
 
     const allowedRoles = ["admin", "officer"];
     const role = req.user.role.toLowerCase();
@@ -1168,7 +1168,8 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
       message: "File deleted successfully.",
     });
   } catch (error) {
-    console.error("Cloudinary Delete Error:", error);
+    console.error("Local File Deletion Error:", error);
+    // Hindi dapat mag-crash ang server kung may error sa pagtanggal ng file
     res.status(500).json({ status: "fail", message: "Failed to delete file." });
   }
 });
@@ -1625,18 +1626,30 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 
   console.log("📥 Body received:", req.body);
 
-  if (!file) return res.status(400).json({ error: "No file uploaded" });
+  if (!file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
 
-  if (!fileId || !mongoose.Types.ObjectId.isValid(fileId))
+  if (!fileId || !mongoose.Types.ObjectId.isValid(fileId)) {
     return res.status(400).json({ error: "Invalid or missing file ID" });
+  }
 
-  if (!title || !admin)
+  if (!title || !admin) {
     return res.status(400).json({ error: "Missing required fields" });
+  }
 
-  if (!mongoose.Types.ObjectId.isValid(admin))
+  if (!mongoose.Types.ObjectId.isValid(admin)) {
     return res.status(400).json({ error: "Invalid admin ID format" });
+  }
 
-  const oldFile = await Files.findByIdAndUpdate(
+  // 1. Hanapin ang lumang file sa database
+  const originalFileDoc = await Files.findById(fileId);
+  if (!originalFileDoc) {
+    return res.status(404).json({ error: "Original file not found" });
+  }
+
+  // 2. I-archive ang lumang file sa database
+  await Files.findByIdAndUpdate(
     fileId,
     {
       ArchivedStatus: "For Restore",
@@ -1649,37 +1662,38 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     { new: true }
   );
 
-  if (!oldFile)
-    return res.status(404).json({ error: "Original file not found" });
-  const ext = path.extname(file.originalname || ".pdf");
-  const baseName = path.basename(file.originalname || "document.pdf", ext);
-  const fileName = `${Date.now()}_${baseName}${ext}`;
-  const folderPath = `Government Archiving/${sanitizeFolderName(category)}`;
-
-  const result = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: folderPath,
-        resource_type: "raw",
-        public_id: fileName.replace(ext, ""),
-        use_filename: true,
-        unique_filename: false,
-        access_mode: "public",
-      },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary error:", error);
-          reject(error);
-        } else {
-          console.log("Cloudinary upload result:", result?.secure_url);
-          resolve(result);
-        }
-      }
+  // 3. I-delete ang lumang file mula sa local storage
+  if (originalFileDoc.fileUrl) {
+    const oldFilePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      originalFileDoc.fileUrl
     );
-    streamifier.createReadStream(file.buffer).pipe(stream);
-  });
+    try {
+      if (fs.existsSync(oldFilePath)) {
+        fs.unlinkSync(oldFilePath);
+        console.log(`🗑️ Old file deleted from local storage: ${oldFilePath}`);
+      } else {
+        console.log(
+          `⚠️ Old file not found in local storage, skipping deletion: ${oldFilePath}`
+        );
+      }
+    } catch (err) {
+      console.error("Error deleting old file:", err);
+    }
+  }
 
-  const typeMap = { ".pdf": "PDF" };
+  // 4. I-save ang bagong file at ang metadata nito sa database
+  const fileUrl = `/uploads/${file.filename}`;
+  const fileName = file.filename;
+  const ext = path.extname(file.originalname || ".pdf");
+
+  const typeMap = {
+    ".pdf": "PDF",
+    ".doc": "Word Document",
+    ".docx": "Word Document",
+  };
   const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
 
   const newFile = await new Files({
@@ -1689,9 +1703,8 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     author,
     admin,
     officer,
-    fileUrl: result?.secure_url,
+    fileUrl,
     fileName,
-    folderPath,
     fullText: fullTextType,
     status,
     approverID,
@@ -1699,7 +1712,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     resolutionNumber,
   }).save();
 
-  // Aggregate and populate new file
+  // 5. I-aggregate at i-populate ang bagong file
   const populatedFileResult = await Files.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(newFile._id) } },
     {
@@ -1774,7 +1787,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   const SendMessage = {
     message: messageText,
     data: finalFile,
-    old: oldFile,
+    old: originalFileDoc,
     FileId: newFile._id,
   };
 
@@ -1793,7 +1806,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
       return;
     }
 
-    const adminId = adminUser.linkedId.toString(); // now safe
+    const adminId = adminUser.linkedId.toString();
     const targetUser = global.connectedUsers?.[adminId];
 
     console.log(`👤 Admin ID: ${adminId}, Email: ${adminUser.username}`);

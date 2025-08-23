@@ -50,6 +50,14 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.set("trust proxy", true);
 
+
+// CHECK environment variables
+console.log("CONN_STR:", process.env.CONN_STR);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
+
+
+console.log("Setting up MongoStore with URL:", process.env.CONN_STR);
 app.use(
   session({
     secret: process.env.SECRET_STR,
@@ -63,7 +71,7 @@ app.use(
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours in milliseconds
+      maxAge: 24 * 60 * 60 * 1000, 
     },
   })
 );
@@ -81,7 +89,10 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+//importante ito para pag view ng picture sa table .etcc..
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+
+app.use('/uploads', express.static(uploadsDir));
 
 app.use("/api/v1/authentication", authentic);
 app.use("/api/v1/Admin", AdminRoute);

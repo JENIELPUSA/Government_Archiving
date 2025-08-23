@@ -29,7 +29,7 @@ router
 
 router.route("/OfficerUpdate/:id").patch(authController.protect,FilesController.updateFileOfficer);
 
-router.get("/stream/:id", authController.protect, FilesController.getFileCloud);
+router.get("/stream/:id",authController.protect,FilesController.getFileCloud);
 
 router.get("/streampublic/:id", FilesController.getFileForPubliCloud);
 

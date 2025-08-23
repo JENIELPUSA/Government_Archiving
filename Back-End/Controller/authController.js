@@ -3,14 +3,14 @@ const Admin = require("../Models/AdminSchema");
 const Approver = require("../Models/ApproverSchema");
 const Officer = require("../Models/OfficerSchema");
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
+const fs = require("fs");
 const CustomError = require("../Utils/CustomError");
+const path = require('path');
 const jwt = require("jsonwebtoken");
 const util = require("util");
 const crypto = require("crypto");
 const sendEmail = require("./../Utils/email");
-const cloudinary = require("../Utils/cloudinary");
 const SBmember = require("../Models/SBmember");
-const sharp = require("sharp");
 const signToken = (id, role, linkId) => {
   return jwt.sign({ id, role, linkId }, process.env.SECRET_STR, {
     expiresIn: "12h",
@@ -38,7 +38,7 @@ const createSendResponse = (user, statusCode, res) => {
 
 exports.signup = AsyncErrorHandler(async (req, res) => {
   console.log("Received data:", req.body);
-
+  
   try {
     const {
       contact_number,
@@ -89,34 +89,29 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const existingUser = await UserLogin.findOne({ username: email });
     if (existingUser) {
+      if (req.file) {
+        const filePath = path.join(__dirname, '..', '..', 'uploads', req.file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log("Deleted uploaded avatar due to existing user.");
+        }
+      }
       return res.status(400).json({
         message: "User with this email already exists!",
       });
     }
 
-    let avatarUploadPromise = Promise.resolve({ url: "", public_id: "" });
+    let avatar = { url: "", public_id: "" };
 
     if (req.file) {
-      avatarUploadPromise = sharp(req.file.buffer)
-        .resize({ width: 512 })
-        .jpeg({ quality: 80 })
-        .toBuffer()
-        .then((resizedBuffer) => {
-          const base64Image = `data:${
-            req.file.mimetype
-          };base64,${resizedBuffer.toString("base64")}`;
-          return cloudinary.uploader.upload(base64Image, {
-            folder: "Government Archiving/Profile",
-          });
-        })
-        .then((uploadedResponse) => ({
-          url: uploadedResponse.secure_url,
-          public_id: uploadedResponse.public_id,
-        }));
+      const avatarUrl = `/uploads/${req.file.filename}`;
+      avatar = {
+        url: avatarUrl,
+        public_id: req.file.filename,
+      };
+      console.log("Avatar saved to local storage:", avatar.url);
     }
-
-    const avatar = await avatarUploadPromise;
-
+    
     const profileModels = {
       admin: Admin,
       officer: Officer,
@@ -145,7 +140,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const linkedRecord = await profileModel.create(profileData);
 
-    // 👉 Create user login record
     const newUserLogin = await UserLogin.create({
       avatar,
       first_name,
@@ -158,7 +152,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       isVerified: true,
     });
 
-    // 👉 Send email only if NOT sbmember
     if (role !== "sbmember") {
       await sendEmail({
         email,
@@ -167,17 +160,18 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // 🔥 socket emit all
     const io = req.app.get("io");
-    io.emit("newUserSignup", {
-      user: {
-        id: newUserLogin._id,
-        first_name: newUserLogin.first_name,
-        last_name: newUserLogin.last_name,
-        role: newUserLogin.role,
-      },
-      profile: linkedRecord,
-    });
+    if (io) {
+        io.emit("newUserSignup", {
+            user: {
+                id: newUserLogin._id,
+                first_name: newUserLogin.first_name,
+                last_name: newUserLogin.last_name,
+                role: newUserLogin.role,
+            },
+            profile: linkedRecord,
+        });
+    }
 
     return res.status(201).json({
       status: "Success",
@@ -186,6 +180,14 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     });
   } catch (error) {
     console.error("Signup Error:", error);
+    if (req.file && req.file.filename) {
+      // ✅ Inalis ang 'AVATARS' sa path para maging consistent
+      const filePath = path.join(__dirname, '..', '..', 'uploads', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log("Deleted uploaded avatar due to signup error.");
+      }
+    }
     return res.status(500).json({
       message: "Something went wrong during signup.",
       error: error.message,

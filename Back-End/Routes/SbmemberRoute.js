@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router(); //express router
 const SBmemberController = require("../Controller/SbController");
 const authController = require("./../Controller/authController");
-const upload = require("../middleware/imageUploader");
+const upload = require("../middleware/fileUploader");
 router
   .route("/")
   .get(authController.protect, SBmemberController.DisplaySBmember)

@@ -1,10 +1,4 @@
-import React, {
-    useEffect,
-    useState,
-    useRef,
-    useCallback,
-    useContext,
-} from "react";
+import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import axios from "axios";
 import { PDFDocument, rgb, StandardFonts, degrees } from "pdf-lib";
@@ -19,7 +13,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/$
 const applyAnnotationsToPdf = async (originalPdfBytes, numPages, placedSignatures, placedTexts, pdfWrapperRef) => {
     const pdfDoc = await PDFDocument.load(originalPdfBytes);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    
+
     const pageDimensions = [];
     for (let i = 0; i < numPages; i++) {
         const page = pdfDoc.getPages()[i];
@@ -39,7 +33,7 @@ const applyAnnotationsToPdf = async (originalPdfBytes, numPages, placedSignature
         const { page: pageNum } = sig;
         const page = pdfDoc.getPages()[pageNum - 1];
         const { width: pdfPageWidth, height: pdfPageHeight } = pageDimensions[pageNum - 1];
-        
+
         const renderedPage = pageElements[pageNum - 1];
         if (!renderedPage) return;
 
@@ -49,11 +43,9 @@ const applyAnnotationsToPdf = async (originalPdfBytes, numPages, placedSignature
         const scaleX = pdfPageWidth / renderedPageWidth;
         const scaleY = pdfPageHeight / renderedPageHeight;
 
-        const imageBytes = await fetch(sig.src).then(res => res.arrayBuffer());
-        const pdfImage = sig.src.includes("png") ? 
-            await pdfDoc.embedPng(imageBytes) : 
-            await pdfDoc.embedJpg(imageBytes);
-            
+        const imageBytes = await fetch(sig.src).then((res) => res.arrayBuffer());
+        const pdfImage = sig.src.includes("png") ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+
         page.drawImage(pdfImage, {
             x: sig.x * scaleX,
             y: pdfPageHeight - sig.y * scaleY - sig.height * scaleY,
@@ -62,11 +54,11 @@ const applyAnnotationsToPdf = async (originalPdfBytes, numPages, placedSignature
         });
     });
 
-    placedTexts.forEach(text => {
+    placedTexts.forEach((text) => {
         const { page: pageNum } = text;
         const page = pdfDoc.getPages()[pageNum - 1];
         const { width: pdfPageWidth, height: pdfPageHeight } = pageDimensions[pageNum - 1];
-        
+
         const renderedPage = pageElements[pageNum - 1];
         if (!renderedPage) return;
 
@@ -145,61 +137,54 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                 return;
             }
 
-            const meta = await axios.get(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${fileId}`,
-                {
-                    headers: { Authorization: `Bearer ${authToken}` },
-                    signal
-                }
-            );
-            
+            const meta = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/${fileId}`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+                signal,
+            });
+
             const { status } = meta.data;
 
-            const res = await axios.get(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/streampublic/${fileId}`,
-                {
-                    responseType: "arraybuffer",
-                    headers: { Authorization: `Bearer ${authToken}` },
-                    signal
-                }
-            );
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/streampublic/${fileId}`, {
+                responseType: "blob",
+            });
 
-            let currentPdfBytes = res.data;
+            let originalBlob = res.data;
+            let currentPdfBytes = await originalBlob.arrayBuffer();
 
             if (status === "Approved") {
                 try {
                     const pdfDoc = await PDFDocument.load(currentPdfBytes);
                     const pages = pdfDoc.getPages();
-        
+
                     const imageBytes = await fetch(approvedImage).then((res) => res.arrayBuffer());
                     const pngImage = await pdfDoc.embedPng(imageBytes);
-        
+
                     const imgWidth = 400;
                     const imgHeight = 400;
-        
+
                     for (const page of pages) {
                         const { width, height } = page.getSize();
                         page.drawImage(pngImage, {
-                            x: (width - imgWidth) /2 + 10,
+                            x: (width - imgWidth) / 2 + 10,
                             y: (height - imgHeight) / 2,
                             width: imgWidth,
                             height: imgHeight,
                             opacity: 0.4,
-                           rotate: degrees(45),
+                            rotate: degrees(45),
                         });
                     }
-        
+
                     currentPdfBytes = await pdfDoc.save();
                 } catch (err) {
                     console.error("❗ Failed to add image watermark. Using original PDF.", err);
                 }
             }
             const newUrl = URL.createObjectURL(new Blob([currentPdfBytes], { type: "application/pdf" }));
-            
+
             cachedPdfRef.current = {
                 fileId,
                 url: newUrl,
-                bytes: currentPdfBytes
+                bytes: currentPdfBytes,
             };
 
             setFileUrl(newUrl);
@@ -227,19 +212,17 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
 
     const onPageLoadSuccess = useCallback((page, index) => {
         const { width, height } = page;
-        setPageDimensions(prev => {
+        setPageDimensions((prev) => {
             const newDimensions = [...prev];
             newDimensions[index] = { width, height };
             return newDimensions;
         });
     }, []);
 
-    const handleZoomIn = useCallback(() => 
-        setScale(prev => Math.min(prev + 0.2, 2.0)), []);
-        
-    const handleZoomOut = useCallback(() => 
-        setScale(prev => Math.max(prev - 0.2, 0.5)), []);
-        
+    const handleZoomIn = useCallback(() => setScale((prev) => Math.min(prev + 0.2, 2.0)), []);
+
+    const handleZoomOut = useCallback(() => setScale((prev) => Math.max(prev - 0.2, 0.5)), []);
+
     const handleAddText = useCallback(() => {
         const newText = {
             id: nextTextId.current++,
@@ -252,7 +235,7 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
             fontSize: 12,
             fontColor: "#000000",
         };
-        setPlacedTexts(prev => [...prev, newText]);
+        setPlacedTexts((prev) => [...prev, newText]);
         setActiveTextId(newText.id);
         setActiveSignatureId(null);
     }, []);
@@ -264,23 +247,17 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
         }
 
         try {
-            const pdfBytes = await applyAnnotationsToPdf(
-                cachedPdfRef.current.bytes,
-                numPages,
-                placedSignatures,
-                placedTexts,
-                pdfWrapperRef
-            );
-            
+            const pdfBytes = await applyAnnotationsToPdf(cachedPdfRef.current.bytes, numPages, placedSignatures, placedTexts, pdfWrapperRef);
+
             const blob = new Blob([pdfBytes], { type: "application/pdf" });
             const url = URL.createObjectURL(blob);
-            
+
             const a = document.createElement("a");
             a.href = url;
             a.download = `${fileData.title || "document"}.pdf`;
             document.body.appendChild(a);
             a.click();
-            
+
             setTimeout(() => {
                 a.remove();
                 URL.revokeObjectURL(url);
@@ -291,14 +268,20 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
         }
     }, [fileData, numPages, placedSignatures, placedTexts]);
 
-    const handleRemoveSignature = useCallback((idToRemove) => {
-        setPlacedSignatures(prev => prev.filter(sig => sig.id !== idToRemove));
-        if (activeSignatureId === idToRemove) setActiveSignatureId(null);
-    }, [activeSignatureId]);
-    const handleRemoveText = useCallback((idToRemove) => {
-        setPlacedTexts(prev => prev.filter(text => text.id !== idToRemove));
-        if (activeTextId === idToRemove) setActiveTextId(null);
-    }, [activeTextId]);
+    const handleRemoveSignature = useCallback(
+        (idToRemove) => {
+            setPlacedSignatures((prev) => prev.filter((sig) => sig.id !== idToRemove));
+            if (activeSignatureId === idToRemove) setActiveSignatureId(null);
+        },
+        [activeSignatureId],
+    );
+    const handleRemoveText = useCallback(
+        (idToRemove) => {
+            setPlacedTexts((prev) => prev.filter((text) => text.id !== idToRemove));
+            if (activeTextId === idToRemove) setActiveTextId(null);
+        },
+        [activeTextId],
+    );
 
     const handleTextClick = useCallback((e, textId) => {
         e.stopPropagation();
@@ -307,15 +290,11 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
     }, []);
 
     const handleTextChange = useCallback((id, newValue) => {
-        setPlacedTexts(prev =>
-            prev.map(text => text.id === id ? { ...text, value: newValue } : text)
-        );
+        setPlacedTexts((prev) => prev.map((text) => (text.id === id ? { ...text, value: newValue } : text)));
     }, []);
 
     const handleUpdateTextFontSize = useCallback((id, newFontSize) => {
-        setPlacedTexts(prev =>
-            prev.map(text => text.id === id ? { ...text, fontSize: newFontSize } : text)
-        );
+        setPlacedTexts((prev) => prev.map((text) => (text.id === id ? { ...text, fontSize: newFontSize } : text)));
     }, []);
 
     const handleDocumentClick = useCallback(() => {
@@ -323,62 +302,66 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
         setActiveTextId(null);
     }, []);
 
-    const handleKeyDown = useCallback((e) => {
-        const step = 5;
-        const pageElements = pdfWrapperRef.current?.querySelectorAll(".react-pdf__Page");
-        const activePage = pageElements?.[0]?.getBoundingClientRect() || { width: 595, height: 842 };
+    const handleKeyDown = useCallback(
+        (e) => {
+            const step = 5;
+            const pageElements = pdfWrapperRef.current?.querySelectorAll(".react-pdf__Page");
+            const activePage = pageElements?.[0]?.getBoundingClientRect() || { width: 595, height: 842 };
 
-        const handleMove = (items, setItems, activeId, removeHandler) => {
-            setItems(prev => {
-                return prev.map(item => {
-                    if (item.id === activeId) {
-                        let newX = item.x;
-                        let newY = item.y;
-                        
-                        switch (e.key) {
-                            case "ArrowUp": newY = Math.max(0, newY - step); break;
-                            case "ArrowDown": newY = Math.min(activePage.height - item.height, newY + step); break;
-                            case "ArrowLeft": newX = Math.max(0, newX - step); break;
-                            case "ArrowRight": newX = Math.min(activePage.width - item.width, newX + step); break;
-                            case "Delete":
-                            case "Backspace":
-                                removeHandler(item.id);
-                                return null;
-                            default: return item;
-                        }
-                        
-                        return { ...item, x: newX, y: newY };
-                    }
-                    return item;
-                }).filter(Boolean);
-            });
-        };
+            const handleMove = (items, setItems, activeId, removeHandler) => {
+                setItems((prev) => {
+                    return prev
+                        .map((item) => {
+                            if (item.id === activeId) {
+                                let newX = item.x;
+                                let newY = item.y;
 
-        if (activeSignatureId !== null) {
-            e.preventDefault();
-            handleMove(
-                placedSignatures, 
-                setPlacedSignatures, 
-                activeSignatureId, 
-                handleRemoveSignature
-            );
-        }
+                                switch (e.key) {
+                                    case "ArrowUp":
+                                        newY = Math.max(0, newY - step);
+                                        break;
+                                    case "ArrowDown":
+                                        newY = Math.min(activePage.height - item.height, newY + step);
+                                        break;
+                                    case "ArrowLeft":
+                                        newX = Math.max(0, newX - step);
+                                        break;
+                                    case "ArrowRight":
+                                        newX = Math.min(activePage.width - item.width, newX + step);
+                                        break;
+                                    case "Delete":
+                                    case "Backspace":
+                                        removeHandler(item.id);
+                                        return null;
+                                    default:
+                                        return item;
+                                }
 
-        if (activeTextId !== null) {
-            e.preventDefault();
-            handleMove(
-                placedTexts, 
-                setPlacedTexts, 
-                activeTextId, 
-                handleRemoveText
-            );
-        }
-    }, [activeSignatureId, activeTextId, placedSignatures, placedTexts, handleRemoveSignature, handleRemoveText]);
+                                return { ...item, x: newX, y: newY };
+                            }
+                            return item;
+                        })
+                        .filter(Boolean);
+                });
+            };
+
+            if (activeSignatureId !== null) {
+                e.preventDefault();
+                handleMove(placedSignatures, setPlacedSignatures, activeSignatureId, handleRemoveSignature);
+            }
+
+            if (activeTextId !== null) {
+                e.preventDefault();
+                handleMove(placedTexts, setPlacedTexts, activeTextId, handleRemoveText);
+            }
+        },
+        [activeSignatureId, activeTextId, placedSignatures, placedTexts, handleRemoveSignature, handleRemoveText],
+    );
 
     useEffect(() => {
         document.addEventListener("click", handleDocumentClick);
         document.addEventListener("keydown", handleKeyDown);
-        
+
         return () => {
             document.removeEventListener("click", handleDocumentClick);
             document.removeEventListener("keydown", handleKeyDown);
@@ -396,7 +379,7 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
         const textId = e.dataTransfer.getData("textId");
 
         if (sigData && !sigId) {
-            setPlacedSignatures(prev => [
+            setPlacedSignatures((prev) => [
                 ...prev,
                 {
                     id: nextSignatureId.current++,
@@ -406,20 +389,16 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                     src: sigData,
                     width: 120,
                     height: 60,
-                }
+                },
             ]);
             setActiveSignatureId(nextSignatureId.current - 1);
             setActiveTextId(null);
-        } 
-        else if (sigId) {
+        } else if (sigId) {
             const signatureId = parseInt(sigId);
-            setPlacedSignatures(prev => prev.map(sig => 
-                sig.id === signatureId ? { ...sig, x, y, page: pageNum } : sig
-            ));
+            setPlacedSignatures((prev) => prev.map((sig) => (sig.id === signatureId ? { ...sig, x, y, page: pageNum } : sig)));
             setActiveSignatureId(signatureId);
             setActiveTextId(null);
-        } 
-        else if (textData && !textId) {
+        } else if (textData && !textId) {
             const newText = {
                 id: nextTextId.current++,
                 page: pageNum,
@@ -431,30 +410,23 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                 fontSize: 12,
                 fontColor: "#000000",
             };
-            setPlacedTexts(prev => [...prev, newText]);
+            setPlacedTexts((prev) => [...prev, newText]);
             setActiveTextId(newText.id);
             setActiveSignatureId(null);
-        } 
-        else if (textId) {
+        } else if (textId) {
             const textIdNum = parseInt(textId);
-            setPlacedTexts(prev => prev.map(text => 
-                text.id === textIdNum ? { ...text, x, y, page: pageNum } : text
-            ));
+            setPlacedTexts((prev) => prev.map((text) => (text.id === textIdNum ? { ...text, x, y, page: pageNum } : text)));
             setActiveTextId(textIdNum);
             setActiveSignatureId(null);
         }
     }, []);
 
     const handleResizeSignature = useCallback((id, size) => {
-        setPlacedSignatures(prev => prev.map(sig => 
-            sig.id === id ? { ...sig, width: size.width, height: size.height } : sig
-        ));
+        setPlacedSignatures((prev) => prev.map((sig) => (sig.id === id ? { ...sig, width: size.width, height: size.height } : sig)));
     }, []);
 
     const handleResizeText = useCallback((id, size) => {
-        setPlacedTexts(prev => prev.map(text => 
-            text.id === id ? { ...text, width: size.width, height: size.height } : text
-        ));
+        setPlacedTexts((prev) => prev.map((text) => (text.id === id ? { ...text, width: size.width, height: size.height } : text)));
     }, []);
 
     const handleDragStart = useCallback((e, id, type) => {
@@ -650,7 +622,10 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                 `}
             </style>
 
-            <div className="pdf-viewer-container" ref={pdfWrapperRef}>
+            <div
+                className="pdf-viewer-container"
+                ref={pdfWrapperRef}
+            >
                 <div className="toolbar print-hidden">
                     <button
                         onClick={handleZoomIn}
@@ -664,9 +639,9 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                     >
                         <ZoomOut size={20} />
                     </button>
-                    <button 
-                        onClick={handleDownload} 
-                        className="download-btn" 
+                    <button
+                        onClick={handleDownload}
+                        className="download-btn"
                         title="Download"
                     >
                         <Download size={20} />
@@ -682,33 +657,36 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                     )}
 
                     {fileUrl ? (
-                        <Document 
-                            file={fileUrl} 
+                        <Document
+                            file={fileUrl}
                             onLoadSuccess={onDocumentLoadSuccess}
                             onLoadError={console.error}
                             key={fileUrl}
                         >
                             {Array.from({ length: numPages || 0 }, (_, index) => {
                                 const pageNum = index + 1;
-                                const pageSignatures = placedSignatures.filter(sig => sig.page === pageNum);
-                                const pageTexts = placedTexts.filter(text => text.page === pageNum);
+                                const pageSignatures = placedSignatures.filter((sig) => sig.page === pageNum);
+                                const pageTexts = placedTexts.filter((text) => text.page === pageNum);
 
                                 return (
-                                    <div key={`page_wrapper_${pageNum}`} className="page-wrapper">
+                                    <div
+                                        key={`page_wrapper_${pageNum}`}
+                                        className="page-wrapper"
+                                    >
                                         <div
                                             className="pdf-page-container print-pdf-container"
-                                            onDragOver={e => e.preventDefault()}
-                                            onDrop={e => handleDrop(e, pageNum)}
+                                            onDragOver={(e) => e.preventDefault()}
+                                            onDrop={(e) => handleDrop(e, pageNum)}
                                         >
-                                            <Page 
-                                                pageNumber={pageNum} 
+                                            <Page
+                                                pageNumber={pageNum}
                                                 scale={scale}
                                                 renderAnnotationLayer={false}
                                                 renderTextLayer={false}
                                                 onLoadSuccess={(page) => onPageLoadSuccess(page, index)}
                                             />
-                                            
-                                            {pageSignatures.map(sig => (
+
+                                            {pageSignatures.map((sig) => (
                                                 <ResizableBox
                                                     key={sig.id}
                                                     width={sig.width}
@@ -716,12 +694,8 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                                                     minConstraints={[50, 25]}
                                                     maxConstraints={[300, 150]}
                                                     onResizeStop={(e, { size }) => {
-                                                        setPlacedSignatures(prev => 
-                                                            prev.map(s => 
-                                                                s.id === sig.id 
-                                                                    ? { ...s, width: size.width, height: size.height } 
-                                                                    : s
-                                                            )
+                                                        setPlacedSignatures((prev) =>
+                                                            prev.map((s) => (s.id === sig.id ? { ...s, width: size.width, height: size.height } : s)),
                                                         );
                                                     }}
                                                     style={{
@@ -760,8 +734,8 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                                                     />
                                                 </ResizableBox>
                                             ))}
-                                            
-                                            {pageTexts.map(text => (
+
+                                            {pageTexts.map((text) => (
                                                 <ResizableBox
                                                     key={text.id}
                                                     width={text.width}
@@ -769,12 +743,10 @@ const ViewOnly = React.memo(({ fileData, fileId }) => {
                                                     minConstraints={[50, 20]}
                                                     maxConstraints={[400, 100]}
                                                     onResizeStop={(e, { size }) => {
-                                                        setPlacedTexts(prev => 
-                                                            prev.map(t => 
-                                                                t.id === text.id 
-                                                                    ? { ...t, width: size.width, height: size.height } 
-                                                                    : t
-                                                            )
+                                                        setPlacedTexts((prev) =>
+                                                            prev.map((t) =>
+                                                                t.id === text.id ? { ...t, width: size.width, height: size.height } : t,
+                                                            ),
                                                         );
                                                     }}
                                                     style={{

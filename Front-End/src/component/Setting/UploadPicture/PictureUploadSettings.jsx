@@ -174,7 +174,7 @@ const PictureUploadSettings = () => {
                                                     rel="noopener noreferrer"
                                                 >
                                                     <img
-                                                        src={picture.avatar?.url}
+                                                        src={`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}${picture.avatar.url}`}
                                                         alt={picture.title}
                                                         className="h-10 w-16 rounded object-contain"
                                                     />
