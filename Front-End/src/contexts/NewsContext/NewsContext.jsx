@@ -28,7 +28,7 @@ export const NewsDisplayProvider = ({ children }) => {
             if (search) {
                 params.search = search;
             }
-            const res = await axios.get(`/api/v1/News`, {
+            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/News`, {
                 params,
             });
 
