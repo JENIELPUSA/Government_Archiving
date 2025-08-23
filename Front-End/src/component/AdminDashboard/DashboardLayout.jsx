@@ -12,6 +12,8 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
     const animationFrameRef = useRef(null);
 
     useEffect(() => {
+        const finalTargetValue = typeof targetValue === 'number' ? targetValue : 0;
+
         let startTimestamp = null;
 
         const animate = (timestamp) => {
@@ -20,11 +22,11 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
 
             if (progress < 1) {
                 const easedProgress = 1 - Math.pow(1 - progress, 3);
-                const animated = easedProgress * targetValue;
+                const animated = easedProgress * finalTargetValue;
                 setCurrentValue(parseFloat(animated.toFixed(precision)));
                 animationFrameRef.current = requestAnimationFrame(animate);
             } else {
-                setCurrentValue(parseFloat(targetValue.toFixed(precision)));
+                setCurrentValue(parseFloat(finalTargetValue.toFixed(precision)));
             }
         };
 
@@ -40,15 +42,13 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
     return <span>{currentValue.toLocaleString(undefined, { minimumFractionDigits: precision, maximumFractionDigits: precision })}{suffix}</span>;
 };
 
+
+
 function DashboardLayout() {
     const {isFile,isTotaDocuments,isTodayDocuments}=useContext(FilesDisplayContext)
     const {isTotalAdmin}=useContext(AdminDisplayContext);
     const {isTotalOfficer}=useContext(OfficerDisplayContext)
     const documents = isFile;
-
-
-    console.log("File",isFile)
-
     const totalDocuments =isTotaDocuments;
     const activeUsers = isTotalAdmin  + isTotalOfficer;
     const totalStorageUsedBytes = documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);

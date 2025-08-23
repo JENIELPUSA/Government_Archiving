@@ -8,8 +8,6 @@ import "react-toastify/dist/ReactToastify.css";
 import { StorageOptimizationProvider } from "./contexts/StorageOptimization/StorageOptimization.jsx";
 import { FilesDisplayProvider } from "./contexts/FileContext/FileContext.jsx";
 import { AuthProvider } from "./contexts/AuthContext.jsx";
-import { UserDisplayProvider } from "./contexts/UserContext/userContext.jsx";
-import { DepartmentDisplayProvider } from "./contexts/DepartmentContext/DepartmentContext.jsx";
 import { OfficerDisplayProvider } from "./contexts/OfficerContext/OfficerContext.jsx";
 import { CommentDisplayProvider } from "./contexts/CommentsContext/CommentsContext.jsx";
 import { RatingDisplayProvider } from "./contexts/RatingContext/RatingContext.jsx";
@@ -43,25 +41,21 @@ createRoot(document.getElementById("root")).render(
                                                     <RatingDisplayProvider>
                                                         <CommentDisplayProvider>
                                                             <OfficerDisplayProvider>
-                                                                <DepartmentDisplayProvider>
-                                                                    <UserDisplayProvider>
-                                                                        <FilesDisplayProvider>
-                                                                            <SocketListener />
-                                                                            <App />
-                                                                            <AxiosInterceptor />
-                                                                            <ToastContainer
-                                                                                position="top-right"
-                                                                                autoClose={3000}
-                                                                                hideProgressBar={false}
-                                                                                newestOnTop
-                                                                                closeOnClick
-                                                                                pauseOnHover
-                                                                                draggable
-                                                                                theme="light"
-                                                                            />
-                                                                        </FilesDisplayProvider>
-                                                                    </UserDisplayProvider>
-                                                                </DepartmentDisplayProvider>
+                                                                <FilesDisplayProvider>
+                                                                    <SocketListener />
+                                                                    <App />
+                                                                    <AxiosInterceptor />
+                                                                    <ToastContainer
+                                                                        position="top-right"
+                                                                        autoClose={3000}
+                                                                        hideProgressBar={false}
+                                                                        newestOnTop
+                                                                        closeOnClick
+                                                                        pauseOnHover
+                                                                        draggable
+                                                                        theme="light"
+                                                                    />
+                                                                </FilesDisplayProvider>
                                                             </OfficerDisplayProvider>
                                                         </CommentDisplayProvider>
                                                     </RatingDisplayProvider>

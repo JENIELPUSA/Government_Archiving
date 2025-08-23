@@ -27,7 +27,7 @@ router
   .route("/UpdateFileDocument/:id")
   .patch(authController.protect, FilesController.updateFiles);
 
-router.route("/OfficerUpdate/:id").patch(FilesController.updateFileOfficer);
+router.route("/OfficerUpdate/:id").patch(authController.protect,FilesController.updateFileOfficer);
 
 router.get("/stream/:id", authController.protect, FilesController.getFileCloud);
 

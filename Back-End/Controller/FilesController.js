@@ -435,7 +435,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     let categoryName = null;
     if (mongoose.Types.ObjectId.isValid(category)) {
       const categoryDoc = await Category.findById(category).lean();
-      categoryName = categoryDoc?.category; 
+      categoryName = categoryDoc?.category;
     }
     if (oldFile === "true" || oldFile === true) {
       if (categoryName === "Resolution" || categoryName === "Ordinance") {
@@ -717,15 +717,16 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
       $gte: startOfDay,
       $lte: endOfDay,
     },
+    ArchivedStatus: { $ne: "For Restore" },
   });
 
   const now = new Date();
   const startOfWeek = new Date(now);
-  startOfWeek.setDate(now.getDate() - now.getDay()); // Sunday (0) as start
+  startOfWeek.setDate(now.getDate() - now.getDay());
   startOfWeek.setHours(0, 0, 0, 0);
 
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+  endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
   const latestBill = await Files.find({
@@ -894,7 +895,10 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         let: { authorId: "$_id" },
         pipeline: [
           {
-            $match: { $expr: { $eq: ["$author", "$$authorId"] } },
+            $match: {
+              $expr: { $eq: ["$author", "$$authorId"] },
+              ArchivedStatus: { $ne: "For Restore" },
+            },
           },
         ],
         as: "files",
@@ -1635,7 +1639,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
   const oldFile = await Files.findByIdAndUpdate(
     fileId,
     {
-      ArchivedStatus: "Archived",
+      ArchivedStatus: "For Restore",
       archivedMetadata: {
         dateArchived: new Date(),
         archivedBy: admin,
@@ -1810,7 +1814,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
-  console.log("getOfficer controller");
   const officerId = req.user.linkId;
   const limit = parseInt(req.query.limit) || 5;
   const pagePending = parseInt(req.query.pagePending) || 1;
@@ -2617,7 +2620,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to } = req.query;
+  const { search, district, detailInfo, Position, term_from, term_to } =
+    req.query;
   const aggregationPipeline = [];
 
   const matchStage = {};
@@ -2634,7 +2638,6 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     matchStage.term_from = fromYear;
     matchStage.term_to = toYear;
   } else if (fromYear) {
-
     matchStage.term_from = fromYear;
   }
 
@@ -2744,18 +2747,23 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         },
         count: { $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] } },
         resolutionCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+          },
         },
         ordinanceCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+          },
         },
       },
     },
     { $sort: { fullName: 1 } }
   );
 
-
-  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+  const AuthorsWithFiles = await SBmember.aggregate(
+    aggregationPipeline
+  ).allowDiskUse(true);
   const totalCount = AuthorsWithFiles.length;
   const limit = parseInt(req.query.limit) || 9;
   const currentPage = parseInt(req.query.page) || 1;
@@ -2771,7 +2779,3 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
-
-
-
-

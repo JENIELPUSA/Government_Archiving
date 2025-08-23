@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useContext } from "react";
 import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
-import { Database, X, ArrowLeft } from "lucide-react"; // Added ArrowLeft icon
+import { Database, X, ArrowLeft } from "lucide-react";
 import { FolderCard } from "./FolderCard";
 import { DocumentCard } from "./DocumentCard";
 import { SearchAndFilter } from "./SearchAndFilter";
@@ -104,6 +104,33 @@ const SkeletonDocumentCard = () => (
   </div>
 );
 
+// Skeleton for SearchAndFilter
+const SkeletonSearchAndFilter = () => (
+  <div className="animate-pulse flex flex-col items-end space-y-4">
+    <div className="h-10 w-64 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+    <div className="h-10 w-32 rounded-lg bg-gray-200 dark:bg-gray-700"></div>
+  </div>
+);
+
+// Skeleton for ArchiveNavigation
+const SkeletonArchiveNavigation = () => (
+  <div className="animate-pulse flex items-center space-x-2">
+    <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700"></div>
+    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700"></div>
+    <div className="h-6 w-20 rounded bg-gray-200 dark:bg-gray-700"></div>
+    <div className="h-4 w-4 rounded bg-gray-200 dark:bg-gray-700"></div>
+    <div className="h-6 w-24 rounded bg-gray-200 dark:bg-gray-700"></div>
+  </div>
+);
+
+// Skeleton for ArchiveHeaderContent
+const SkeletonArchiveHeaderContent = () => (
+  <div className="animate-pulse mt-2">
+    <div className="h-8 w-48 rounded bg-gray-200 dark:bg-gray-700 mb-2"></div>
+    <div className="h-5 w-64 rounded bg-gray-200 dark:bg-gray-700"></div>
+  </div>
+);
+
 const ArchiveLayout = () => {
   const {
     isLoading,
@@ -134,6 +161,7 @@ const ArchiveLayout = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showTagSuggestions, setShowTagSuggestions] = useState(false);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const folderStatusMap = {
     "Pending Deletion": { ArchivedStatus: "Deleted" },
@@ -151,16 +179,20 @@ const ArchiveLayout = () => {
   // Fetch data whenever filters or navigation change
   useEffect(() => {
     if (selectedMainFolder) {
+      setIsNavigating(true);
       const baseParams = folderStatusMap[selectedMainFolder];
       const params = {
         ...baseParams,
-        page: 1, // Reset to page 1 for new search/filter
+        page: 1,
         ...(selectedYear && { year: selectedYear }),
         ...(selectedCategoryId && { category: selectedCategoryId }),
         ...(debouncedSearch && { search: debouncedSearch }),
         ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
       };
-      fetchAchivedData(params);
+      
+      fetchAchivedData(params).finally(() => {
+        setIsNavigating(false);
+      });
     }
   }, [selectedMainFolder, selectedYear, selectedCategoryId, debouncedSearch, selectedTags]);
 
@@ -244,6 +276,7 @@ const ArchiveLayout = () => {
 
   const handlePageChange = (newPage) => {
     if (!selectedMainFolder) return;
+    setIsNavigating(true);
     const baseParams = folderStatusMap[selectedMainFolder];
     const params = {
       ...baseParams,
@@ -253,10 +286,13 @@ const ArchiveLayout = () => {
       ...(debouncedSearch && { search: debouncedSearch }),
       ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
     };
-    fetchAchivedData(params);
+    fetchAchivedData(params).finally(() => {
+      setIsNavigating(false);
+    });
   };
 
   const handleSelectMainFolder = (folderName) => {
+    setIsNavigating(true);
     setSelectedMainFolder(folderName);
     setSelectedYear(null);
     setSelectedCategory(null);
@@ -264,9 +300,15 @@ const ArchiveLayout = () => {
     setSelectedDocument(null);
     setSearchQuery("");
     setSelectedTags([]);
+    
+    // If going back to root, set navigating to false immediately
+    if (folderName === null) {
+      setIsNavigating(false);
+    }
   };
 
   const handleSelectYear = (year) => {
+    setIsNavigating(true);
     setSelectedYear(year);
     setSelectedCategory(null);
     setSelectedCategoryId(null);
@@ -276,14 +318,12 @@ const ArchiveLayout = () => {
   };
 
   const handleSelectCategory = (category, categoryId) => {
+    setIsNavigating(true);
     setSelectedCategory(category);
     setSelectedCategoryId(categoryId);
     setSelectedDocument(null);
   };
 
-  const handleBackToMainFolders = () => handleSelectMainFolder(null);
-  const handleBackToYears = () => handleSelectYear(null);
-  
   // New function: Handle back navigation from any view
   const handleBackNavigation = () => {
     if (selectedDocument) {
@@ -295,10 +335,14 @@ const ArchiveLayout = () => {
       setSelectedCategoryId(null);
     } else if (selectedYear) {
       // Back from year view to main folder view
-      handleBackToYears();
+      setSelectedYear(null);
+      setSelectedCategory(null);
+      setSelectedCategoryId(null);
+      setSearchQuery("");
+      setSelectedTags([]);
     } else if (selectedMainFolder) {
       // Back from main folder view to root
-      handleBackToMainFolders();
+      handleSelectMainFolder(null);
     }
   };
 
@@ -318,15 +362,18 @@ const ArchiveLayout = () => {
     setSelectedDocument(null);
   };
 
+  // Determine if we should show loading state
+  const showLoading = isLoading || isNavigating;
+
   let content;
 
   if (selectedDocument) {
     content = <DocumentDetailsPanel document={selectedDocument} onClose={() => setSelectedDocument(null)} onRestore={handleRestore} />;
   } 
-  else if (isLoading) {
-    // Skeleton loading berdasarkan level navigasi
+  else if (showLoading) {
+    // Skeleton loading based on navigation level
     if (selectedMainFolder && selectedYear && selectedCategory) {
-      // Level dokumen
+      // Document level
       content = (
         <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, idx) => (
@@ -336,7 +383,7 @@ const ArchiveLayout = () => {
       );
     } 
     else if (selectedMainFolder && selectedYear) {
-      // Level kategori
+      // Category level
       content = (
         <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, idx) => (
@@ -346,7 +393,7 @@ const ArchiveLayout = () => {
       );
     } 
     else if (selectedMainFolder) {
-      // Level tahun
+      // Year level
       content = (
         <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 5 }).map((_, idx) => (
@@ -356,7 +403,7 @@ const ArchiveLayout = () => {
       );
     } 
     else {
-      // Level folder utama
+      // Main folder level
       content = (
         <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, idx) => (
@@ -367,7 +414,7 @@ const ArchiveLayout = () => {
     }
   } 
   else {
-    // Konten asli saat tidak loading
+    // Actual content when not loading
     if (selectedMainFolder && selectedYear && selectedCategory) {
       const currentCategoryData = isArchived?.find((cat) => cat.categoryId === selectedCategoryId);
       const totalPagesToShow = currentCategoryData?.totalPages || Archivedtotalpage;
@@ -474,37 +521,49 @@ const ArchiveLayout = () => {
               )}
               
               <div>
-                <ArchiveNavigation
-                  isLoading={isLoading}
-                  selectedMainFolder={selectedMainFolder}
-                  selectedYear={selectedYear}
-                  selectedCategory={selectedCategory}
-                  handleBackToMainFolders={handleBackToMainFolders}
-                  handleBackToYears={handleBackToYears}
-                />
-                <ArchiveHeaderContent
-                  isLoading={isLoading}
-                  selectedMainFolder={selectedMainFolder}
-                  selectedYear={selectedYear}
-                  selectedCategory={selectedCategory}
-                />
+                {showLoading ? (
+                  <>
+                    <SkeletonArchiveNavigation />
+                    <SkeletonArchiveHeaderContent />
+                  </>
+                ) : (
+                  <>
+                    <ArchiveNavigation
+                      isLoading={isLoading}
+                      selectedMainFolder={selectedMainFolder}
+                      selectedYear={selectedYear}
+                      selectedCategory={selectedCategory}
+                      onBack={handleBackNavigation}
+                    />
+                    <ArchiveHeaderContent
+                      isLoading={isLoading}
+                      selectedMainFolder={selectedMainFolder}
+                      selectedYear={selectedYear}
+                      selectedCategory={selectedCategory}
+                    />
+                  </>
+                )}
               </div>
             </div>
             
             {showSearchAndFilter && (
-              <SearchAndFilter
-                isLoading={isLoading}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                allTags={activeTags}
-                selectedTags={selectedTags}
-                toggleTag={toggleTag}
-                clearAllFilters={clearAllFilters}
-                isFilterOpen={isFilterOpen}
-                setIsFilterOpen={setIsFilterOpen}
-                showTagSuggestions={showTagSuggestions}
-                setShowTagSuggestions={setShowTagSuggestions}
-              />
+              showLoading ? (
+                <SkeletonSearchAndFilter />
+              ) : (
+                <SearchAndFilter
+                  isLoading={isLoading}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  allTags={activeTags}
+                  selectedTags={selectedTags}
+                  toggleTag={toggleTag}
+                  clearAllFilters={clearAllFilters}
+                  isFilterOpen={isFilterOpen}
+                  setIsFilterOpen={setIsFilterOpen}
+                  showTagSuggestions={showTagSuggestions}
+                  setShowTagSuggestions={setShowTagSuggestions}
+                />
+              )
             )}
           </div>
         </div>

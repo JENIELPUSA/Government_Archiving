@@ -5,27 +5,46 @@ import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
 import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
 import { FileText, Folder, File, User, X, Save } from "lucide-react";
 
-const EditDocumentModal = ({ show, document, onSave, onClose }) => {
+const EditDocumentModal = ({ show, document, onClose }) => {
   const { isDropdown } = useContext(SbMemberDisplayContext);
   const { UpdateFiles } = useContext(FilesDisplayContext);
   const { isCategory } = useContext(CategoryContext);
   const [editedDoc, setEditedDoc] = useState({});
 
-  const normalizeCategory = useCallback((doc) => {
-    if (!doc) return {};
-    const categoryValue =
-      typeof doc.category === "string"
-        ? doc.category
-        : doc.category?.categoryName || "";
-    return {
-      ...doc,
-      category: categoryValue,
-    };
-  }, []);
+  // 🔥 Normalizer para gawing _id ang author at pangalan lang ang category
+  const normalizeDoc = useCallback(
+    (doc) => {
+      if (!doc) return {};
+
+      // Handle author (convert to _id kung name lang ang galing sa backend)
+      let authorId = "";
+      if (doc.author && typeof doc.author === "string") {
+        const found = isDropdown?.find((m) => m.full_name === doc.author);
+        authorId = found?._id || "";
+      } else if (doc.author && typeof doc.author === "object") {
+        authorId = doc.author._id;
+      } else {
+        authorId = doc.author || "";
+      }
+
+      // Handle category (gamitin categoryName kung object)
+      const categoryValue =
+        typeof doc.category === "string"
+          ? doc.category
+          : doc.category?.categoryName || "";
+
+      return {
+        ...doc,
+        category: categoryValue,
+        author: authorId,
+      };
+    },
+    [isDropdown]
+  );
 
   useEffect(() => {
-    setEditedDoc(normalizeCategory(document));
-  }, [document, normalizeCategory]);
+    setEditedDoc(normalizeDoc(document));
+  }, [document, normalizeDoc]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -184,10 +203,7 @@ const EditDocumentModal = ({ show, document, onSave, onClose }) => {
                       Select SB Member
                     </option>
                     {isDropdown?.map((member) => (
-                      <option
-                        key={member._id}
-                        value={`${member._id}`}
-                      >
+                      <option key={member._id} value={member._id}>
                         {member.full_name}
                       </option>
                     ))}

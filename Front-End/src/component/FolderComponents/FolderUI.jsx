@@ -17,12 +17,14 @@ import {
     Edit,
     ChevronLeft,
     ChevronRight,
-    Eye, // Added Eye icon
+    Eye,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FolderContext } from "../../contexts/FolderContext/FolderContext";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import UploadDocumentsModal from "./FormUpload/UploadDocuments";
+import FoldersView from "./FoldersView";
+import FilesView from "./FilesView";
 
 const FolderCreationUI = () => {
     const {
@@ -305,7 +307,6 @@ const FolderCreationUI = () => {
             setIsEditing(null);
             setEditedFolderName("");
             setEditedFolderColor("");
-            // Refetch folders after update
             fetchfolder({
                 search: searchTerm,
                 page: folderCurrentPage,
@@ -373,7 +374,6 @@ const FolderCreationUI = () => {
         );
     }
 
-    // Loading state for folders
     if (isLoadingFolders) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -397,806 +397,70 @@ const FolderCreationUI = () => {
         );
     }
 
-    if (openFolder) {
-        const colorClasses = getColorClasses(openFolder.color);
-        if (isLoadingFiles) {
-            return (
-                <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-                    <div className={`${colorClasses.bg} border-b-2 ${colorClasses.border} shadow-sm`}>
-                        <div className="mx-auto max-w-7xl px-6 py-8">
-                            <div className="mb-8 flex items-center justify-between">
-                                <button
-                                    onClick={closeFolderWithEffect}
-                                    className="flex transform items-center gap-2 rounded-xl border bg-white px-4 py-2 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-                                >
-                                    <ArrowLeft className="h-4 w-4" />
-                                    Back to Folders
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-8">
-                                <div
-                                    className={`rounded-3xl bg-white p-6 shadow-xl ${colorClasses.border} transform border-2 transition-transform duration-200 hover:scale-105 dark:bg-gray-800`}
-                                >
-                                    <Folder className={`h-20 w-20 ${colorClasses.icon}`} />
-                                </div>
-                                <div>
-                                    <h1 className="mb-3 text-5xl font-bold text-gray-900 dark:text-white">{openFolder.folderName}</h1>
-                                    <div className="flex items-center gap-8 text-gray-600 dark:text-gray-400">
-                                        <span className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">
-                                            <Calendar className="h-5 w-5" />
-                                            Loading files...
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* SEARCH SKELETON */}
-                    <div className="mx-auto max-w-7xl px-6 py-4">
-                        <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                            <div className="flex flex-1 flex-wrap items-center gap-4">
-                                <div className="relative min-w-[250px] flex-1">
-                                    <div className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform rounded bg-gray-200 dark:bg-gray-700"></div>
-                                    <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <div className="h-4 w-12 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                    <div className="h-10 w-32 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <div className="h-4 w-8 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                    <div className="h-10 w-32 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-4">
-                                <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="flex gap-2">
-                                    <div className="h-10 w-10 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                    <div className="h-10 w-10 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* FILES SKELETON */}
-                    <div className="mx-auto max-w-7xl px-6 pb-8">
-                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                            <div className="animate-pulse">
-                                <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-8 dark:border-gray-700 dark:from-gray-800 dark:to-gray-800">
-                                    <div className="h-6 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                    <div className="mt-2 h-4 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                </div>
-                                <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {[...Array(5)].map((_, index) => (
-                                        <div
-                                            key={index}
-                                            className="p-6"
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-6">
-                                                    <div className="h-16 w-16 rounded-2xl bg-gray-200 dark:bg-gray-700"></div>
-                                                    <div className="space-y-2">
-                                                        <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                                        <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-                {/* Folder Header */}
-                <div className={`${colorClasses.bg} border-b-2 ${colorClasses.border} shadow-sm`}>
-                    <div className="mx-auto max-w-7xl px-6 py-8">
-                        <div className="mb-8 flex items-center justify-between">
-                            <button
-                                onClick={closeFolderWithEffect}
-                                className="flex transform items-center gap-2 rounded-xl border bg-white px-4 py-2 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Back to Folders
-                            </button>
-                            <button
-                                onClick={handleUploadFiles}
-                                className="flex transform items-center gap-3 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl"
-                            >
-                                <Upload className="h-5 w-5" />
-                                Upload Files
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-8">
-                            <div
-                                className={`rounded-3xl bg-white p-6 shadow-xl ${colorClasses.border} transform border-2 transition-transform duration-200 hover:scale-105 dark:bg-gray-800`}
-                            >
-                                <Folder className={`h-20 w-20 ${colorClasses.icon}`} />
-                            </div>
-                            <div>
-                                <h1 className="mb-3 text-5xl font-bold text-gray-900 dark:text-white">{openFolder.folderName}</h1>
-                                <div className="flex items-center gap-8 text-gray-600 dark:text-gray-400">
-                                    <span className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">
-                                        <Calendar className="h-5 w-5" />
-                                        Created {new Date().toLocaleDateString()}
-                                    </span>
-                                    <span className="rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">{isfolderFiles.length} files</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* File Filter Controls */}
-                <div className="mx-auto max-w-7xl px-6 py-4">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                        {/* Combined search and filter bar */}
-                        <div className="flex flex-1 flex-wrap items-center gap-4">
-                            {/* File Search Input */}
-                            <div className="relative min-w-[250px] flex-1">
-                                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search files..."
-                                    value={fileSearchTerm}
-                                    onChange={(e) => handleFileSearch(e.target.value)}
-                                    className="w-full rounded-xl border border-gray-300 py-2 pl-12 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                />
-                            </div>
-
-                            {/* Date Range */}
-                            <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From:</label>
-                                <input
-                                    type="date"
-                                    value={fileDateFrom}
-                                    onChange={(e) => setFileDateFrom(e.target.value)}
-                                    className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
-                                <input
-                                    type="date"
-                                    value={fileDateTo}
-                                    onChange={(e) => setFileDateTo(e.target.value)}
-                                    className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                />
-                            </div>
-
-                            {/* Reset Button */}
-                            {(fileSearchTerm || fileTypeInput || fileDateFrom || fileDateTo) && (
-                                <button
-                                    onClick={resetFileFilters}
-                                    className="rounded-lg px-3 py-1 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-gray-700"
-                                >
-                                    Reset Filters
-                                </button>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                                Page {fileCurrentPage} of {fileTotalPages}
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() =>
-                                        fetchSpecificData(openFolder._id, {
-                                            search: fileSearchTerm,
-                                            type: fileTypeInput,
-                                            dateFrom: fileDateFrom,
-                                            dateTo: fileDateTo,
-                                            page: Math.max(fileCurrentPage - 1, 1),
-                                        })
-                                    }
-                                    disabled={fileCurrentPage === 1}
-                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                >
-                                    <ChevronLeft className="h-5 w-5" />
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        fetchSpecificData(openFolder._id, {
-                                            search: fileSearchTerm,
-                                            type: fileTypeInput,
-                                            dateFrom: fileDateFrom,
-                                            dateTo: fileDateTo,
-                                            page: Math.min(fileCurrentPage + 1, fileTotalPages),
-                                        })
-                                    }
-                                    disabled={fileCurrentPage === fileTotalPages || fileTotalPages === 0}
-                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                >
-                                    <ChevronRight className="h-5 w-5" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Folder Content */}
-                <div className="mx-auto max-w-7xl px-6 pb-8">
-                    {isfolderFiles.length === 0 ? (
-                        <div className="py-20 text-center">
-                            <div className={`h-32 w-32 ${colorClasses.bg} mx-auto mb-8 flex items-center justify-center rounded-3xl shadow-lg`}>
-                                <Folder className={`h-16 w-16 ${colorClasses.icon}`} />
-                            </div>
-                            <h3 className="mb-3 text-2xl font-semibold text-gray-900 dark:text-white">No files found</h3>
-                            <p className="mb-8 text-lg text-gray-500 dark:text-gray-400">
-                                {fileSearchTerm || fileTypeInput || fileDateFrom || fileDateTo
-                                    ? "Try adjusting your filters"
-                                    : "Add some files to get started"}
-                            </p>
-
-                            <button
-                                onClick={handleUploadFiles}
-                                className="mx-auto flex transform items-center gap-3 rounded-xl bg-blue-600 px-8 py-4 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl"
-                            >
-                                <Upload className="h-5 w-5" />
-                                Upload Files
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                            <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-8 dark:border-gray-700 dark:from-gray-800 dark:to-gray-800">
-                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Files in this folder</h2>
-                                <p className="mt-1 text-gray-600 dark:text-gray-400">Showing {isfolderFiles.length} files</p>
-                            </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {isfolderFiles.map((file, index) => {
-                                    const fileExtension = file.fileName?.split(".").pop()?.toLowerCase() || "";
-                                    const fileType = file.category || fileExtension;
-                                    const colorClasses = getFileTypeColor(fileType.toLowerCase());
-                                    const IconComponent = getFileIcon(fileType);
-
-                                    return (
-                                        <div
-                                            key={file._id}
-                                            className="group p-6 transition-all duration-200 hover:bg-gray-50 hover:shadow-sm dark:hover:bg-gray-700"
-                                            style={{ animationDelay: `${index * 100}ms` }}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-6">
-                                                    <div
-                                                        className={`rounded-2xl p-4 ${colorClasses} shadow-sm transition-transform duration-200 group-hover:scale-110`}
-                                                    >
-                                                        <IconComponent className="h-8 w-8" />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="mb-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
-                                                            {file.title || file.fileName}
-                                                        </h3>
-                                                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                            {file.category} • {file.fileSize} bytes
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <div className="relative">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setOpenFileMenu(openFileMenu === file._id ? null : file._id);
-                                                        }}
-                                                        className="rounded-xl p-3 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
-                                                    >
-                                                        <MoreVertical className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                                                    </button>
-                                                    {openFileMenu === file._id && (
-                                                        <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    console.log(`Viewing PDF: ${file.fileName}`);
-                                                                    handleViewPdf(file);
-                                                                    setOpenFileMenu(null);
-                                                                }}
-                                                                className="flex w-full items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                                                            >
-                                                                <Eye className="h-5 w-5" />
-                                                                <span>View</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleDeleteFiles(file._id);
-                                                                    console.log(`Editing file: ${file.fileName}`);
-
-                                                                    setOpenFileMenu(null);
-                                                                }}
-                                                                className="flex w-full items-center gap-3 px-4 py-3 text-left text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                                                            >
-                                                                <Edit className="h-5 w-5" />
-                                                                <span>Edit</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteFiles(file._id)}
-                                                                className="flex w-full items-center gap-3 px-4 py-3 text-left text-red-500 hover:bg-red-50 dark:text-red-400 dark:hover:bg-gray-700"
-                                                            >
-                                                                <Trash2 className="h-5 w-5" />
-                                                                <span>Delete</span>
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Pagination for files */}
-                            {fileTotalPages > 1 && (
-                                <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4 dark:border-gray-700">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        Page {fileCurrentPage} of {fileTotalPages}
-                                    </span>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() =>
-                                                fetchSpecificData(openFolder._id, {
-                                                    search: fileSearchTerm,
-                                                    type: fileTypeInput,
-                                                    dateFrom: fileDateFrom,
-                                                    dateTo: fileDateTo,
-                                                    page: Math.max(fileCurrentPage - 1, 1),
-                                                })
-                                            }
-                                            disabled={fileCurrentPage === 1}
-                                            className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" /> Previous
-                                        </button>
-                                        <button
-                                            onClick={() =>
-                                                fetchSpecificData(openFolder._id, {
-                                                    search: fileSearchTerm,
-                                                    type: fileTypeInput,
-                                                    dateFrom: fileDateFrom,
-                                                    dateTo: fileDateTo,
-                                                    page: Math.min(fileCurrentPage + 1, fileTotalPages),
-                                                })
-                                            }
-                                            disabled={fileCurrentPage === fileTotalPages}
-                                            className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                                        >
-                                            Next <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {/* UPLOAD MODAL */}
-                {isUploadModalOpen && (
-                    <UploadDocumentsModal
-                        isOpen={isUploadModalOpen}
-                        onClose={closeUploadModal}
-                        folderId={openFolder._id}
-                        isSuccess={Success}
-                    />
-                )}
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6 dark:from-gray-900 dark:to-gray-800">
-            {/* Header */}
-            <div className="mx-auto max-w-7xl">
-                <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                            <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Old Files Management</h1>
-                            <p className="text-lg text-gray-600 dark:text-gray-400">Create and organize your folders efficiently</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-4">
-                            {/* Search */}
-                            <div className="relative">
-                                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search folders..."
-                                    value={searchTerm}
-                                    onChange={(e) => handleFolderSearch(e.target.value)}
-                                    className="w-72 rounded-xl border border-gray-300 py-3 pl-12 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                />
-                            </div>
-
-                            {/* Reset folder filters button */}
-                            {searchTerm && (
-                                <button
-                                    onClick={resetFolderFilters}
-                                    className="rounded-lg px-3 py-1 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-gray-700"
-                                >
-                                    Reset Search
-                                </button>
-                            )}
-
-                            {/* View Toggle */}
-                            <div className="flex rounded-xl bg-gray-100 p-1 shadow-inner dark:bg-gray-700">
-                                <button
-                                    onClick={() => setViewMode("grid")}
-                                    className={`rounded-lg p-3 transition-all duration-200 ${viewMode === "grid" ? "bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-400" : "text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-600"}`}
-                                >
-                                    <Grid className="h-5 w-5" />
-                                </button>
-                                <button
-                                    onClick={() => setViewMode("list")}
-                                    className={`rounded-lg p-3 transition-all duration-200 ${viewMode === "list" ? "bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-400" : "text-gray-600 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-600"}`}
-                                >
-                                    <List className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            {/* Create Button */}
-                            <button
-                                onClick={() => setIsCreating(true)}
-                                className="flex transform items-center gap-3 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl"
-                            >
-                                <FolderPlus className="h-5 w-5" />
-                                New Folder
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Create Folder Modal */}
-                {isCreating && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
-                        <div className="w-full max-w-md scale-100 transform rounded-2xl bg-white p-8 shadow-2xl transition-all duration-300 dark:bg-gray-800">
-                            <div className="mb-6 flex items-center justify-between">
-                                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Create New Folder</h2>
-                                <button
-                                    onClick={() => {
-                                        setIsCreating(false);
-                                        setNewFolderName("");
-                                        setSelectedColor("blue");
-                                    }}
-                                    className="rounded-xl p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-                                >
-                                    <X className="h-6 w-6" />
-                                </button>
-                            </div>
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">Folder Name</label>
-                                    <input
-                                        type="text"
-                                        value={newFolderName}
-                                        onChange={(e) => setNewFolderName(e.target.value)}
-                                        onKeyPress={(e) => handleKeyPress(e, createFolder)}
-                                        placeholder="Enter folder name..."
-                                        className="w-full rounded-xl border border-gray-300 px-4 py-3 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                        autoFocus
-                                    />
-                                </div>
-                                <div>
-                                    <label className="mb-3 block text-sm font-medium text-gray-700 dark:text-gray-300">Choose Color</label>
-                                    <div className="flex gap-3">
-                                        {colors.map((color) => {
-                                            const colorClasses = getColorClasses(color.name);
-                                            return (
-                                                <button
-                                                    key={color.name}
-                                                    onClick={() => setSelectedColor(color.name)}
-                                                    className={`h-12 w-12 rounded-2xl ${colorClasses.accent} shadow-md transition-all duration-200 hover:scale-110 ${
-                                                        selectedColor === color.name ? "ring-4 ring-gray-400 ring-offset-2 dark:ring-gray-300" : ""
-                                                    }`}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="mt-8 flex gap-4">
-                                <button
-                                    onClick={() => {
-                                        setIsCreating(false);
-                                        setNewFolderName("");
-                                        setSelectedColor("blue");
-                                    }}
-                                    className="flex-1 rounded-xl border border-gray-300 px-6 py-3 font-medium shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={createFolder}
-                                    disabled={!newFolderName.trim()}
-                                    className="flex-1 transform rounded-xl bg-blue-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Create
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Folders Grid/List */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                    {foldersToDisplay.length === 0 ? (
-                        <div className="py-16 text-center">
-                            <Folder className="mx-auto mb-6 h-20 w-20 text-gray-300 dark:text-gray-600" />
-                            <h3 className="mb-3 text-xl font-medium text-gray-900 dark:text-white">
-                                {searchTerm ? "No folders found" : "No folders yet"}
-                            </h3>
-                            <p className="mb-8 text-lg text-gray-500 dark:text-gray-400">
-                                {searchTerm ? "Try adjusting your search terms" : "Create your first folder to get started"}
-                            </p>
-                            {!searchTerm && (
-                                <button
-                                    onClick={() => setIsCreating(true)}
-                                    className="mx-auto flex transform items-center gap-3 rounded-xl bg-blue-600 px-8 py-4 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl"
-                                >
-                                    <FolderPlus className="h-6 w-6" />
-                                    Create Folder
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <div>
-                            <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                                    {foldersToDisplay.length} {foldersToDisplay.length === 1 ? "Folder" : "Folders"}
-                                </h2>
-
-                                <div className="flex flex-wrap items-center gap-4">
-                                    {searchTerm && (
-                                        <span className="rounded-lg bg-gray-100 px-3 py-1 text-sm text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-                                            Search: "{searchTerm}"
-                                        </span>
-                                    )}
-
-                                    <div className="flex items-center gap-4">
-                                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                                            Page {folderCurrentPage} of {folderTotalPages}
-                                        </span>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => setFolderCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                                disabled={folderCurrentPage === 1}
-                                                className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                            >
-                                                <ChevronLeft className="h-5 w-5" />
-                                            </button>
-                                            <button
-                                                onClick={() => setFolderCurrentPage((prev) => Math.min(prev + 1, folderTotalPages))}
-                                                disabled={folderCurrentPage === folderTotalPages || folderTotalPages === 0}
-                                                className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                            >
-                                                <ChevronRight className="h-5 w-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {viewMode === "grid" ? (
-                                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                    {foldersToDisplay.map((folder, index) => {
-                                        const colorClasses = getColorClasses(folder.color);
-                                        return (
-                                            <div
-                                                key={folder._id}
-                                                className="group relative transform cursor-pointer transition-all duration-200 hover:scale-105"
-                                                onClick={() => openFolderWithEffect(folder)}
-                                                style={{ animationDelay: `${index * 100}ms` }}
-                                            >
-                                                {/* Edit mode vs Normal mode */}
-                                                {isEditing === folder._id ? (
-                                                    <div
-                                                        className={`relative rounded-2xl p-6 ${colorClasses.bg} ${colorClasses.border} border-2 shadow-lg transition-shadow duration-200`}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <h3 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">Edit Folder</h3>
-                                                        <input
-                                                            type="text"
-                                                            value={editedFolderName}
-                                                            onChange={(e) => setEditedFolderName(e.target.value)}
-                                                            onKeyPress={(e) => handleKeyPress(e, (event) => saveEdit(event, folder._id))}
-                                                            className="w-full rounded-xl border border-gray-300 px-4 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                            autoFocus
-                                                        />
-                                                        <div className="mt-4 flex gap-3">
-                                                            {colors.map((color) => (
-                                                                <button
-                                                                    key={color.name}
-                                                                    onClick={() => setEditedFolderColor(color.name)}
-                                                                    className={`h-8 w-8 rounded-full ${color.accent} transition-all duration-200 hover:scale-110 ${
-                                                                        editedFolderColor === color.name ? "ring-2 ring-gray-400 ring-offset-2" : ""
-                                                                    }`}
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                        <div className="mt-6 flex gap-2">
-                                                            <button
-                                                                onClick={(e) => cancelEdit(e)}
-                                                                className="flex-1 rounded-xl border border-gray-300 px-4 py-2 font-medium shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-700"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => saveEdit(e, folder._id)}
-                                                                disabled={!editedFolderName.trim()}
-                                                                className="flex-1 rounded-xl bg-blue-600 px-4 py-2 font-medium text-white shadow-lg transition-all duration-200 hover:bg-blue-700 disabled:opacity-50"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className={`flex h-48 flex-col justify-between rounded-2xl border-2 p-6 transition-all duration-200 ${colorClasses.bg} ${colorClasses.border} shadow-lg group-hover:shadow-xl`}
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <div
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110 ${colorClasses.accent}`}
-                                                            >
-                                                                <Folder className={`h-6 w-6 text-white`} />
-                                                            </div>
-                                                            <div className="opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                                                <div className="flex gap-2">
-                                                                    <button
-                                                                        onClick={(e) => handleEditClick(e, folder)}
-                                                                        className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                                                                    >
-                                                                        <Edit className="h-5 w-5" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={(e) => hanndledeleteFolder(e, folder._id)}
-                                                                        className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-100 dark:hover:bg-gray-700"
-                                                                    >
-                                                                        <Trash2 className="h-5 w-5" />
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <h3 className="mb-1 text-xl font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
-                                                                {folder.folderName}
-                                                            </h3>
-                                                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                                <Calendar className="h-4 w-4" />
-                                                                <span>{new Date(folder.created_at).toLocaleDateString()}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {foldersToDisplay.map((folder, index) => {
-                                        const colorClasses = getColorClasses(folder.color);
-                                        return (
-                                            <div
-                                                key={folder._id}
-                                                className={`group relative flex cursor-pointer items-center justify-between p-6 transition-all duration-200 hover:bg-gray-50 hover:shadow-sm dark:hover:bg-gray-700`}
-                                                onClick={() => openFolderWithEffect(folder)}
-                                                style={{ animationDelay: `${index * 100}ms` }}
-                                            >
-                                                {isEditing === folder._id ? (
-                                                    <div
-                                                        className="flex w-full items-center gap-4"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <div
-                                                            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl ${colorClasses.accent}`}
-                                                        >
-                                                            <Folder className={`h-6 w-6 text-white`} />
-                                                        </div>
-                                                        <div className="flex-1">
-                                                            <input
-                                                                type="text"
-                                                                value={editedFolderName}
-                                                                onChange={(e) => setEditedFolderName(e.target.value)}
-                                                                onKeyPress={(e) => handleKeyPress(e, (event) => saveEdit(event, folder._id))}
-                                                                className="w-full rounded-xl border border-gray-300 px-4 py-2 shadow-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                                                                autoFocus
-                                                            />
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={(e) => saveEdit(e, folder._id)}
-                                                                disabled={!editedFolderName.trim()}
-                                                                className="rounded-xl p-2 text-green-500 transition-colors hover:bg-green-100 disabled:opacity-50 dark:hover:bg-gray-700"
-                                                            >
-                                                                <Check className="h-5 w-5" />
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => cancelEdit(e)}
-                                                                className="rounded-xl p-2 text-red-500 transition-colors hover:bg-red-100 dark:hover:bg-gray-700"
-                                                            >
-                                                                <X className="h-5 w-5" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex w-full items-center justify-between">
-                                                        <div className="flex items-center gap-6">
-                                                            <div
-                                                                className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110 ${colorClasses.accent}`}
-                                                            >
-                                                                <Folder className={`h-6 w-6 text-white`} />
-                                                            </div>
-                                                            <div>
-                                                                <h3 className="text-xl font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
-                                                                    {folder.folderName}
-                                                                </h3>
-                                                                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                                    <Calendar className="h-4 w-4" />
-                                                                    <span>{new Date(folder.created_at).toLocaleDateString()}</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <div className="opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                                            <div className="flex gap-2">
-                                                                <button
-                                                                    onClick={(e) => handleEditClick(e, folder)}
-                                                                    className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700"
-                                                                >
-                                                                    <Edit className="h-5 w-5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={(e) => hanndledeleteFolder(e, folder._id)}
-                                                                    className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-100 dark:hover:bg-gray-700"
-                                                                >
-                                                                    <Trash2 className="h-5 w-5" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                            {folderTotalPages >= 1 && (
-                                <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 pt-6 dark:border-gray-700">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                                        Showing {foldersToDisplay.length} of {folderTotalPages * 8} folders
-                                    </span>
-                                    <div className="flex items-center gap-4">
-                                        <button
-                                            onClick={() => setFolderCurrentPage((prev) => Math.max(prev - 1, 1))}
-                                            disabled={folderCurrentPage === 1}
-                                            className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" /> Previous
-                                        </button>
-                                        <span className="text-sm font-medium">
-                                            Page {folderCurrentPage} of {folderTotalPages}
-                                        </span>
-                                        <button
-                                            onClick={() => setFolderCurrentPage((prev) => Math.min(prev + 1, folderTotalPages))}
-                                            disabled={folderCurrentPage === folderTotalPages}
-                                            className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
-                                        >
-                                            Next <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+            {openFolder ? (
+                <FilesView
+                    openFolder={openFolder}
+                    closeFolderWithEffect={closeFolderWithEffect}
+                    handleUploadFiles={handleUploadFiles}
+                    isfolderFiles={isfolderFiles}
+                    isLoadingFiles={isLoadingFiles}
+                    fileSearchTerm={fileSearchTerm}
+                    handleFileSearch={handleFileSearch}
+                    fileDateFrom={fileDateFrom}
+                    setFileDateFrom={setFileDateFrom}
+                    fileDateTo={fileDateTo}
+                    setFileDateTo={setFileDateTo}
+                    resetFileFilters={resetFileFilters}
+                    fileCurrentPage={fileCurrentPage}
+                    fileTotalPages={fileTotalPages}
+                    fetchSpecificData={fetchSpecificData}
+                    openFileMenu={openFileMenu}
+                    setOpenFileMenu={setOpenFileMenu}
+                    handleViewPdf={handleViewPdf}
+                    handleDeleteFiles={handleDeleteFiles}
+                    getColorClasses={getColorClasses}
+                    getFileTypeColor={getFileTypeColor}
+                    getFileIcon={getFileIcon}
+                    isUploadModalOpen={isUploadModalOpen}
+                    closeUploadModal={closeUploadModal}
+                    Success={Success}
+                />
+            ) : (
+                <FoldersView
+                    foldersToDisplay={foldersToDisplay}
+                    searchTerm={searchTerm}
+                    handleFolderSearch={handleFolderSearch}
+                    resetFolderFilters={resetFolderFilters}
+                    viewMode={viewMode}
+                    setViewMode={setViewMode}
+                    isCreating={isCreating}
+                    setIsCreating={setIsCreating}
+                    newFolderName={newFolderName}
+                    setNewFolderName={setNewFolderName}
+                    selectedColor={selectedColor}
+                    setSelectedColor={setSelectedColor}
+                    openFolderWithEffect={openFolderWithEffect}
+                    isEditing={isEditing}
+                    setIsEditing={setIsEditing}
+                    editedFolderName={editedFolderName}
+                    setEditedFolderName={setEditedFolderName}
+                    editedFolderColor={editedFolderColor}
+                    setEditedFolderColor={setEditedFolderColor}
+                    handleEditClick={handleEditClick}
+                    saveEdit={saveEdit}
+                    cancelEdit={cancelEdit}
+                    hanndledeleteFolder={hanndledeleteFolder}
+                    folderCurrentPage={folderCurrentPage}
+                    folderTotalPages={folderTotalPages}
+                    setFolderCurrentPage={setFolderCurrentPage}
+                    colors={colors}
+                    getColorClasses={getColorClasses}
+                    handleKeyPress={handleKeyPress}
+                    createFolder={createFolder}
+                />
+            )}
         </div>
     );
 };
