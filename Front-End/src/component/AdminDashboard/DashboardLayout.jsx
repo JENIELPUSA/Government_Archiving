@@ -6,7 +6,8 @@ import PieGraph from "./PieGraph";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
-
+import useAutoLogout from "../../../../Back-End/Utils/useAutoLogout";
+import { useNavigate } from "react-router-dom";
 const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 2 }) => {
     const [currentValue, setCurrentValue] = useState(0);
     const animationFrameRef = useRef(null);
@@ -45,14 +46,18 @@ const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 
 
 
 function DashboardLayout() {
+      const navigate = useNavigate();
     const {isFile,isTotaDocuments,isTodayDocuments}=useContext(FilesDisplayContext)
     const {isTotalAdmin}=useContext(AdminDisplayContext);
     const {isTotalOfficer}=useContext(OfficerDisplayContext)
     const documents = isFile;
     const totalDocuments =isTotaDocuments;
-    const activeUsers = isTotalAdmin  + isTotalOfficer;
+    const activeUsers = isTotalAdmin ;
     const totalStorageUsedBytes = documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0);
-
+  useAutoLogout(() => {
+    localStorage.removeItem("token"); // optional: JWT/session cleanup
+    navigate("/login");
+  });
     const formatStorage = (bytes) => {
         if (bytes < 1024) return { value: bytes, unit: 'bytes' };
         if (bytes < 1024 * 1024) return { value: bytes / 1024, unit: 'KB' };

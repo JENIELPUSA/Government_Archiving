@@ -1,26 +1,21 @@
 const multer = require("multer");
 const path = require("path");
 
-// Memory storage for all environments
 const storage = multer.memoryStorage();
 
-// File filter
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt)$/i;
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  const mimetype = file.mimetype.startsWith("application/");
-
-  if (extname && mimetype) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only document files are allowed (.pdf, .docx, etc)"));
+ const allowedExts = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|txt|jpg|jpeg|png|gif|svg|webp)$/i;
+  
+  if (!allowedExts.test(path.extname(file.originalname).toLowerCase())) {
+    return cb(new Error("Only document and image files are allowed (.pdf, .docx, .jpg, .png, etc)"));
   }
+  cb(null, true);
 };
 
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
 module.exports = upload;

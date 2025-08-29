@@ -11,7 +11,6 @@ const MongoStore = require("connect-mongo");
 
 const AdminRoute = require("./Routes/AdminRoute");
 
-
 const Notification = require("./Routes/NotificationRoute");
 
 const Retention = require("./Routes/RetentionRoute")
@@ -49,15 +48,6 @@ const logger = function (req, res, next) {
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.set("trust proxy", true);
-
-
-// CHECK environment variables
-console.log("CONN_STR:", process.env.CONN_STR);
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("FRONTEND_URL:", process.env.FRONTEND_URL);
-
-
-console.log("Setting up MongoStore with URL:", process.env.CONN_STR);
 app.use(
   session({
     secret: process.env.SECRET_STR,
@@ -65,14 +55,15 @@ app.use(
     saveUninitialized: false,
     store: MongoStore.create({
       mongoUrl: process.env.CONN_STR,
-      ttl: 24 * 60 * 60, // 24 hours in seconds
+      ttl: 12 * 60 * 60, // 12 hours in seconds
     }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
       sameSite: "none",
-      maxAge: 24 * 60 * 60 * 1000, 
+      maxAge: 12 * 60 * 60 * 1000,
     },
+     rolling: true,
   })
 );
 app.use(
@@ -85,6 +76,9 @@ app.use(
 
 app.use(logger);
 
+
+
+
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
@@ -93,7 +87,6 @@ if (process.env.NODE_ENV === "development") {
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 
 app.use('/uploads', express.static(uploadsDir));
-
 app.use("/api/v1/authentication", authentic);
 app.use("/api/v1/Admin", AdminRoute);
 app.use("/api/v1/Notification", Notification);

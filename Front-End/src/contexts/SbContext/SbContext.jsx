@@ -30,6 +30,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             setSBMember(res.data.data);
+            console.log("SB MEMBER",res.data.data)
         } catch (error) {
             console.error("Error fetching SB member:", error);
         }
@@ -116,10 +117,9 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 formData.append("avatar", values.avatar);
             }
 
-            const res = await axiosInstance.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
+            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
-                    "Content-Type": "multipart/form-data",
                 },
             });
 

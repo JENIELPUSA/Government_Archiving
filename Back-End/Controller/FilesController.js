@@ -2,16 +2,14 @@ const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const Files = require("../Models/File");
 const path = require("path");
 const cloudinary = require("../Utils/cloudinary");
-const streamifier = require("streamifier");
 const mongoose = require("mongoose");
-const axios = require("axios");
 const ActivityLog = require("./../Models/LogActionAudit");
 const Notification = require("../Models/NotificationSchema");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
 const Category = require("../Models/CategorySchema");
 const SBmember = require("../Models/SBmember");
-const { ObjectId } = require("mongodb");
-const fs = require("fs");
+const { Blob } = require("buffer");
+const axios = require("axios");
 const ftp = require("basic-ftp");
 const sanitizeFolderName = (name) => {
   return name
@@ -19,6 +17,24 @@ const sanitizeFolderName = (name) => {
     .replace(/\s+/g, "_")
     .trim();
 };
+
+const ftpClient = new ftp.Client();
+ftpClient.ftp.verbose = true;
+let isFtpConnected = false;
+
+async function connectFTP() {
+  if (!isFtpConnected) {
+    await ftpClient.access({
+      host: process.env.FTP_HOST,
+      user: process.env.FTP_USER,
+      password: process.env.FTP_PASSWORD,
+      secure: false,
+      passive: true,
+    });
+    isFtpConnected = true;
+  }
+  return ftpClient;
+}
 
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -325,9 +341,12 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-exports.createFiles = AsyncErrorHandler(async (req, res) => {
+exports.createFiles = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    if (!req.file) {
+      console.error("No file uploaded. Request body:", req.body);
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
     const {
       title,
@@ -343,58 +362,21 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       status = "Pending",
     } = req.body;
 
-    if (!title || !admin || !category)
+    if (!title || !admin || !category) {
       return res.status(400).json({ error: "Missing required fields" });
-
-    if (!mongoose.Types.ObjectId.isValid(admin))
-      return res.status(400).json({ error: "Invalid admin ID format" });
-
-    if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
-      return res.status(400).json({ error: "Invalid approver ID format" });
-
-    if ((category === "Resolution" || category === "Ordinance") && !approverID)
-      return res.status(400).json({ error: `ApproverID is required for category "${category}"` });
-
-    const ext = path.extname(req.file.originalname);
-    const fileName = `${Date.now()}_${req.file.originalname}`;
-    let fileUrl;
-    let fileSize = req.file.size;
-
-    const sanitizedCategory = category.replace(/[^a-zA-Z0-9_-]/g, "");
-
-    if (process.env.NODE_ENV === "development") {
-      const uploadDir = path.join(__dirname, "../uploads", sanitizedCategory);
-      fs.mkdirSync(uploadDir, { recursive: true });
-      const filePath = path.join(uploadDir, fileName);
-      fs.writeFileSync(filePath, req.file.buffer);
-
-      fileUrl = `/uploads/${sanitizedCategory}/${fileName}`;
-      console.log("📂 File saved locally:", filePath);
-    } else {
-      const client = new ftp.Client();
-      try {
-        await client.access({
-          host: process.env.FTP_HOST,
-          user: process.env.FTP_USER,
-          password: process.env.FTP_PASSWORD,
-        });
-
-        const baseRemoteDir = `/public_html/uploads`;
-        const categoryRemoteDir = `${baseRemoteDir}/${sanitizedCategory}`;
-        const remotePath = `${categoryRemoteDir}/${fileName}`;
-
-        await client.ensureDir(categoryRemoteDir);
-        await client.uploadFrom(req.file.buffer, remotePath);
-
-        fileUrl = `https://${process.env.FRONTEND_URL}/uploads/${sanitizedCategory}/${fileName}`;
-        console.log("🌐 File uploaded to Hostinger:", fileUrl);
-      } catch (ftpErr) {
-        console.error("FTP upload failed:", ftpErr);
-        return res.status(500).json({ error: "Failed to upload file to server" });
-      } finally {
-        client.close();
-      }
     }
+
+    if (!mongoose.Types.ObjectId.isValid(admin)) {
+      return res.status(400).json({ error: "Invalid admin ID" });
+    }
+
+    if (approverID && !mongoose.Types.ObjectId.isValid(approverID)) {
+      return res.status(400).json({ error: "Invalid approver ID" });
+    }
+
+    const fileName = `${Date.now()}_${req.file.originalname}`;
+    const fileSize = req.file.size;
+    const ext = path.extname(req.file.originalname).toLowerCase();
 
     const typeMap = {
       ".pdf": "PDF",
@@ -405,8 +387,49 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       ".ppt": "PowerPoint Presentation",
       ".pptx": "PowerPoint Presentation",
       ".txt": "Text File",
+      ".jpg": "Image",
+      ".jpeg": "Image",
+      ".png": "Image",
+      ".gif": "Image",
+      ".svg": "Image",
+      ".webp": "Image",
     };
-    const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
+    const fullTextType = typeMap[ext] || "Unknown";
+
+    let remotePath;
+    try {
+      const form = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      form.append("file", blob, req.file.originalname);
+
+      const response = await axios.post(
+        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        form,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          maxBodyLength: Infinity,
+        }
+      );
+
+      console.log("Hostinger response:", response.data);
+
+      if (!response.data.success) {
+        return res.status(500).json({
+          error: response.data.message || "Failed to upload to Hostinger",
+        });
+      }
+
+      remotePath = response.data.url;
+      console.log("File uploaded to Hostinger:", remotePath);
+    } catch (phpErr) {
+      console.error(
+        "Hostinger upload failed:",
+        phpErr.response?.data || phpErr.message || phpErr
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to upload file to Hostinger" });
+    }
 
     const fileData = {
       title,
@@ -419,25 +442,115 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       approverID,
       status,
       dateOfResolution,
-      fileUrl,
       fileName,
+      fileUrl: remotePath,
       oldFile,
       folderID,
-      folderPath: `/uploads/${sanitizedCategory}`,
+      folderPath: "/uploads",
       fullText: fullTextType,
     };
 
-    const savedFile = await new Files(fileData);
-    await savedFile.save();
-    console.log("✅ File saved to DB:", savedFile._id);
+    let categoryName = null;
+    if (mongoose.Types.ObjectId.isValid(category)) {
+      const categoryDoc = await Category.findById(category).lean();
+      categoryName = categoryDoc?.category;
+    }
+    if (oldFile === "true" || oldFile === true) {
+      if (categoryName === "Resolution" || categoryName === "Ordinance") {
+        fileData.status = "Approved";
+        fileData.ArchivedStatus = "Active";
+      } else {
+        fileData.ArchivedStatus = "Archived";
+      }
+    }
+    let savedFile;
+    try {
+      savedFile = await new Files(fileData);
+      await savedFile.save();
+      console.log("File saved to database:", savedFile._id);
+    } catch (dbErr) {
+      console.error("Database save error:", dbErr);
+      return res.status(500).json({ error: "Failed to save file to database" });
+    }
 
+    // Log activity
+    const allowedRoles = ["admin", "officer"];
+    const role = req.user?.role?.toLowerCase();
+    const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
+
+    if (allowedRoles.includes(role)) {
+      await ActivityLog.create({
+        type: "CREATE",
+        action: "Uploaded a new file",
+        performedBy: req.user.linkId,
+        performedByModel: capitalizedRole,
+        file: savedFile._id,
+        message: `${capitalizedRole} uploaded file: '${title}'`,
+        level: "info",
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"],
+      });
+    }
+
+    // Notification for Pending
+    if (savedFile.status === "Pending") {
+      const fileId = savedFile._id;
+      const fileTitle = savedFile.title || "Untitled Document";
+      const categoryTitle = savedFile.category || "Unknown Category";
+      const messageText = `New document pending your approval: "${fileTitle}" from ${categoryTitle}`;
+
+      const targetViewer =
+        approverID && mongoose.Types.ObjectId.isValid(approverID)
+          ? approverID
+          : author;
+
+      if (mongoose.Types.ObjectId.isValid(targetViewer)) {
+        const viewersArray = [
+          { user: targetViewer, isRead: false, isApprover: !!approverID },
+        ];
+
+        if (approverID) {
+          const notificationDoc = await Notification.create({
+            message: messageText,
+            viewers: viewersArray,
+            FileId: fileId,
+            relatedApprover: approverID,
+          });
+
+          const io = req.app.get("io");
+          if (io) {
+            const SendMessage = {
+              message: messageText,
+              data: savedFile, // directly send savedFile instead of enrichedFile
+              notificationId: notificationDoc._id,
+              FileId: fileId,
+              approverID: approverID,
+            };
+
+            const receiver = global.connectedUsers?.[targetViewer];
+            if (receiver) {
+              io.to(receiver.socketId).emit(
+                "SentDocumentNotification",
+                SendMessage
+              );
+              console.log(
+                `📨 Sent real-time notification to USER (${targetViewer})`
+              );
+            } else {
+              console.log(
+                `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
+              );
+            }
+          }
+        }
+      }
+    }
     res.status(201).json({ status: "success", data: savedFile });
   } catch (err) {
-    console.error("Unhandled error in createFiles:", err);
+    console.error("Upload error:", err.message || err);
     res.status(500).json({ error: "Internal server error" });
   }
-});
-
+};
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -950,104 +1063,140 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
 });
 
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const file = await Files.findById(id);
+  if (!file) {
+    console.log("❌ File not found in DB");
+    return res.status(404).json({ message: "File not found." });
+  }
+  console.log("✅ File found in DB:", file.fileName);
+
+  const allowedRoles = ["admin", "officer"];
+  const role = req.user?.role;
+  if (role && allowedRoles.includes(role.toLowerCase())) {
+    const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
+    ActivityLog.create({
+      type: "REVIEW",
+      action: "Accessed a file",
+      performedBy: req.user.linkId,
+      performedByModel: capitalizedRole,
+      file: file._id,
+      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
+      level: "info",
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    }).catch((err) => console.error("❌ Activity log failed:", err));
+  }
+  if (!file.fileUrl) {
+    return res.status(500).json({ message: "File URL missing in DB" });
+  }
+
   try {
-    const { id } = req.params;
-    const file = await Files.findById(id);
-    if (!file) return res.status(404).json({ message: "File not found." });
-
-    const cloudinaryUrl = file.fileUrl;
-
-    const allowedRoles = ["admin", "officer"];
-    const role = req.user?.role;
-    if (role && allowedRoles.includes(role.toLowerCase())) {
-      const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-
-      await ActivityLog.create({
-        type: "REVIEW",
-        action: "Accessed a file",
-        performedBy: req.user.linkId,
-        performedByModel: capitalizedRole,
-        file: file._id,
-        message: `${capitalizedRole} accessed file: '${
-          file.title || file.fileName
-        }'`,
-        level: "info",
-        ipAddress: req.ip,
-        userAgent: req.headers["user-agent"],
-      });
-    }
-
-    // Proceed with streaming regardless of role
-    const response = await axios({
-      method: "GET",
-      url: cloudinaryUrl,
-      responseType: "stream",
-    });
-
-    res.setHeader("Content-Type", "application/pdf");
+    const response = await axios.get(file.fileUrl, { responseType: "stream" });
+    res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    return response.data.pipe(res);
-  } catch (error) {
-    console.error("Cloudinary streaming failed:", error.message);
-    res.status(error.response?.status || 500).json({
-      message: "Cloudinary streaming failed",
-      error: error.message,
-    });
+    response.data.pipe(res);
+    response.data.on("end", () => console.log("📤 File streamed successfully"));
+    response.data.on("error", (err) => console.error("❗ Streaming error:", err));
+  } catch (err) {
+    console.error("❗ Hostinger streaming failed:", err.message || err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "File streaming failed", error: err.message });
+    }
   }
 });
 
 exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const file = await Files.findById(id);
+  if (!file) {
+    console.log("File not found in DB");
+    return res.status(404).json({ message: "File not found." });
+  }
+  console.log("File found in DB:", file.fileName);
+
+  const allowedRoles = ["admin", "officer"];
+  const role = req.user?.role;
+  if (role && allowedRoles.includes(role.toLowerCase())) {
+    const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
+    ActivityLog.create({
+      type: "REVIEW",
+      action: "Accessed a file",
+      performedBy: req.user.linkId,
+      performedByModel: capitalizedRole,
+      file: file._id,
+      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
+      level: "info",
+      ipAddress: req.ip,
+      userAgent: req.headers["user-agent"],
+    }).catch((err) => console.error("Activity log failed:", err));
+  }
+
+  // Stream file from Hostinger
+  if (!file.fileUrl) {
+    return res.status(500).json({ message: "File URL missing in DB" });
+  }
+
   try {
-    const { id } = req.params;
-    const file = await Files.findById(id);
-    if (!file) return res.status(404).json({ message: "File not found." });
-    return res.redirect(file.fileUrl);
-  } catch (error) {
-    console.error("Redirect to Cloudinary failed:", error.message);
-    res.status(500).json({
-      message: "Error redirecting to Cloudinary",
-      error: error.message,
-    });
+    const response = await axios.get(file.fileUrl, { responseType: "stream" });
+
+    // Set headers dynamically
+    res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+
+    // Pipe the remote file stream to the client
+    response.data.pipe(res);
+
+    response.data.on("end", () => console.log("File streamed successfully"));
+    response.data.on("error", (err) => console.error("Streaming error:", err));
+  } catch (err) {
+    console.error("Hostinger streaming failed:", err.message || err);
+    if (!res.headersSent) {
+      res.status(500).json({ message: "File streaming failed", error: err.message });
+    }
   }
 });
 
 exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
-  const file = await Files.findById(req.params.id);
-  if (!file)
-    return res.status(404).json({ status: "fail", message: "File not found" });
-
-  // Get department ID as folder name
-  const department =
-    typeof file.department === "object" && file.department !== null
-      ? file.department._id || file.department.id
-      : file.department;
-
-  // Remove file extension from filename
-  const ext = path.extname(file.fileName);
-  const baseFileName = file.fileName.replace(ext, "");
-
-  // Final Cloudinary public ID
-  const publicId = `Government Archiving/${department}/${baseFileName}`;
-  console.log("Deleting from Cloudinary:", publicId);
-
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "raw", // or "auto" if needed
-    });
-
-    if (result.result !== "ok") {
-      console.warn("Cloudinary destroy failed:", result);
+    const file = await Files.findById(req.params.id);
+    if (!file) {
+      return res.status(404).json({ status: "fail", message: "File not found" });
     }
 
+    if (file.fileUrl) {
+      try {
+        const response = await axios.post(
+          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          { file: file.fileUrl }
+        );
+
+        if (!response.data.success) {
+          console.error("Hostinger deletion failed:", response.data.message);
+          return res.status(500).json({
+            status: "fail",
+            message: "Failed to delete file from Hostinger. Database not updated.",
+          });
+        }
+        console.log("File deleted from Hostinger:", file.fileUrl);
+
+      } catch (err) {
+        console.error("Hostinger delete failed:", err.message || err);
+        return res.status(500).json({
+          status: "fail",
+          message: "Failed to delete file from Hostinger. Database not updated.",
+        });
+      }
+    }
+
+    // Kung successful ang pag-delete sa Hostinger, magpatuloy sa database operations
     const allowedRoles = ["admin", "officer"];
-    const role = req.user.role.toLowerCase();
-
+    const role = req.user?.role?.toLowerCase();
     if (!allowedRoles.includes(role)) {
-      return res
-        .status(400)
-        .json({ error: "Invalid user role for activity log." });
+      return res.status(400).json({ error: "Invalid user role for activity log." });
     }
-
     const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
 
     await ActivityLog.create({
@@ -1066,13 +1215,15 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      message: "File deleted successfully.",
+      message: "File and database record deleted successfully.",
     });
-  } catch (error) {
-    console.error("Cloudinary Delete Error:", error);
-    res.status(500).json({ status: "fail", message: "Failed to delete file." });
+
+  } catch (err) {
+    console.error("Unhandled error in RemoveFiles:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
+
 exports.updateFileOfficer = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
   const { officer } = req.body;
@@ -1509,157 +1660,18 @@ exports.getFileForArchive = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
-  const { file } = req;
-  const {
-    fileId,
-    title,
-    summary,
-    author,
-    admin,
-    status,
-    officer,
-    category,
-    approverID,
-    dateOfResolution,
-    resolutionNumber,
-  } = req.body;
-
-  console.log("📥 Body received:", req.body);
-
-  if (!file) return res.status(400).json({ error: "No file uploaded" });
+  const { fileId } = req.body;
 
   if (!fileId || !mongoose.Types.ObjectId.isValid(fileId))
     return res.status(400).json({ error: "Invalid or missing file ID" });
 
-  if (!title || !admin)
-    return res.status(400).json({ error: "Missing required fields" });
+  const existingFile = await Files.findById(fileId);
+  if (!existingFile)
+    return res.status(404).json({ error: "File not found" });
 
-  if (!mongoose.Types.ObjectId.isValid(admin))
-    return res.status(400).json({ error: "Invalid admin ID format" });
+  existingFile.status = "Approved";
+  await existingFile.save();
 
-  const oldFile = await Files.findByIdAndUpdate(
-    fileId,
-    {
-      ArchivedStatus: "For Restore",
-      archivedMetadata: {
-        dateArchived: new Date(),
-        archivedBy: admin,
-        notes: "Archived due to update",
-      },
-    },
-    { new: true }
-  );
-
-  if (!oldFile)
-    return res.status(404).json({ error: "Original file not found" });
-  const ext = path.extname(file.originalname || ".pdf");
-  const baseName = path.basename(file.originalname || "document.pdf", ext);
-  const fileName = `${Date.now()}_${baseName}${ext}`;
-  const folderPath = `Government Archiving/${sanitizeFolderName(category)}`;
-
-  const result = await new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: folderPath,
-        resource_type: "raw",
-        public_id: fileName.replace(ext, ""),
-        use_filename: true,
-        unique_filename: false,
-        access_mode: "public",
-      },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary error:", error);
-          reject(error);
-        } else {
-          console.log("Cloudinary upload result:", result?.secure_url);
-          resolve(result);
-        }
-      }
-    );
-    streamifier.createReadStream(file.buffer).pipe(stream);
-  });
-
-  const typeMap = { ".pdf": "PDF" };
-  const fullTextType = typeMap[ext.toLowerCase()] || "Unknown";
-
-  const newFile = await new Files({
-    title,
-    category,
-    summary,
-    author,
-    admin,
-    officer,
-    fileUrl: result?.secure_url,
-    fileName,
-    folderPath,
-    fullText: fullTextType,
-    status,
-    approverID,
-    dateOfResolution,
-    resolutionNumber,
-  }).save();
-
-  // Aggregate and populate new file
-  const populatedFileResult = await Files.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(newFile._id) } },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "category",
-        foreignField: "_id",
-        as: "category",
-      },
-    },
-    { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "officers",
-        localField: "officer",
-        foreignField: "_id",
-        as: "officer",
-      },
-    },
-    { $unwind: { path: "$officer", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "admins",
-        localField: "admin",
-        foreignField: "_id",
-        as: "admin",
-      },
-    },
-    { $unwind: { path: "$admin", preserveNullAndEmptyArrays: true } },
-    {
-      $project: {
-        title: 1,
-        summary: 1,
-        author: 1,
-        fullText: 1,
-        fileSize: 1,
-        fileUrl: 1,
-        fileName: 1,
-        status: 1,
-        tags: 1,
-        notes: 1,
-        createdAt: 1,
-        dateOfResolution: 1,
-        updatedAt: 1,
-        approverID: 1,
-        ArchivedStatus: 1,
-        categoryID: "$category._id",
-        category: "$category.category",
-        officer: "$officer._id",
-        officer_first_name: "$officer.first_name",
-        officer_last_name: "$officer.last_name",
-        admin: 1,
-        admin_first_name: "$admin.first_name",
-        admin_last_name: "$admin.last_name",
-      },
-    },
-  ]);
-
-  const finalFile = populatedFileResult[0];
   const adminUsers = await UserLoginSchema.find({ role: "admin" });
   const io = req.app.get("io");
 
@@ -1671,48 +1683,36 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
       viewedAt: null,
     }));
 
-  const messageText = `A new document has been submitted. Status: ${finalFile.status}`;
+  const messageText = `Document "${existingFile.title}" has been approved.`;
   const SendMessage = {
     message: messageText,
-    data: finalFile,
-    old: oldFile,
-    FileId: newFile._id,
+    data: existingFile,
+    old: null,
+    FileId: existingFile._id,
   };
 
   await Notification.create({
     message: messageText,
     viewers: viewersArray,
-    FileId: newFile._id,
+    FileId: existingFile._id,
   });
 
   adminUsers.forEach((adminUser) => {
-    if (!adminUser?.linkedId) {
-      console.warn(
-        "⚠️ Skipping admin with missing linkedId:",
-        adminUser.username
-      );
-      return;
-    }
-
-    const adminId = adminUser.linkedId.toString(); // now safe
+    if (!adminUser?.linkedId) return;
+    const adminId = adminUser.linkedId.toString();
     const targetUser = global.connectedUsers?.[adminId];
-
-    console.log(`👤 Admin ID: ${adminId}, Email: ${adminUser.username}`);
-
     if (targetUser) {
       io.to(targetUser.socketId).emit("SentNewDocuNotification", SendMessage);
-      console.log(`📨 Sent document notification to online admin (${adminId})`);
-    } else {
-      console.log(`📭 Admin (${adminId}) is offline. Notification saved.`);
     }
   });
 
-  res.status(201).json({
+  res.status(200).json({
     status: "success",
-    message: "New file version added. Old file archived.",
-    data: finalFile,
+    message: "File status updated to approved.",
+    data: existingFile,
   });
 });
+
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
   const officerId = req.user.linkId;
@@ -2666,7 +2666,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     aggregationPipeline
   ).allowDiskUse(true);
   const totalCount = AuthorsWithFiles.length;
-  const limit = parseInt(req.query.limit) || 9;
+  const limit = parseInt(req.query.limit) || 20;
   const currentPage = parseInt(req.query.page) || 1;
   const totalPages = Math.ceil(totalCount / limit);
   const startIndex = (currentPage - 1) * limit;

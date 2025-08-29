@@ -1,10 +1,8 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const Admin = require("../Models/AdminSchema");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
-const fs = require('fs');
-const path = require('path');
-
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+const axios = require("axios");
+const { URLSearchParams } = require("url");
 exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   const AdminID = req.params.id;
 
@@ -12,38 +10,53 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   if (!existingAdmin) {
     return res.status(404).json({
       status: "fail",
-      message: "Officer not found.",
+      message: "Admin not found.",
     });
   }
 
-  if (existingAdmin.avatar && existingAdmin.avatar.url) {
-    const fileName = path.basename(existingAdmin.avatar.url);
-    const filePath = path.join(uploadsDir, fileName);
-
-    try {
-      await fs.promises.unlink(filePath); // Corrected: use fs.promises.unlink
-    } catch (error) {
-      console.error("Local file deletion failed:", error);
-    }
-  }
-
+  // Hakbang 1: Tanggalin ang admin record at ang UserLogin record
   const userLogin = await UserLoginSchema.findOne({ linkedId: AdminID });
   if (userLogin) {
     await UserLoginSchema.findByIdAndDelete(userLogin._id);
   }
 
-  const deleteAdmin = await Admin.findByIdAndDelete(AdminID);
-  if (!deleteAdmin) {
-    // This part of the code is unreachable since we already checked for the user above
-  }
+  await Admin.findByIdAndDelete(AdminID);
 
+  // Hakbang 2: Agad na magbigay ng success response sa user
   res.status(200).json({
     status: "success",
-    message: "Officer and related login deleted successfully.",
+    message: "Admin and related login deleted successfully.",
     data: null,
   });
-});
 
+  // Hakbang 3: I-delete ang avatar file sa background
+  if (existingAdmin.avatar && existingAdmin.avatar.url) {
+    const avatarUrl = existingAdmin.avatar.url;
+    
+    // "Fire and forget" ang delete request
+    const params = new URLSearchParams();
+    params.append("file", avatarUrl);
+
+    axios.post(
+        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        params.toString(), {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+      .then(response => {
+        if (response.data.success) {
+          console.log("Avatar deleted from Hostinger in background:", avatarUrl);
+        } else {
+          console.error("Failed to delete avatar from Hostinger in background:", response.data.message);
+        }
+      })
+      .catch(error => {
+        console.error("Error deleting avatar from Hostinger in background:", error.message);
+      });
+  }
+});
 
 exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   try {
@@ -64,7 +77,6 @@ exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   }
 });
 
-
 exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
   const loggedInAdminId = req.user.linkId;
   const admin = await Admin.findById(loggedInAdminId);
@@ -81,7 +93,7 @@ exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
   });
 });
 
-exports.UpdateAdmin = async (req, res) => {
+exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
   const adminId = req.params.id;
 
   try {
@@ -90,50 +102,91 @@ exports.UpdateAdmin = async (req, res) => {
       return res.status(404).json({ error: "Admin not found" });
     }
 
-    let avatarPath = oldRecord.avatar?.url || null;
+    const avatarObj = oldRecord.avatar || {};
+    let newAvatarUrl = avatarObj.url || null;
+    const oldAvatarUrl = avatarObj.url; // I-store ang lumang URL bago mag-update
 
     if (req.file) {
-      const newFilePath = req.file.path;
-      const fileName = path.basename(newFilePath);
-      avatarPath = `/uploads/${fileName}`;
+      // Step 1: Upload the new avatar
+      const form = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      form.append("file", blob, req.file.originalname);
 
-      // Step 1: I-delete ang lumang avatar
-      if (oldRecord.avatar?.url) {
-        const oldFileName = path.basename(oldRecord.avatar.url);
-        const oldFilePath = path.join(uploadsDir, oldFileName);
-        
-        try {
-          await fs.promises.unlink(oldFilePath);
-        } catch (err) {
-          console.error("Failed to delete old image:", err.message);
+      const uploadResponse = await axios.post(
+        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        form,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+          maxBodyLength: Infinity,
         }
+      );
+
+      if (!uploadResponse.data.success) {
+        return res.status(500).json({
+          error: uploadResponse.data.message || "Failed to upload new avatar",
+        });
       }
+
+      newAvatarUrl = uploadResponse.data.url;
+      console.log("New avatar uploaded:", newAvatarUrl);
     }
 
+    // Step 2: Update the database with new data (including new avatar URL if applicable)
     const updateData = {
       first_name: req.body.first_name,
       last_name: req.body.last_name,
       middle_name: req.body.middle_name,
       email: req.body.email,
       gender: req.body.gender,
-      ...(req.file && { avatar: { url: avatarPath } }),
     };
 
-    const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, { new: true });
+    if (req.file) {
+      updateData.avatar = {
+        ...avatarObj,
+        url: newAvatarUrl,
+      };
+    }
+
+    const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, {
+      new: true,
+    });
 
     if (!updatedAdmin) {
+      // Optional: Rollback ng na-upload na file kung may error sa database
+      // await deleteUploadedFile(newAvatarUrl); 
       return res.status(404).json({ error: "Admin not found after update" });
     }
 
     res.json({ status: "success", data: updatedAdmin });
 
+    // Step 3: "Fire and Forget" - I-delete ang lumang avatar sa background
+    if (req.file && oldAvatarUrl) {
+      const params = new URLSearchParams();
+      params.append("file", oldAvatarUrl);
+
+      // Hindi ina-await ang axios call para mag-proceed agad ang code
+      axios.post(
+        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        params.toString(),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      ).then(response => {
+        if (response.data.success) {
+          console.log("Old avatar deleted in background:", oldAvatarUrl);
+        } else {
+          console.error("Failed to delete old avatar in background:", response.data.message);
+        }
+      }).catch(error => {
+        console.error("Error deleting old avatar in background:", error.message);
+      });
+    }
+
   } catch (error) {
-    console.error(error);
+    console.error("UpdateAdmin Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
-};
-
-
-
-
+});
 

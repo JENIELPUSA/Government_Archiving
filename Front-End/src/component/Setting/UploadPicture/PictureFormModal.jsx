@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { FaSave, FaTimes, FaCloudUploadAlt, FaTrash } from 'react-icons/fa';
+import { FaSave, FaTimes, FaCloudUploadAlt, FaTrash, FaSpinner } from 'react-icons/fa';
 
 const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] }) => {
   // State variables remain the same
@@ -12,7 +12,9 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
   const [imagePreview, setImagePreview] = useState('');
   const [errors, setErrors] = useState({});
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Add loading state
   const fileInputRef = useRef(null);
+  
   useEffect(() => {
     if (picture) {
       setTitle(picture.title || '');
@@ -34,6 +36,7 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
     setImageFile(null);
     setImagePreview('');
     setErrors({});
+    setIsLoading(false); // Reset loading state
   };
 
   const validateForm = () => {
@@ -81,17 +84,25 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
     
-    onSave({
-      title,
-      date,
-      excerpt,
-      category,
-      imageFile,
-      imagePreview,
-    });
+    setIsLoading(true); // Set loading to true when saving starts
+    
+    try {
+      await onSave({
+        title,
+        date,
+        excerpt,
+        category,
+        imageFile,
+        imagePreview,
+      });
+    } catch (error) {
+      console.error('Save error:', error);
+    } finally {
+      setIsLoading(false); // Set loading to false when save completes
+    }
   };
 
   if (!isOpen) return null;
@@ -112,6 +123,7 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
             aria-label="Close modal"
+            disabled={isLoading} // Disable close button when loading
           >
             <FaTimes />
           </button>
@@ -131,10 +143,13 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                   type="text"
                   className={`w-full px-4 py-2.5 rounded-lg border ${
                     errors.title ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700`}
+                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 ${
+                    isLoading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => !isLoading && setTitle(e.target.value)}
                   placeholder="Enter title"
+                  disabled={isLoading} // Disable input when loading
                 />
                 {errors.title && <p className="mt-1 text-red-500 text-sm">{errors.title}</p>}
               </div>
@@ -148,9 +163,12 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                   type="date"
                   className={`w-full px-4 py-2.5 rounded-lg border ${
                     errors.date ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700`}
+                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 ${
+                    isLoading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => !isLoading && setDate(e.target.value)}
+                  disabled={isLoading} // Disable input when loading
                 />
                 {errors.date && <p className="mt-1 text-red-500 text-sm">{errors.date}</p>}
               </div>
@@ -163,11 +181,14 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                 <textarea
                   className={`w-full px-4 py-2.5 rounded-lg border ${
                     errors.excerpt ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700`}
+                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 ${
+                    isLoading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                   value={excerpt}
-                  onChange={(e) => setExcerpt(e.target.value)}
+                  onChange={(e) => !isLoading && setExcerpt(e.target.value)}
                   placeholder="Enter description"
                   rows={4}
+                  disabled={isLoading} // Disable textarea when loading
                 />
                 {errors.excerpt && <p className="mt-1 text-red-500 text-sm">{errors.excerpt}</p>}
               </div>
@@ -180,9 +201,12 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                 <select
                   className={`w-full px-4 py-2.5 rounded-lg border ${
                     errors.category ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'
-                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700`}
+                  } focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 ${
+                    isLoading ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
+                  onChange={(e) => !isLoading && setCategory(e.target.value)}
+                  disabled={isLoading} // Disable select when loading
                 >
                   <option value="">Select category</option>
                   {categories.map((cat) => (
@@ -208,11 +232,12 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                         : errors.image 
                           ? 'border-red-500' 
                           : 'border-gray-300 dark:border-gray-600'
-                    }`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={() => fileInputRef.current?.click()}
+                    } ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                  onDragOver={isLoading ? undefined : handleDragOver}
+                  onDragLeave={isLoading ? undefined : handleDragLeave}
+                  onDrop={isLoading ? undefined : handleDrop}
+                  onClick={isLoading ? undefined : () => fileInputRef.current?.click()}
+                  style={isLoading ? { pointerEvents: 'none' } : {}}
                 >
                   <input
                     type="file"
@@ -220,6 +245,7 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                     accept="image/*"
                     onChange={handleFileInputChange}
                     className="hidden"
+                    disabled={isLoading} // Disable file input when loading
                   />
                   
                   {imagePreview ? (
@@ -233,12 +259,13 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                       </div>
                       <button
                         type="button"
-                        className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center mx-auto"
+                        className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 flex items-center justify-center mx-auto disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={(e) => {
                           e.stopPropagation();
                           removeImage();
                         }}
                         aria-label="Remove image"
+                        disabled={isLoading} // Disable remove button when loading
                       >
                         <FaTrash className="mr-2" /> Remove Image
                       </button>
@@ -253,11 +280,12 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
                         Supports JPG, PNG, WEBP (max 5MB)
                       </p>
                       <button 
-                        className="mt-2 px-4 py-2 bg-blue-100 dark:bg-gray-700 rounded-lg text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-200 dark:hover:bg-gray-600 transition-colors"
+                        className="mt-2 px-4 py-2 bg-blue-100 dark:bg-gray-700 rounded-lg text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={(e) => {
                           e.stopPropagation();
                           fileInputRef.current?.click();
                         }}
+                        disabled={isLoading} // Disable browse button when loading
                       >
                         Browse Files
                       </button>
@@ -272,16 +300,26 @@ const PictureFormModal = ({ isOpen, onClose, onSave, picture, categories = [] })
         
         <div className="flex justify-end space-x-3 p-4 bg-gray-50 dark:bg-gray-700/50 border-t dark:border-gray-700">
           <button 
-            className="px-5 py-2.5 font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+            className="px-5 py-2.5 font-medium rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={onClose}
+            disabled={isLoading} // Disable cancel button when loading
           >
             Cancel
           </button>
           <button 
-            className="px-5 py-2.5 font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors"
+            className="px-5 py-2.5 font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
             onClick={handleSubmit}
+            disabled={isLoading} // Disable save button when loading
           >
-            <FaSave className="mr-2" /> {picture ? 'Update' : 'Save'}
+            {isLoading ? (
+              <>
+                <FaSpinner className="animate-spin mr-2" /> Saving...
+              </>
+            ) : (
+              <>
+                <FaSave className="mr-2" /> {picture ? 'Update' : 'Save'}
+              </>
+            )}
           </button>
         </div>
       </motion.div>

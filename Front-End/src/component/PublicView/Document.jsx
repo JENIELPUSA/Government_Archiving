@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useContext, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import { CategoryContext } from "../../contexts/CategoryContext/CategoryContext";
 import { useNavigate } from "react-router-dom";
@@ -133,12 +134,76 @@ const Documents = ({ searchKeyword }) => {
         }
     };
 
-    return (
-        <div className="container mx-auto mt-8 max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
-            <h1 className="mb-6 text-3xl font-bold text-blue-800">DOCUMENTS</h1>
+    // Animation variants
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1,
+                delayChildren: 0.2
+            }
+        }
+    };
 
-            <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
+    const itemVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: {
+            y: 0,
+            opacity: 1,
+            transition: {
+                type: "spring",
+                stiffness: 100,
+                damping: 10
+            }
+        }
+    };
+
+    const yearSectionVariants = {
+        closed: {
+            height: 0,
+            opacity: 0,
+            transition: {
+                duration: 0.3,
+                ease: "easeInOut"
+            }
+        },
+        open: {
+            height: "auto",
+            opacity: 1,
+            transition: {
+                duration: 0.4,
+                ease: "easeOut"
+            }
+        }
+    };
+
+    return (
+        <motion.div 
+            className="container mx-auto mt-8 max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+        >
+            <motion.h1 
+                className="mb-6 text-3xl font-bold text-blue-800"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+            >
+                DOCUMENTS
+            </motion.h1>
+
+            <motion.div 
+                className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
+                <motion.div 
+                    className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                    variants={itemVariants}
+                >
                     <label
                         htmlFor="year-select"
                         className="mb-2 block text-sm font-medium text-blue-800"
@@ -164,10 +229,13 @@ const Documents = ({ searchKeyword }) => {
                             </option>
                         ))}
                     </select>
-                </div>
+                </motion.div>
 
                 {/* Category Filter */}
-                <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
+                <motion.div 
+                    className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                    variants={itemVariants}
+                >
                     <label
                         htmlFor="category-select"
                         className="mb-2 block text-sm font-medium text-blue-800"
@@ -189,24 +257,37 @@ const Documents = ({ searchKeyword }) => {
                             </option>
                         ))}
                     </select>
-                </div>
-            </div>
+                </motion.div>
+            </motion.div>
 
             {/* Document List */}
             {loading && !isPaginatedAction && Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
-                <div className="py-12 text-center">
+                <motion.div 
+                    className="py-12 text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                >
                     <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-800 border-t-transparent"></div>
                     <p className="mt-4 text-lg text-gray-600">Loading documents...</p>
-                </div>
+                </motion.div>
             ) : Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
-                <div className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center">
+                <motion.div 
+                    className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                >
                     <h3 className="mt-4 text-xl font-semibold text-blue-800">No documents found</h3>
                     <p className="mx-auto mt-2 max-w-md text-gray-600">Try adjusting your search or filter criteria.</p>
-                </div>
+                </motion.div>
             ) : (
-                <div
+                <motion.div
                     id="document-list"
                     className="space-y-6"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
                 >
                     {Object.entries(filteredData)
                         .sort(([a], [b]) => {
@@ -226,18 +307,25 @@ const Documents = ({ searchKeyword }) => {
                             const endIndex = Math.min(currentPage * 10, totalCount);
 
                             return (
-                                <div
+                                <motion.div
                                     key={year}
                                     className="overflow-hidden rounded-xl shadow-md"
+                                    variants={itemVariants}
+                                    layout
                                 >
-                                    <div
+                                    <motion.div
                                         className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 text-white transition-all hover:from-blue-800 hover:to-blue-900"
                                         onClick={() => toggleYear(year)}
+                                        whileHover={{ scale: 1.005 }}
+                                        whileTap={{ scale: 0.995 }}
                                     >
                                         <h2 className="flex items-center gap-3 text-xl font-bold">
-                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900">
+                                            <motion.span 
+                                                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900"
+                                                whileHover={{ rotate: 5 }}
+                                            >
                                                 {year === "Unknown" ? "?" : year.substring(2)}
-                                            </span>
+                                            </motion.span>
                                             <span>
                                                 {year} • {totalCount} document
                                                 {totalCount !== 1 ? "s" : ""}
@@ -251,139 +339,170 @@ const Documents = ({ searchKeyword }) => {
                                                 )}
                                             </span>
                                         </h2>
-                                        {isOpen ? (
-                                            <ChevronUp
-                                                className="text-blue-200"
-                                                size={24}
-                                            />
-                                        ) : (
-                                            <ChevronDown
-                                                className="text-blue-200"
-                                                size={24}
-                                            />
-                                        )}
-                                    </div>
-
-                                    {isOpen && (
-                                        <div className="bg-white">
-                                            <div className="space-y-4 p-6">
-                                                {isLoading && yearFiles.length === 0 ? (
-                                                    <div className="flex justify-center py-8">
-                                                        <Loader
-                                                            className="animate-spin text-blue-700"
-                                                            size={32}
-                                                        />
-                                                    </div>
-                                                ) : yearFiles.length === 0 ? (
-                                                    <div className="py-8 text-center">
-                                                        <p className="text-gray-500">No documents found for {year}</p>
-                                                    </div>
-                                                ) : (
-                                                    yearFiles.map((item) => (
-                                                        <div
-                                                            key={item?._id}
-                                                            className="rounded-lg border border-gray-200 p-5 transition-all hover:bg-blue-50"
-                                                        >
-                                                            <div className="flex flex-col gap-4 md:flex-row md:items-start">
-                                                                <div className="flex-grow">
-                                                                    <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                                                                        <h3 className="text-lg font-bold text-gray-800">{item?.title}</h3>
-                                                                        {item?.resolutionNumber && (
-                                                                            <span className="whitespace-nowrap rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                                                                                Resolution #: {item.resolutionNumber}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    <p className="mb-4 line-clamp-2 text-gray-600">{item?.summary}</p>
-                                                                    <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                                                                        <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                            <div className="mr-2 text-xs font-medium text-blue-700">Author:</div>
-                                                                            <div className="truncate font-medium text-gray-700">
-                                                                                {item?.author || "N/A"}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                            <div className="mr-2 text-xs font-medium text-blue-700">Category:</div>
-                                                                            <div className="truncate font-medium text-gray-700">
-                                                                                {item?.category || "Uncategorized"}
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                            <div className="mr-2 text-xs font-medium text-blue-700">Created:</div>
-                                                                            <div className="font-medium text-gray-700">
-                                                                                {formatDate(item?.createdAt)}
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <button
-                                                                    onClick={() => handleView(item)}
-                                                                    className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
-                                                                >
-                                                                    View Document
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-
-                                            {/* Pagination */}
-                                            {isOpen && totalPages > 1 && (
-                                                <div className="mb-6 mt-2 flex flex-col items-center justify-between gap-4 px-6 sm:flex-row">
-                                                    <div className="text-sm text-gray-600">
-                                                        Showing {startIndex} to {endIndex} of {totalCount} documents
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                        <button
-                                                            onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
-                                                            disabled={currentPage === 1 || isLoading}
-                                                            className={`rounded-lg border px-4 py-2 ${
-                                                                currentPage === 1 || isLoading
-                                                                    ? "cursor-not-allowed border-gray-300 text-gray-400"
-                                                                    : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                            }`}
-                                                        >
-                                                            Previous
-                                                        </button>
-                                                        <div className="flex flex-wrap items-center justify-center gap-1">
-                                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                                                <button
-                                                                    key={page}
-                                                                    onClick={() => handlePageChange(year, page)}
-                                                                    disabled={isLoading}
-                                                                    className={`h-10 min-w-[2.5rem] rounded-lg px-2 ${
-                                                                        page === currentPage
-                                                                            ? "bg-blue-700 text-white"
-                                                                            : "text-blue-700 hover:bg-blue-50"
-                                                                    } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
-                                                                >
-                                                                    {page}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
-                                                            disabled={currentPage === totalPages || isLoading}
-                                                            className={`rounded-lg border px-4 py-2 ${
-                                                                currentPage === totalPages || isLoading
-                                                                    ? "cursor-not-allowed border-gray-300 text-gray-400"
-                                                                    : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                            }`}
-                                                        >
-                                                            Next
-                                                        </button>
-                                                    </div>
-                                                </div>
+                                        <motion.div
+                                            animate={{ rotate: isOpen ? 180 : 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            {isOpen ? (
+                                                <ChevronUp
+                                                    className="text-blue-200"
+                                                    size={24}
+                                                />
+                                            ) : (
+                                                <ChevronDown
+                                                    className="text-blue-200"
+                                                    size={24}
+                                                />
                                             )}
-                                        </div>
-                                    )}
-                                </div>
+                                        </motion.div>
+                                    </motion.div>
+
+                                    <AnimatePresence>
+                                        {isOpen && (
+                                            <motion.div 
+                                                className="bg-white"
+                                                variants={yearSectionVariants}
+                                                initial="closed"
+                                                animate="open"
+                                                exit="closed"
+                                                layout
+                                            >
+                                                <div className="space-y-4 p-6">
+                                                    {isLoading && yearFiles.length === 0 ? (
+                                                        <div className="flex justify-center py-8">
+                                                            <Loader
+                                                                className="animate-spin text-blue-700"
+                                                                size={32}
+                                                            />
+                                                        </div>
+                                                    ) : yearFiles.length === 0 ? (
+                                                        <div className="py-8 text-center">
+                                                            <p className="text-gray-500">No documents found for {year}</p>
+                                                        </div>
+                                                    ) : (
+                                                        yearFiles.map((item) => (
+                                                            <motion.div
+                                                                key={item?._id}
+                                                                className="rounded-lg border border-gray-200 p-5 transition-all hover:bg-blue-50"
+                                                                initial={{ opacity: 0, y: 10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ duration: 0.3 }}
+                                                                whileHover={{ y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+                                                            >
+                                                                <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                                                                    <div className="flex-grow">
+                                                                        <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                                                                            <h3 className="text-lg font-bold text-gray-800">{item?.title}</h3>
+                                                                            {item?.resolutionNumber && (
+                                                                                <span className="whitespace-nowrap rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                                                                                    Resolution #: {item.resolutionNumber}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <p className="mb-4 line-clamp-2 text-gray-600">{item?.summary}</p>
+                                                                        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Author:</div>
+                                                                                <div className="truncate font-medium text-gray-700">
+                                                                                    {item?.author || "N/A"}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Category:</div>
+                                                                                <div className="truncate font-medium text-gray-700">
+                                                                                    {item?.category || "Uncategorized"}
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Created:</div>
+                                                                                <div className="font-medium text-gray-700">
+                                                                                    {formatDate(item?.createdAt)}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <motion.button
+                                                                        onClick={() => handleView(item)}
+                                                                        className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
+                                                                        whileHover={{ scale: 1.05 }}
+                                                                        whileTap={{ scale: 0.95 }}
+                                                                    >
+                                                                        View Document
+                                                                    </motion.button>
+                                                                </div>
+                                                            </motion.div>
+                                                        ))
+                                                    )}
+                                                </div>
+
+                                                {/* Pagination */}
+                                                {isOpen && totalPages > 1 && (
+                                                    <motion.div 
+                                                        className="mb-6 mt-2 flex flex-col items-center justify-between gap-4 px-6 sm:flex-row"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ delay: 0.2 }}
+                                                    >
+                                                        <div className="text-sm text-gray-600">
+                                                            Showing {startIndex} to {endIndex} of {totalCount} documents
+                                                        </div>
+                                                        <div className="flex gap-2">
+                                                            <motion.button
+                                                                onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
+                                                                disabled={currentPage === 1 || isLoading}
+                                                                className={`rounded-lg border px-4 py-2 ${
+                                                                    currentPage === 1 || isLoading
+                                                                        ? "cursor-not-allowed border-gray-300 text-gray-400"
+                                                                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                                }`}
+                                                                whileHover={{ scale: currentPage === 1 || isLoading ? 1 : 1.05 }}
+                                                                whileTap={{ scale: currentPage === 1 || isLoading ? 1 : 0.95 }}
+                                                            >
+                                                                Previous
+                                                            </motion.button>
+                                                            <div className="flex flex-wrap items-center justify-center gap-1">
+                                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                                    <motion.button
+                                                                        key={page}
+                                                                        onClick={() => handlePageChange(year, page)}
+                                                                        disabled={isLoading}
+                                                                        className={`h-10 min-w-[2.5rem] rounded-lg px-2 ${
+                                                                            page === currentPage
+                                                                                ? "bg-blue-700 text-white"
+                                                                                : "text-blue-700 hover:bg-blue-50"
+                                                                        } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+                                                                        whileHover={{ scale: isLoading ? 1 : 1.1 }}
+                                                                        whileTap={{ scale: isLoading ? 1 : 0.9 }}
+                                                                    >
+                                                                        {page}
+                                                                    </motion.button>
+                                                                ))}
+                                                            </div>
+                                                            <motion.button
+                                                                onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
+                                                                disabled={currentPage === totalPages || isLoading}
+                                                                className={`rounded-lg border px-4 py-2 ${
+                                                                    currentPage === totalPages || isLoading
+                                                                        ? "cursor-not-allowed border-gray-300 text-gray-400"
+                                                                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                                }`}
+                                                                whileHover={{ scale: currentPage === totalPages || isLoading ? 1 : 1.05 }}
+                                                                whileTap={{ scale: currentPage === totalPages || isLoading ? 1 : 0.95 }}
+                                                            >
+                                                                Next
+                                                            </motion.button>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
                             );
                         })}
-                </div>
+                </motion.div>
             )}
-        </div>
+        </motion.div>
     );
 };
 

@@ -1,10 +1,8 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const News = require("../Models/newsItemsSchema");
-const path = require("path");
-const fs = require("fs/promises"); 
-const sharp = require("sharp");
-const cloudinary = require("../Utils/cloudinary");
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+const streamifier = require("streamifier");
+const axios = require("axios");
+const FormData = require("form-data");
 
 exports.AddNews = AsyncErrorHandler(async (req, res) => {
   const requiredFields = ["title", "date", "excerpt", "category"];
@@ -39,13 +37,51 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  let imageData = { url: "" };
+  let avatar = { url: "", public_id: "" };
 
+  // Upload image to Hostinger if file exists
   if (req.file) {
-    // Multer (diskStorage) has already saved the file.
-    // We just need to get the file path and save it to the database.
-    const fileName = path.basename(req.file.path);
-    imageData.url = `/uploads/${fileName}`;
+    const fileName = `${Date.now()}_${req.file.originalname}`;
+
+    try {
+      const FormData = require("form-data");
+      const form = new FormData();
+
+      // Append buffer directly (Node.js)
+      form.append("file", req.file.buffer, {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype,
+      });
+
+      const response = await axios.post(
+        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        form,
+        {
+          headers: form.getHeaders(),
+          maxBodyLength: Infinity,
+        }
+      );
+
+      console.log("Hostinger response:", response.data);
+
+      if (!response.data.success) {
+        return res.status(500).json({
+          error: response.data.message || "Failed to upload image",
+        });
+      }
+
+      avatar = {
+        url: response.data.url, // PHP script should return public URL
+        public_id: fileName,
+      };
+      console.log("✅ News image uploaded to Hostinger:", avatar.url);
+    } catch (err) {
+      console.error(
+        "❌ Hostinger upload failed:",
+        err.response?.data || err.message
+      );
+      return res.status(500).json({ error: "Failed to upload news image" });
+    }
   }
 
   const newNews = await News.create({
@@ -53,7 +89,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     date,
     excerpt,
     category,
-    avatar: imageData,
+    avatar,
   });
 
   return res.status(201).json({
@@ -61,6 +97,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     news: newNews,
   });
 });
+
 exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -99,7 +136,7 @@ exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
       .select("_id avatar title date excerpt category")
       .lean();
 
-    data = data.map(item => ({
+    data = data.map((item) => ({
       ...item,
       date: new Date(item.date).toLocaleDateString("en-US"), // Format: MM/DD/YYYY
     }));
@@ -121,8 +158,7 @@ exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
   }
 });
 
-
-exports.UpdateNews = async (req, res) => {
+exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
   const NewsID = req.params.id;
 
   try {
@@ -131,39 +167,50 @@ exports.UpdateNews = async (req, res) => {
       return res.status(404).json({ error: "News not found" });
     }
 
-    let avatarData = oldRecord.avatar || null;
+    const avatarObj = oldRecord.avatar || {};
+    let newAvatarUrl = avatarObj.url || null;
+    const oldAvatarUrl = avatarObj.url;
 
     if (req.file) {
-      // Tanggalin ang lumang file kung mayroon
-      if (oldRecord.avatar?.url) {
-        const oldFileName = path.basename(oldRecord.avatar.url);
-        const oldFilePath = path.join(uploadsDir, oldFileName);
-        
-        try {
-          // Gumamit ng fs.promises.unlink para async ang pag-delete
-          await fs.unlink(oldFilePath);
-        } catch (err) {
-          // I-log ang error pero huwag mag-crash kung hindi ma-delete ang lumang file
-          console.error("Failed to delete old image:", err.message);
+      const form = new FormData();
+      const readStream = streamifier.createReadStream(req.file.buffer);
+      form.append("file", readStream, {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype,
+      });
+
+      const uploadResponse = await axios.post(
+        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        form, {
+          headers: form.getHeaders(),
+          maxBodyLength: Infinity,
         }
+      );
+
+      if (!uploadResponse.data.success) {
+        return res.status(500).json({
+          error: uploadResponse.data.message || "Failed to upload new image",
+        });
       }
 
-      // I-save ang bagong file sa local storage
-      const newFilePath = req.file.path; // Galing ito sa multer.diskStorage
-      const fileName = path.basename(newFilePath);
-      avatarData = { url: `/uploads/${fileName}` };
+      newAvatarUrl = uploadResponse.data.url;
+      console.log("New news image uploaded to Hostinger:", newAvatarUrl);
     }
 
-    // I-update ang database record
     const updateData = {
       title: req.body.title,
       date: req.body.date,
       excerpt: req.body.excerpt,
       category: req.body.category,
       detailInfo: req.body.detailInfo,
-      // I-update lang ang avatar kung may bagong file
-      avatar: avatarData,
     };
+
+    if (req.file) {
+      updateData.avatar = {
+        ...avatarObj,
+        url: newAvatarUrl,
+      };
+    }
 
     const updatedNews = await News.findByIdAndUpdate(NewsID, updateData, { new: true });
 
@@ -173,12 +220,35 @@ exports.UpdateNews = async (req, res) => {
 
     res.json({ status: "success", data: updatedNews });
 
+    if (req.file && oldAvatarUrl) {
+      const params = new URLSearchParams();
+      params.append("file", oldAvatarUrl);
+
+      axios.post(
+          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          params.toString(), {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        )
+        .then(response => {
+          if (response.data.success) {
+            console.log("Old news image deleted in background:", oldAvatarUrl);
+          } else {
+            console.error("Failed to delete old news image in background:", response.data.message);
+          }
+        })
+        .catch(error => {
+          console.error("Error deleting old news image in background:", error.message);
+        });
+    }
+
   } catch (error) {
-    console.error(error);
+    console.error("UpdateNews Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
-};
-
+});
 
 exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
   const NewsID = req.params.id;
@@ -191,26 +261,51 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 
-  // Tanggalin ang lokal na image file kung mayroon
-  if (existingNews.avatar && existingNews.avatar.url) {
-    const fileName = path.basename(existingNews.avatar.url);
-    const filePath = path.join(uploadsDir, fileName);
+  const avatarUrlToDelete = existingNews.avatar?.url;
 
-    try {
-      await fs.unlink(filePath);
-    } catch (error) {
-      console.error("Local file deletion failed:", error);
-      // It's okay to continue even if the file deletion fails,
-      // as the primary goal is to remove the database record.
-    }
-  }
-
-  // Tanggalin ang database record
+  // Hakbang 1: Tanggalin ang database record
   await News.findByIdAndDelete(NewsID);
 
+  // Hakbang 2: Magbigay ng mabilis na success response sa user
   res.status(200).json({
     status: "success",
     message: "News and related image deleted successfully.",
     data: null,
   });
+
+  // Hakbang 3: "Fire and Forget" - I-delete ang image file sa background
+  if (avatarUrlToDelete) {
+    const params = new URLSearchParams();
+    params.append("file", avatarUrlToDelete);
+
+    axios
+      .post(
+        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        params.toString(),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+      .then((response) => {
+        if (response.data.success) {
+          console.log(
+            "✅ News image deleted from Hostinger in background:",
+            avatarUrlToDelete
+          );
+        } else {
+          console.error(
+            "❌ Failed to delete news image from Hostinger in background:",
+            response.data.message
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "❌ Error deleting news image from Hostinger in background:",
+          error.message
+        );
+      });
+  }
 });

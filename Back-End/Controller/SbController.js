@@ -1,11 +1,7 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const SBmember = require("../Models/SBmember");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
-const cloudinary = require("../Utils/cloudinary");
-const fs = require('fs/promises'); // For async file operations
-const path = require('path');
-
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+const axios = require("axios");
 exports.createSBmember = AsyncErrorHandler(async (req, res) => {
   const newSBmember = await SBmember.create(req.body);
 
@@ -174,38 +170,42 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
 
 
 
-exports.UpdateSBmember = async (req, res) => {
+exports.UpdateSBmember = AsyncErrorHandler(async (req, res) => {
   const SbmemberID = req.params.id;
 
   try {
-    // 1. Hanapin ang SB member record para makuha ang lumang avatar path
     const oldRecord = await SBmember.findById(SbmemberID);
     if (!oldRecord) {
       return res.status(404).json({ error: "SB Member not found" });
     }
 
-    let avatarPath = oldRecord.avatar?.url || null;
+    const avatarObj = oldRecord.avatar || {};
+    let newAvatarUrl = avatarObj.url || null;
+    const oldAvatarUrl = avatarObj.url;
 
     if (req.file) {
-      // Dito, gamitin ang req.file.path na galing sa multer.diskStorage
-      const newFilePath = req.file.path;
-      const fileName = path.basename(newFilePath);
-      avatarPath = `/uploads/${fileName}`;
+      const form = new FormData();
+      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+      form.append("file", blob, req.file.originalname);
 
-      // Step 1: I-delete ang lumang avatar
-      if (oldRecord.avatar?.url) {
-        const oldFileName = path.basename(oldRecord.avatar.url);
-        const oldFilePath = path.join(uploadsDir, oldFileName);
-        
-        try {
-          await fs.unlink(oldFilePath);
-        } catch (err) {
-          console.error("Failed to delete old image:", err.message);
+      const uploadResponse = await axios.post(
+        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        form, {
+          headers: { "Content-Type": "multipart/form-data" },
+          maxBodyLength: Infinity,
         }
+      );
+
+      if (!uploadResponse.data.success) {
+        return res.status(500).json({
+          error: uploadResponse.data.message || "Failed to upload new avatar",
+        });
       }
+
+      newAvatarUrl = uploadResponse.data.url;
+      console.log("New avatar uploaded to Hostinger:", newAvatarUrl);
     }
 
-    // Step 2: I-update ang database record
     const updateData = {
       first_name: req.body.first_name,
       last_name: req.body.last_name,
@@ -213,22 +213,55 @@ exports.UpdateSBmember = async (req, res) => {
       email: req.body.email,
       Position: req.body.Position,
       detailInfo: req.body.detailInfo,
-      // I-update lang ang avatar kung may bagong file
-      ...(req.file && { avatar: { url: avatarPath } }),
     };
 
-    const updatedSBmember = await SBmember.findByIdAndUpdate(SbmemberID, updateData, { new: true });
+    if (req.file) {
+      updateData.avatar = {
+        ...avatarObj,
+        url: newAvatarUrl,
+      };
+    }
+
+    const updatedSBmember = await SBmember.findByIdAndUpdate(
+      SbmemberID,
+      updateData, { new: true }
+    );
 
     if (!updatedSBmember) {
       return res.status(404).json({ error: "SB Member not found after update" });
     }
 
     res.json({ status: "success", data: updatedSBmember });
+
+    if (req.file && oldAvatarUrl) {
+      const params = new URLSearchParams();
+      params.append("file", oldAvatarUrl);
+
+      axios.post(
+          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          params.toString(), {
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+          }
+        )
+        .then(response => {
+          if (response.data.success) {
+            console.log("Old avatar deleted in background:", oldAvatarUrl);
+          } else {
+            console.error("Failed to delete old avatar in background:", response.data.message);
+          }
+        })
+        .catch(error => {
+          console.error("Error deleting old avatar in background:", error.message);
+        });
+    }
+
   } catch (error) {
-    console.error(error);
+    console.error("UpdateSBmember Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   }
-};
+});
 
 
 exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
@@ -238,38 +271,53 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
   if (!existingSB) {
     return res.status(404).json({
       status: "fail",
-      message: "Officer not found.",
+      message: "SB member not found.",
     });
   }
 
-  // 🗑 Delete the local image file if it exists
-  if (existingSB.avatar && existingSB.avatar.url) {
-    const fileName = path.basename(existingSB.avatar.url);
-    const filePath = path.join(uploadsDir, fileName);
+  const avatarUrlToDelete = existingSB.avatar?.url;
 
-    try {
-      await fs.unlink(filePath);
-    } catch (error) {
-      console.error("Local file deletion failed:", error);
-      // It's okay to continue if the file deletion fails.
-    }
-  }
-
-  // 🗑 Delete linked login
+  // Hakbang 1: Tanggalin ang linked login at ang SB member record sa database.
   const userLogin = await UserLoginSchema.findOne({ linkedId: SbmemberID });
   if (userLogin) {
     await UserLoginSchema.findByIdAndDelete(userLogin._id);
   }
 
-  // 🗑 Delete the SB member record
   await SBmember.findByIdAndDelete(SbmemberID);
 
+  // Hakbang 2: Magbigay ng mabilis na success response sa user.
   res.status(200).json({
     status: "success",
-    message: "Officer and related login deleted successfully.",
-    data: null,
+    message: "SB member and related login deleted successfully.",
   });
+
+  // Hakbang 3: "Fire and Forget" - I-delete ang avatar file sa background.
+  if (avatarUrlToDelete) {
+    const params = new URLSearchParams();
+    params.append("file", avatarUrlToDelete);
+
+    axios.post(
+      "https://tan-kudu-520349.hostingersite.com/delete.php",
+      params.toString(), {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    )
+    .then(response => {
+      if (response.data.success) {
+        console.log("✅ Avatar deleted from Hostinger in background:", avatarUrlToDelete);
+      } else {
+        console.error("❌ Failed to delete avatar from Hostinger in background:", response.data.message);
+      }
+    })
+    .catch(error => {
+      console.error("❌ Error deleting avatar from Hostinger in background:", error.message);
+    });
+  }
 });
+
+
 
 
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {

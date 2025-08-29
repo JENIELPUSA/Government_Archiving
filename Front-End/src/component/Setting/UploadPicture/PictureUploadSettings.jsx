@@ -108,7 +108,7 @@ const PictureUploadSettings = () => {
     };
 
     return (
-        <div className="mb-8">
+        <div className="mb-8 mt-8">
             <h2 className="mb-4 text-xl font-bold">Set-Up Public-Access Dashboard</h2>
             <div className="mb-4 flex items-center justify-between">
                 <label className="flex cursor-pointer items-center">
@@ -174,7 +174,7 @@ const PictureUploadSettings = () => {
                                                     rel="noopener noreferrer"
                                                 >
                                                     <img
-                                                        src={`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}${picture.avatar.url}`}
+                                                        src={picture.avatar.url || "https://randomuser.me/api/portraits/men/64.jpg" }
                                                         alt={picture.title}
                                                         className="h-10 w-16 rounded object-contain"
                                                     />

@@ -155,9 +155,9 @@ const UploadForm = () => {
             email: newAuthorEmail,
             Position: newAuthorPosition,
         };
-        
+
         const result = await AddSbData(authorData);
-        
+
         if (result && result.data) {
             setCustomAuthor(authorDisplayName);
             setCustomAuthorId(result.data._id); // NEW: Store new author ID
@@ -172,6 +172,31 @@ const UploadForm = () => {
 
         setShowAuthorModal(false);
         setAuthorError("");
+    };
+
+    // Function to reset all form fields
+    const resetForm = () => {
+        setTitle("");
+        setCategory("");
+        setSummary("");
+        setAuthorId(null);
+        setCustomAuthorId(null);
+        setCustomAuthor("");
+        setDateOfResolution("");
+        setResolutionNumber("");
+        setSelectedFile(null);
+        setAuthorType("sbMember");
+        setFileError("");
+        setTitleError("");
+        setResolutionNumberError("");
+        setAuthorError("");
+        setApproverError("");
+        setUploadMessage("");
+
+        // Reset file input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
     };
 
     const handleUpload = async (e) => {
@@ -206,7 +231,7 @@ const UploadForm = () => {
 
         // Require approver for Resolution/Ordinance
         if (isResolutionOrOrdinance && (!approver || !approver._id)) {
-            setApproverError("Please select an approver in the sidebar");
+            setApproverError("Please Add Approver Account!");
             valid = false;
         }
 
@@ -229,6 +254,13 @@ const UploadForm = () => {
 
     // New function to handle final submission
     const handleFinalSubmit = async () => {
+        // 1. ADD VALIDATION CHECK HERE
+        if (!selectedFile) {
+            console.error("No file selected.");
+            setUploadMessage("Please select a file to upload.");
+            return; // Hihinto ang function kung walang file
+        }
+
         // Close the modal immediately
         setShowPdfModal(false);
 
@@ -239,8 +271,7 @@ const UploadForm = () => {
         formData.append("summary", summary);
         formData.append("admin", linkId);
         formData.append("dateOfResolution", dateOfResolution);
-        
-        // UPDATED: Include either SB member or custom author
+
         if (authorId) {
             formData.append("author", authorId);
         } else if (customAuthorId) {
@@ -251,7 +282,6 @@ const UploadForm = () => {
             formData.append("resolutionNumber", resolutionNumber);
         }
 
-        // Automatically include approver for Resolution/Ordinance
         if (isResolutionOrOrdinance && approver?._id) {
             formData.append("approverID", approver._id);
         }
@@ -263,15 +293,8 @@ const UploadForm = () => {
             const result = await AddFiles(formData);
             if (result.success) {
                 setUploadMessage("File uploaded successfully.");
-                setSelectedFile(null);
-                setTitle("");
-                setCategory("");
-                setSummary("");
-                setAuthorId(null);
-                setCustomAuthorId(null); // NEW: Reset custom author ID
-                setCustomAuthor(""); // NEW: Reset custom author name
-                setDateOfResolution("");
-                setResolutionNumber("");
+                // Reset all form fields after successful upload
+                resetForm();
                 setModalStatus("success");
                 setShowModal(true);
             }
@@ -295,6 +318,15 @@ const UploadForm = () => {
             onSubmit={handleUpload}
             className="relative w-full rounded-2xl bg-gradient-to-br from-white/50 to-blue-50/30 p-6 shadow-xl backdrop-blur-xl transition-all duration-300 hover:shadow-2xl dark:from-slate-800/70 dark:to-slate-900/80 dark:ring-1 dark:ring-gray-900"
         >
+            {/* Approver error message */}
+            {isResolutionOrOrdinance && approverError && (
+                <div className="mt-1.5 flex items-start rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                    <div className="mr-2 mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                        <FiX size={14} />
+                    </div>
+                    <p className="text-sm text-red-600 dark:text-red-400">{approverError}</p>
+                </div>
+            )}
             {isLoading && (
                 <div className="absolute inset-0 z-[999] flex flex-col items-center justify-center rounded-2xl bg-white/90 backdrop-blur-xl dark:bg-gray-900/95">
                     <div className="relative">
@@ -381,22 +413,12 @@ const UploadForm = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Approver error message */}
-                            {isResolutionOrOrdinance && approverError && (
-                                <div className="mt-1.5 flex items-start rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
-                                    <div className="mr-2 mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
-                                        <FiX size={14} />
-                                    </div>
-                                    <p className="text-sm text-red-600 dark:text-red-400">{approverError}</p>
-                                </div>
-                            )}
                         </div>
                         {(isResolution || isOrdinance) && (
                             <div>
                                 <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                     <FiHash className="text-blue-500" />
-                                    Resolution No. <span className="text-red-500">*</span>
+                                    Resolution / Ordinance No. <span className="text-red-500">*</span>
                                 </label>
                                 {isFormLoading ? (
                                     <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
@@ -449,9 +471,7 @@ const UploadForm = () => {
                                         <div className="flex items-center">
                                             {selectedMember ? (
                                                 <div className="text-left">
-                                                    <div className="font-medium">
-                                                        {selectedMember.full_name}
-                                                    </div>
+                                                    <div className="font-medium">{selectedMember.full_name}</div>
                                                     <div className="mt-0.5 text-xs text-gray-500">{selectedMember.Position}</div>
                                                 </div>
                                             ) : customAuthor ? (
@@ -515,9 +535,7 @@ const UploadForm = () => {
                                                                 }}
                                                                 className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                                                             >
-                                                                <div className="font-medium">
-                                                                    {member.full_name}
-                                                                </div>
+                                                                <div className="font-medium">{member.full_name}</div>
                                                                 <div className="mt-1 text-xs text-gray-500">{member.Position}</div>
                                                             </div>
                                                         ))}
@@ -552,7 +570,7 @@ const UploadForm = () => {
                         <div>
                             <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 <FiCalendar className="text-blue-500" />
-                                Date of Resolution
+                                Date of Resolution/Ordinance
                             </label>
                             {isFormLoading ? (
                                 <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />

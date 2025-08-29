@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-
-function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
+import { Image } from 'lucide-react';
+function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
     const [newMember, setNewMember] = useState({
         first_name: "",
         middle_name: "",
@@ -16,7 +16,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
         preview: null,
     });
     const [isLoading, setIsLoading] = useState(false);
-
     const fileInputRef = useRef(null);
     useEffect(() => {
         if (memberToEdit) {
@@ -31,9 +30,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit }) {
                 term_from: memberToEdit.memberInfo?.term_from || "",
                 term_to: memberToEdit.memberInfo?.term_to || "",
                 avatar: null,
-                preview:
-                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}${memberToEdit.memberInfo?.avatar?.url}` ||
-                    "https://randomuser.me/api/portraits/men/64.jpg",
+                preview: 
+                  Image 
             });
         } else {
             setNewMember({

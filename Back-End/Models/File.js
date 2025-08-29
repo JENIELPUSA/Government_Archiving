@@ -20,6 +20,7 @@ const ArchivingSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    remotePath: { type: String },
     fileSize: Number,
     fileUrl: {
       type: String,
@@ -119,6 +120,13 @@ ArchivingSchema.pre("save", function (next) {
     this.tags = [...new Set(words)].slice(0, 5);
   }
 
+
+  ArchivingSchema.pre("save", function (next) {
+  const categoryFolder = this.category.toString();
+  const dateFolder = this.dateOfResolution.toISOString().split("T")[0];
+  this.remotePath = `/public_html/uploads/${categoryFolder}/${dateFolder}/${this.fileName}`;
+  next();
+});
   // Auto-add archivedMetadata if ArchivedStatus is 'Archived' and metadata is not present
   if (
     this.ArchivedStatus === "Archived" &&

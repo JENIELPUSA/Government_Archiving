@@ -74,10 +74,10 @@ export const FilesDisplayProvider = ({ children }) => {
 
     const AddFiles = async (formData) => {
         try {
-            const res = await axiosInstance.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, formData, {
+            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
-                    "Content-Type": "multipart/form-data",
+                   
                 },
             });
 

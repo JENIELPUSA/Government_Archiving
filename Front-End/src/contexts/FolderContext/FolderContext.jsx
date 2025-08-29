@@ -2,6 +2,7 @@ import React, { createContext, useState, useEffect, useContext, useCallback } fr
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
 import axiosInstance from "../../ReusableFolder/axioxInstance";
+import axios from "axios";
 
 export const FolderContext = createContext();
 
@@ -53,7 +54,7 @@ export const FolderDisplayProvider = ({ children }) => {
 
     const AddFolder = async (values) => {
         try {
-            const res = await axiosInstance.post(
+            const res = await axios.post(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder`,
                 {
                     folderName: values.name,

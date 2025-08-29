@@ -3,9 +3,8 @@ const Admin = require("../Models/AdminSchema");
 const Approver = require("../Models/ApproverSchema");
 const Officer = require("../Models/OfficerSchema");
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
-const fs = require("fs");
+const axios = require("axios");
 const CustomError = require("../Utils/CustomError");
-const path = require('path');
 const jwt = require("jsonwebtoken");
 const util = require("util");
 const crypto = require("crypto");
@@ -38,7 +37,7 @@ const createSendResponse = (user, statusCode, res) => {
 
 exports.signup = AsyncErrorHandler(async (req, res) => {
   console.log("Received data:", req.body);
-  
+
   try {
     const {
       contact_number,
@@ -67,18 +66,13 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     const requiredFields = requiredFieldsByRole[role];
     if (!requiredFields) {
       return res.status(400).json({
-        message:
-          "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
+        message: "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
       });
     }
 
     const missingFields = [];
     requiredFields.forEach((field) => {
-      if (!req.body[field]) {
-        missingFields.push(
-          field.replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase())
-        );
-      }
+      if (!req.body[field]) missingFields.push(field);
     });
 
     if (missingFields.length > 0) {
@@ -89,13 +83,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const existingUser = await UserLogin.findOne({ username: email });
     if (existingUser) {
-      if (req.file) {
-        const filePath = path.join(__dirname, '..', '..', 'uploads', req.file.filename);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-          console.log("Deleted uploaded avatar due to existing user.");
-        }
-      }
       return res.status(400).json({
         message: "User with this email already exists!",
       });
@@ -103,23 +90,52 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     let avatar = { url: "", public_id: "" };
 
+    // Hakbang 1: I-upload ang image nang synchronous
     if (req.file) {
-      const avatarUrl = `/uploads/${req.file.filename}`;
-      avatar = {
-        url: avatarUrl,
-        public_id: req.file.filename,
-      };
-      console.log("Avatar saved to local storage:", avatar.url);
+      const fileName = `${Date.now()}_${req.file.originalname}`;
+      
+      try {
+        const form = new FormData();
+        const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
+        form.append("file", blob, req.file.originalname);
+
+        const response = await axios.post(
+          "https://tan-kudu-520349.hostingersite.com/upload.php",
+          form,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+            maxBodyLength: Infinity,
+          }
+        );
+
+        console.log("Hostinger response:", response.data);
+
+        if (!response.data.success) {
+          return res.status(500).json({
+            error: response.data.message || "Failed to upload avatar",
+          });
+        }
+
+        avatar = {
+          url: response.data.url,
+          public_id: fileName,
+        };
+        console.log("✅ Avatar uploaded to Hostinger:", avatar.url);
+      } catch (err) {
+        console.error("❌ Hostinger upload failed:", err.response?.data || err.message);
+        return res.status(500).json({ error: "Failed to upload avatar image" });
+      }
     }
-    
+
+    // Hakbang 2: Magpatuloy sa paglikha ng records sa database
     const profileModels = {
       admin: Admin,
       officer: Officer,
       approver: Approver,
       sbmember: SBmember,
     };
-
     const profileModel = profileModels[role];
+
     const profileData = {
       avatar,
       first_name,
@@ -133,10 +149,8 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     };
 
     if (gender) profileData.gender = gender;
-
-    if (Position) {
+    if (Position)
       profileData.Position = Array.isArray(Position) ? Position[0] : Position;
-    }
 
     const linkedRecord = await profileModel.create(profileData);
 
@@ -151,43 +165,40 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       linkedId: linkedRecord._id,
       isVerified: true,
     });
+    
+    // Hakbang 3: Magbigay ng mabilis na "Success" response
+    res.status(201).json({
+      status: "Success",
+      user: newUserLogin,
+      profile: linkedRecord,
+    });
 
+    // Hakbang 4: "Fire and Forget" - Gawin sa background ang email at Socket.IO events
     if (role !== "sbmember") {
-      await sendEmail({
+      sendEmail({
         email,
         subject: "Your Account Credentials",
         text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
+      }).catch(err => {
+        console.error("❌ Failed to send signup email in background:", err.message);
       });
     }
 
     const io = req.app.get("io");
     if (io) {
-        io.emit("newUserSignup", {
-            user: {
-                id: newUserLogin._id,
-                first_name: newUserLogin.first_name,
-                last_name: newUserLogin.last_name,
-                role: newUserLogin.role,
-            },
-            profile: linkedRecord,
-        });
+      io.emit("newUserSignup", {
+        user: {
+          id: newUserLogin._id,
+          first_name: newUserLogin.first_name,
+          last_name: newUserLogin.last_name,
+          role: newUserLogin.role,
+        },
+        profile: linkedRecord,
+      });
     }
 
-    return res.status(201).json({
-      status: "Success",
-      user: newUserLogin,
-      profile: linkedRecord,
-    });
   } catch (error) {
     console.error("Signup Error:", error);
-    if (req.file && req.file.filename) {
-      // ✅ Inalis ang 'AVATARS' sa path para maging consistent
-      const filePath = path.join(__dirname, '..', '..', 'uploads', req.file.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log("Deleted uploaded avatar due to signup error.");
-      }
-    }
     return res.status(500).json({
       message: "Something went wrong during signup.",
       error: error.message,
@@ -219,6 +230,13 @@ exports.login = AsyncErrorHandler(async (req, res, next) => {
       linkId = patient._id;
       zone = patient.zone;
     }
+  }
+
+   // Optional: destroy old session to prevent multiple sessions per user
+  if (req.session.userId && req.session.userId !== user._id) {
+    req.session.destroy(err => {
+      if (err) console.log("Failed to destroy old session:", err);
+    });
   }
 
   //Generate token with role and linkId
@@ -394,12 +412,6 @@ exports.protect = AsyncErrorHandler(async (req, res, next) => {
     last_name: user.last_name,
     linkId,
   };
-
-  // 6. Store to session for future requests
-  req.session.user = userData;
-  req.session.isLoggedIn = true;
-  req.user = userData;
-
   next();
 });
 

@@ -19,5 +19,4 @@ router
   .route("/AuthhorDropdown")
   .get(authController.protect,SBmemberController.DisplaySBmemberInDropdown)
 
-
 module.exports = router;
