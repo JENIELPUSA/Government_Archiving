@@ -11,6 +11,12 @@ const SBmember = require("../Models/SBmember");
 const { Blob } = require("buffer");
 const axios = require("axios");
 const ftp = require("basic-ftp");
+const fs = require("fs");
+const FormData = require("form-data");
+
+
+
+
 const sanitizeFolderName = (name) => {
   return name
     .replace(/[^a-zA-Z0-9\s]/g, "")
@@ -341,6 +347,8 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
+
+
 exports.createFiles = async (req, res) => {
   try {
     if (!req.file) {
@@ -374,7 +382,8 @@ exports.createFiles = async (req, res) => {
       return res.status(400).json({ error: "Invalid approver ID" });
     }
 
-    const fileName = `${Date.now()}_${req.file.originalname}`;
+    // File details
+    const fileName = req.file.filename;
     const fileSize = req.file.size;
     const ext = path.extname(req.file.originalname).toLowerCase();
 
@@ -396,22 +405,20 @@ exports.createFiles = async (req, res) => {
     };
     const fullTextType = typeMap[ext] || "Unknown";
 
+    // --- Upload to Hostinger ---
     let remotePath;
     try {
       const form = new FormData();
-      const blob = new Blob([req.file.buffer], { type: req.file.mimetype });
-      form.append("file", blob, req.file.originalname);
+      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
 
       const response = await axios.post(
         "https://tan-kudu-520349.hostingersite.com/upload.php",
         form,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+           headers: { "Content-Type": "multipart/form-data" },
           maxBodyLength: Infinity,
         }
       );
-
-      console.log("Hostinger response:", response.data);
 
       if (!response.data.success) {
         return res.status(500).json({
@@ -421,16 +428,17 @@ exports.createFiles = async (req, res) => {
 
       remotePath = response.data.url;
       console.log("File uploaded to Hostinger:", remotePath);
+
+      // Delete temp file
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete temp file:", err);
+      });
     } catch (phpErr) {
-      console.error(
-        "Hostinger upload failed:",
-        phpErr.response?.data || phpErr.message || phpErr
-      );
-      return res
-        .status(500)
-        .json({ error: "Failed to upload file to Hostinger" });
+      console.error("Hostinger upload failed:", phpErr.response?.data || phpErr.message || phpErr);
+      return res.status(500).json({ error: "Failed to upload file to Hostinger" });
     }
 
+    // --- Prepare file data for DB ---
     const fileData = {
       title,
       resolutionNumber,
@@ -450,6 +458,7 @@ exports.createFiles = async (req, res) => {
       fullText: fullTextType,
     };
 
+    // Check category for special status
     let categoryName = null;
     if (mongoose.Types.ObjectId.isValid(category)) {
       const categoryDoc = await Category.findById(category).lean();
@@ -463,6 +472,8 @@ exports.createFiles = async (req, res) => {
         fileData.ArchivedStatus = "Archived";
       }
     }
+
+    // --- Save to database ---
     let savedFile;
     try {
       savedFile = await new Files(fileData);
@@ -473,7 +484,7 @@ exports.createFiles = async (req, res) => {
       return res.status(500).json({ error: "Failed to save file to database" });
     }
 
-    // Log activity
+    // --- Log activity ---
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
     const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
@@ -492,7 +503,7 @@ exports.createFiles = async (req, res) => {
       });
     }
 
-    // Notification for Pending
+    // --- Notifications for Pending ---
     if (savedFile.status === "Pending") {
       const fileId = savedFile._id;
       const fileTitle = savedFile.title || "Untitled Document";
@@ -521,7 +532,7 @@ exports.createFiles = async (req, res) => {
           if (io) {
             const SendMessage = {
               message: messageText,
-              data: savedFile, // directly send savedFile instead of enrichedFile
+              data: savedFile,
               notificationId: notificationDoc._id,
               FileId: fileId,
               approverID: approverID,
@@ -529,28 +540,23 @@ exports.createFiles = async (req, res) => {
 
             const receiver = global.connectedUsers?.[targetViewer];
             if (receiver) {
-              io.to(receiver.socketId).emit(
-                "SentDocumentNotification",
-                SendMessage
-              );
-              console.log(
-                `📨 Sent real-time notification to USER (${targetViewer})`
-              );
+              io.to(receiver.socketId).emit("SentDocumentNotification", SendMessage);
+              console.log(`📨 Sent real-time notification to USER (${targetViewer})`);
             } else {
-              console.log(
-                `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
-              );
+              console.log(`📭 User (${targetViewer}) is OFFLINE - notification saved in DB`);
             }
           }
         }
       }
     }
+
     res.status(201).json({ status: "success", data: savedFile });
   } catch (err) {
     console.error("Upload error:", err.message || err);
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
