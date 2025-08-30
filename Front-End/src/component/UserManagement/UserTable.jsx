@@ -45,6 +45,9 @@ const UserTable = () => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const currentAdmins = (isAdmin || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
+
+    console.log("isAdmin",isAdmin)
+
     const goToPage = (page) => {
         if (page < 1 || page > totalPages) return;
 
@@ -92,19 +95,6 @@ const UserTable = () => {
             setLoading(false);
         }
     };
-    const getAvatarUrl = (avatar) => {
-        if (!avatar || !avatar.url) return null;
-        
-        if (avatar.url.startsWith('http')) {
-            return avatar.url;
-        }
-
-        const baseURL = import.meta.env.VITE_REACT_APP_BACKEND_BASEURL || '';
-        const formattedBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
-        const formattedAvatarURL = avatar.url.startsWith('/') ? avatar.url : `/${avatar.url}`;
-        
-        return `${formattedBaseURL}${formattedAvatarURL}`;
-    };
 
     return (
         <div className="relative w-full space-y-6">
@@ -148,16 +138,15 @@ const UserTable = () => {
                             [...Array(ITEMS_PER_PAGE)].map((_, i) => <UserRowSkeleton key={i} />)
                         ) : currentAdmins.length > 0 ? (
                             currentAdmins.map((user) => {
-                                const avatarUrl = getAvatarUrl(user.avatar);
                                 return (
                                     <tr
                                         key={user.id || user._id}
                                         className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                     >
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                            {avatarUrl ? (
+                                            {user.avatar.url ? (
                                                 <img
-                                                    src={avatarUrl}
+                                                    src={user.avatar.url}
                                                     alt="User Avatar"
                                                     className="h-10 w-10 rounded-full object-cover"
                                                     onError={(e) => {

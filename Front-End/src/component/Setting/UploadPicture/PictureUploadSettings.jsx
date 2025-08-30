@@ -220,7 +220,7 @@ const PictureUploadSettings = () => {
                     }}
                     onSave={handleAddPicture}
                     picture={editingPicture}
-                    categories={["Documentation", "Carousel"]}
+                    categories={["Documentation"]}
                 />
             )}
         </div>

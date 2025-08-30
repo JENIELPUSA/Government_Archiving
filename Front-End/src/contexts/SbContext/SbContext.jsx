@@ -30,7 +30,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             setSBMember(res.data.data);
-            console.log("SB MEMBER",res.data.data)
+            console.log("SB MEMBER", res.data.data);
         } catch (error) {
             console.error("Error fetching SB member:", error);
         }
@@ -69,7 +69,6 @@ export const SbMemberDisplayProvider = ({ children }) => {
     );
 
     const DisplayPublicAuthor = useCallback(
-        
         async (queryParams = {}) => {
             try {
                 const res = await axiosInstance.post(
@@ -96,6 +95,8 @@ export const SbMemberDisplayProvider = ({ children }) => {
     );
 
     const AddSbData = async (values) => {
+        console.log("values", values);
+
         try {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
@@ -113,13 +114,12 @@ export const SbMemberDisplayProvider = ({ children }) => {
             if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
             if (values.Position) formData.append("Position", values.Position);
             if (values.district) formData.append("district", values.district);
-            if (values.avatar instanceof File) {
-                formData.append("avatar", values.avatar);
-            }
+            if (values.avatar) formData.append("avatar", values.avatar);
 
             const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
-                headers: {
+                 headers: {
                     Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
                 },
             });
 

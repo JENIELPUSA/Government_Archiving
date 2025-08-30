@@ -3,11 +3,11 @@ const News = require("../Models/newsItemsSchema");
 const streamifier = require("streamifier");
 const axios = require("axios");
 const FormData = require("form-data");
+const fs = require("fs");
 
 exports.AddNews = AsyncErrorHandler(async (req, res) => {
   const requiredFields = ["title", "date", "excerpt", "category"];
   const missingFields = requiredFields.filter((field) => !req.body[field]);
-
   if (missingFields.length > 0) {
     return res.status(400).json({
       message: `Missing required fields: ${missingFields.join(", ")}`,
@@ -16,6 +16,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 
   let { title, date, excerpt, category } = req.body;
 
+  // --- 2Date Validation ---
   if (typeof date === "string") {
     date = new Date(date);
     if (isNaN(date.getTime())) {
@@ -23,6 +24,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
+  // --- 3Category Limits ---
   const categoryLimits = {
     Carousel: 5,
     Documentation: 10,
@@ -37,21 +39,20 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
+  // --- 4Image Upload to Hostinger ---
   let avatar = { url: "", public_id: "" };
 
-  // Upload image to Hostinger if file exists
   if (req.file) {
-    const fileName = `${Date.now()}_${req.file.originalname}`;
+    // Validate file type
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: "Invalid image type" });
+    }
 
+    const fileName = req.file.filename; // filename sa disk
     try {
-      const FormData = require("form-data");
       const form = new FormData();
-
-      // Append buffer directly (Node.js)
-      form.append("file", req.file.buffer, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-      });
+      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
 
       const response = await axios.post(
         "https://tan-kudu-520349.hostingersite.com/upload.php",
@@ -62,8 +63,6 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
         }
       );
 
-      console.log("Hostinger response:", response.data);
-
       if (!response.data.success) {
         return res.status(500).json({
           error: response.data.message || "Failed to upload image",
@@ -71,19 +70,25 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
       }
 
       avatar = {
-        url: response.data.url, // PHP script should return public URL
+        url: response.data.url, // Public URL returned by Hostinger
         public_id: fileName,
       };
-      console.log("✅ News image uploaded to Hostinger:", avatar.url);
+      console.log("News image uploaded to Hostinger:", avatar.url);
+
+      // Optional: Delete temp file after upload
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete temp file:", err);
+      });
     } catch (err) {
       console.error(
-        "❌ Hostinger upload failed:",
+        "Hostinger upload failed:",
         err.response?.data || err.message
       );
       return res.status(500).json({ error: "Failed to upload news image" });
     }
   }
 
+  // --- 5Save News in DB ---
   const newNews = await News.create({
     title,
     date,
@@ -92,6 +97,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     avatar,
   });
 
+  // --- 6Response ---
   return res.status(201).json({
     status: "Success",
     news: newNews,
@@ -171,32 +177,48 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
     let newAvatarUrl = avatarObj.url || null;
     const oldAvatarUrl = avatarObj.url;
 
+    // --- Upload new image if exists ---
     if (req.file) {
-      const form = new FormData();
-      const readStream = streamifier.createReadStream(req.file.buffer);
-      form.append("file", readStream, {
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-      });
-
-      const uploadResponse = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
-        form, {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity,
-        }
-      );
-
-      if (!uploadResponse.data.success) {
-        return res.status(500).json({
-          error: uploadResponse.data.message || "Failed to upload new image",
-        });
+      // Validate file type
+      const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      if (!allowedTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ error: "Invalid image type" });
       }
 
-      newAvatarUrl = uploadResponse.data.url;
-      console.log("New news image uploaded to Hostinger:", newAvatarUrl);
+      const fileName = req.file.filename; // filename sa disk
+      const form = new FormData();
+      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
+
+      try {
+        const uploadResponse = await axios.post(
+          "https://tan-kudu-520349.hostingersite.com/upload.php",
+          form,
+          {
+            headers: form.getHeaders(),
+            maxBodyLength: Infinity,
+          }
+        );
+
+        if (!uploadResponse.data.success) {
+          return res.status(500).json({
+            error: uploadResponse.data.message || "Failed to upload new image",
+          });
+        }
+
+        newAvatarUrl = uploadResponse.data.url;
+        console.log("New news image uploaded to Hostinger:", newAvatarUrl);
+
+        // Optional: delete temp file
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Failed to delete temp file:", err);
+        });
+      } catch (err) {
+        console.error("Hostinger upload failed:", err.response?.data || err.message);
+        return res.status(500).json({ error: "Failed to upload news image" });
+      }
     }
 
+    // --- Prepare update data ---
     const updateData = {
       title: req.body.title,
       date: req.body.date,
@@ -212,25 +234,23 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
       };
     }
 
+    // --- Update DB ---
     const updatedNews = await News.findByIdAndUpdate(NewsID, updateData, { new: true });
-
     if (!updatedNews) {
       return res.status(404).json({ error: "News not found after update" });
     }
 
     res.json({ status: "success", data: updatedNews });
 
+    // --- Delete old image in background if new image uploaded ---
     if (req.file && oldAvatarUrl) {
       const params = new URLSearchParams();
       params.append("file", oldAvatarUrl);
 
       axios.post(
           "https://tan-kudu-520349.hostingersite.com/delete.php",
-          params.toString(), {
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-            },
-          }
+          params.toString(),
+          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
         )
         .then(response => {
           if (response.data.success) {
@@ -291,19 +311,19 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
       .then((response) => {
         if (response.data.success) {
           console.log(
-            "✅ News image deleted from Hostinger in background:",
+            "News image deleted from Hostinger in background:",
             avatarUrlToDelete
           );
         } else {
           console.error(
-            "❌ Failed to delete news image from Hostinger in background:",
+            "Failed to delete news image from Hostinger in background:",
             response.data.message
           );
         }
       })
       .catch((error) => {
         console.error(
-          "❌ Error deleting news image from Hostinger in background:",
+          "Error deleting news image from Hostinger in background:",
           error.message
         );
       });

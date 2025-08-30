@@ -8,39 +8,13 @@ const Notification = require("../Models/NotificationSchema");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
 const Category = require("../Models/CategorySchema");
 const SBmember = require("../Models/SBmember");
-const { Blob } = require("buffer");
 const axios = require("axios");
 const ftp = require("basic-ftp");
 const fs = require("fs");
 const FormData = require("form-data");
 
-
-
-
-const sanitizeFolderName = (name) => {
-  return name
-    .replace(/[^a-zA-Z0-9\s]/g, "")
-    .replace(/\s+/g, "_")
-    .trim();
-};
-
 const ftpClient = new ftp.Client();
 ftpClient.ftp.verbose = true;
-let isFtpConnected = false;
-
-async function connectFTP() {
-  if (!isFtpConnected) {
-    await ftpClient.access({
-      host: process.env.FTP_HOST,
-      user: process.env.FTP_USER,
-      password: process.env.FTP_PASSWORD,
-      secure: false,
-      passive: true,
-    });
-    isFtpConnected = true;
-  }
-  return ftpClient;
-}
 
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -347,8 +321,6 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-
-
 exports.createFiles = async (req, res) => {
   try {
     if (!req.file) {
@@ -409,13 +381,17 @@ exports.createFiles = async (req, res) => {
     let remotePath;
     try {
       const form = new FormData();
-      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
+      form.append(
+        "file",
+        fs.createReadStream(req.file.path),
+        req.file.originalname
+      );
 
       const response = await axios.post(
         "https://tan-kudu-520349.hostingersite.com/upload.php",
         form,
         {
-           headers: { "Content-Type": "multipart/form-data" },
+          headers: { "Content-Type": "multipart/form-data" },
           maxBodyLength: Infinity,
         }
       );
@@ -434,8 +410,13 @@ exports.createFiles = async (req, res) => {
         if (err) console.error("Failed to delete temp file:", err);
       });
     } catch (phpErr) {
-      console.error("Hostinger upload failed:", phpErr.response?.data || phpErr.message || phpErr);
-      return res.status(500).json({ error: "Failed to upload file to Hostinger" });
+      console.error(
+        "Hostinger upload failed:",
+        phpErr.response?.data || phpErr.message || phpErr
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to upload file to Hostinger" });
     }
 
     // --- Prepare file data for DB ---
@@ -470,6 +451,14 @@ exports.createFiles = async (req, res) => {
         fileData.ArchivedStatus = "Active";
       } else {
         fileData.ArchivedStatus = "Archived";
+      }
+    }
+
+    if (!fileData.ArchivedStatus) {
+      if (categoryName !== "Resolution" && categoryName !== "Ordinance") {
+        fileData.ArchivedStatus = "Archived";
+      } else {
+        fileData.ArchivedStatus = "Active";
       }
     }
 
@@ -540,10 +529,17 @@ exports.createFiles = async (req, res) => {
 
             const receiver = global.connectedUsers?.[targetViewer];
             if (receiver) {
-              io.to(receiver.socketId).emit("SentDocumentNotification", SendMessage);
-              console.log(`📨 Sent real-time notification to USER (${targetViewer})`);
+              io.to(receiver.socketId).emit(
+                "SentDocumentNotification",
+                SendMessage
+              );
+              console.log(
+                `📨 Sent real-time notification to USER (${targetViewer})`
+              );
             } else {
-              console.log(`📭 User (${targetViewer}) is OFFLINE - notification saved in DB`);
+              console.log(
+                `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
+              );
             }
           }
         }
@@ -556,7 +552,6 @@ exports.createFiles = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -1088,7 +1083,9 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
       performedBy: req.user.linkId,
       performedByModel: capitalizedRole,
       file: file._id,
-      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
+      message: `${capitalizedRole} accessed file: '${
+        file.title || file.fileName
+      }'`,
       level: "info",
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
@@ -1100,15 +1097,22 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
 
   try {
     const response = await axios.get(file.fileUrl, { responseType: "stream" });
-    res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
+    res.setHeader(
+      "Content-Type",
+      response.headers["content-type"] || "application/octet-stream"
+    );
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
     response.data.pipe(res);
     response.data.on("end", () => console.log("📤 File streamed successfully"));
-    response.data.on("error", (err) => console.error("❗ Streaming error:", err));
+    response.data.on("error", (err) =>
+      console.error("❗ Streaming error:", err)
+    );
   } catch (err) {
     console.error("❗ Hostinger streaming failed:", err.message || err);
     if (!res.headersSent) {
-      res.status(500).json({ message: "File streaming failed", error: err.message });
+      res
+        .status(500)
+        .json({ message: "File streaming failed", error: err.message });
     }
   }
 });
@@ -1133,7 +1137,9 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
       performedBy: req.user.linkId,
       performedByModel: capitalizedRole,
       file: file._id,
-      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
+      message: `${capitalizedRole} accessed file: '${
+        file.title || file.fileName
+      }'`,
       level: "info",
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
@@ -1149,7 +1155,10 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
     const response = await axios.get(file.fileUrl, { responseType: "stream" });
 
     // Set headers dynamically
-    res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
+    res.setHeader(
+      "Content-Type",
+      response.headers["content-type"] || "application/octet-stream"
+    );
     res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
 
     // Pipe the remote file stream to the client
@@ -1160,7 +1169,9 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   } catch (err) {
     console.error("Hostinger streaming failed:", err.message || err);
     if (!res.headersSent) {
-      res.status(500).json({ message: "File streaming failed", error: err.message });
+      res
+        .status(500)
+        .json({ message: "File streaming failed", error: err.message });
     }
   }
 });
@@ -1169,7 +1180,9 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
   try {
     const file = await Files.findById(req.params.id);
     if (!file) {
-      return res.status(404).json({ status: "fail", message: "File not found" });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "File not found" });
     }
 
     if (file.fileUrl) {
@@ -1183,16 +1196,17 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
           console.error("Hostinger deletion failed:", response.data.message);
           return res.status(500).json({
             status: "fail",
-            message: "Failed to delete file from Hostinger. Database not updated.",
+            message:
+              "Failed to delete file from Hostinger. Database not updated.",
           });
         }
         console.log("File deleted from Hostinger:", file.fileUrl);
-
       } catch (err) {
         console.error("Hostinger delete failed:", err.message || err);
         return res.status(500).json({
           status: "fail",
-          message: "Failed to delete file from Hostinger. Database not updated.",
+          message:
+            "Failed to delete file from Hostinger. Database not updated.",
         });
       }
     }
@@ -1201,7 +1215,9 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
     if (!allowedRoles.includes(role)) {
-      return res.status(400).json({ error: "Invalid user role for activity log." });
+      return res
+        .status(400)
+        .json({ error: "Invalid user role for activity log." });
     }
     const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
 
@@ -1223,7 +1239,6 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
       status: "success",
       message: "File and database record deleted successfully.",
     });
-
   } catch (err) {
     console.error("Unhandled error in RemoveFiles:", err);
     res.status(500).json({ error: "Internal server error" });
@@ -1672,8 +1687,7 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     return res.status(400).json({ error: "Invalid or missing file ID" });
 
   const existingFile = await Files.findById(fileId);
-  if (!existingFile)
-    return res.status(404).json({ error: "File not found" });
+  if (!existingFile) return res.status(404).json({ error: "File not found" });
 
   existingFile.status = "Approved";
   await existingFile.save();
@@ -1718,7 +1732,6 @@ exports.UpdateCloudinaryFile = AsyncErrorHandler(async (req, res) => {
     data: existingFile,
   });
 });
-
 
 exports.getOfficer = AsyncErrorHandler(async (req, res) => {
   const officerId = req.user.linkId;

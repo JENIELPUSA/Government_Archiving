@@ -141,9 +141,7 @@ export const AdminDisplayProvider = ({ children }) => {
                 formData.append("middle_name", values.middle_name);
             }
 
-            if (values.avatar instanceof File) {
-                formData.append("avatar", values.avatar);
-            }
+            if (values.avatar) formData.append("avatar", values.avatar);
 
             const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
                 headers: {

@@ -1,4 +1,3 @@
-// SBmember.jsx
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { SbMemberDisplayContext } from "../../contexts/SbContext/SbContext";
 import { FaSearch, FaFilter, FaUserAlt, FaCalendarAlt, FaArrowUp, FaChevronLeft, FaChevronRight, FaTimes, FaList } from "react-icons/fa";
@@ -21,12 +20,12 @@ const SBmember = () => {
   const [toDate, setToDate] = useState("");
   const [availablePositions, setAvailablePositions] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [isScrolling, setIsScrolling] = useState(false);
 
   const initialLoad = useRef(true);
   const positionsInitialized = useRef(false);
   const scrollTimeout = useRef(null);
   const memberGridRef = useRef(null);
+  const headerRef = useRef(null);
 
   useEffect(() => {
     if (isGroupPublicAuthor?.length > 0 && !positionsInitialized.current) {
@@ -51,13 +50,6 @@ const SBmember = () => {
   useEffect(() => {
     const handleScroll = () => {
       setShowBackToTop(window.scrollY > 300);
-      
-      // Add scroll detection for header styling
-      setIsScrolling(true);
-      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-      scrollTimeout.current = setTimeout(() => {
-        setIsScrolling(false);
-      }, 150);
     };
     
     window.addEventListener("scroll", handleScroll);
@@ -80,6 +72,7 @@ const SBmember = () => {
     setFromDate("");
     setToDate("");
   };
+  
   const fetchWithFilters = useCallback(async () => {
     setLoading(true);
     try {
@@ -281,8 +274,8 @@ const SBmember = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className={`mx-auto max-w-7xl bg-white p-6 rounded-xl shadow-sm md:p-8 transition-all duration-300 ${isScrolling ? 'shadow-md' : ''}`}>
-        <header className={`mb-8 transition-all duration-300 ${isScrolling ? 'sticky top-0 z-10 bg-white py-4 -mt-6 -mx-6 px-6 rounded-t-xl shadow-sm' : ''}`}>
+      <div className="mx-auto max-w-7xl bg-white p-6 rounded-xl shadow-sm md:p-8">
+        <header ref={headerRef} className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="flex items-center text-2xl font-bold text-gray-800 md:text-3xl">
@@ -367,7 +360,7 @@ const SBmember = () => {
                       <select
                         value={positionFilter}
                         onChange={(e) => setPositionFilter(e.target.value)}
-                        className="w-full SBmemberearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                        className="w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
                       >
                         <option value="all">All Positions</option>
                         {availablePositions.map((position, index) => (
