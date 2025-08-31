@@ -1071,6 +1071,12 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
     console.log("❌ File not found in DB");
     return res.status(404).json({ message: "File not found." });
   }
+
+  if (file.ArchivedStatus === "Deleted") {
+    console.log("File is already removed:", file.fileName);
+    return res.status(400).json({ message: "This file is already removed." });
+  }
+
   console.log("✅ File found in DB:", file.fileName);
 
   const allowedRoles = ["admin", "officer"];

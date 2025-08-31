@@ -77,7 +77,6 @@ export const FilesDisplayProvider = ({ children }) => {
             const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
-                   
                 },
             });
 
@@ -255,7 +254,7 @@ export const FilesDisplayProvider = ({ children }) => {
             );
 
             if (response.data && response.data.status === "success") {
-                setFiles((prevUsers) => prevUsers.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
+                FetchFiles();
                 setModalStatus("success");
                 setShowModal(true);
                 return { success: true };
@@ -517,7 +516,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
                 status={modalStatus}
-                errorMessage={customError}
+                error={customError}
             />
         </FilesDisplayContext.Provider>
     );

@@ -52,6 +52,16 @@ export const FolderDisplayProvider = ({ children }) => {
         }
     }, [authToken, fetchfolder]);
 
+    useEffect(() => {
+        if (customError) {
+            const timer = setTimeout(() => {
+                setCustomError(null);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [customError]);
+
     const AddFolder = async (values) => {
         try {
             const res = await axios.post(
@@ -126,6 +136,8 @@ export const FolderDisplayProvider = ({ children }) => {
             }
         } catch (error) {
             console.error("Error deleting folder:", error);
+            setModalStatus("failed");
+            setShowModal(true);
             setCustomError(error.response?.data?.message || "Failed to delete folder.");
         }
     };
@@ -181,6 +193,7 @@ export const FolderDisplayProvider = ({ children }) => {
                 totalFolderPages,
                 setCurrentFolderPage,
                 currentFolderPage,
+                setIsLoadingFiles,
             }}
         >
             {children}

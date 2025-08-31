@@ -1,6 +1,7 @@
 const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
 const SBmember = require("../Models/SBmember");
 const UserLoginSchema = require("../Models/LogInDentalSchema");
+const Files = require("../Models/File");
 const axios = require("axios");
 const fs = require("fs");
 const FormData = require("form-data");
@@ -183,12 +184,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   const oldAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
 
   if (req.file) {
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ];
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!allowedTypes.includes(req.file.mimetype)) {
       fs.unlink(req.file.path, (err) => {
         if (err) console.error("Failed to delete invalid temp file:", err);
@@ -198,17 +194,15 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
 
     try {
       const form = new FormData();
-      form.append(
-        "file",
-        fs.createReadStream(req.file.path), {
-          filename: req.file.originalname,
-          contentType: req.file.mimetype,
-        }
-      );
+      form.append("file", fs.createReadStream(req.file.path), {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype,
+      });
 
       const uploadResponse = await axios.post(
         "https://tan-kudu-520349.hostingersite.com/upload.php",
-        form, {
+        form,
+        {
           headers: form.getHeaders(),
           maxBodyLength: Infinity,
         }
@@ -258,8 +252,9 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
 
   const updatedSBmember = await SBmember.findByIdAndUpdate(
     SbmemberID,
-    updateData, {
-      new: true
+    updateData,
+    {
+      new: true,
     }
   );
 
@@ -271,29 +266,36 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
 
   res.json({
     status: "success",
-    data: updatedSBmember
+    data: updatedSBmember,
   });
 
-    if (req.file && oldAvatarUrl) {
-      const params = new URLSearchParams();
-      params.append("file", oldAvatarUrl);
+  if (req.file && oldAvatarUrl) {
+    const params = new URLSearchParams();
+    params.append("file", oldAvatarUrl);
 
-      axios.post(
-          "https://tan-kudu-520349.hostingersite.com/delete.php",
-          params.toString(),
-          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-        )
-        .then(response => {
-          if (response.data.success) {
-            console.log("Old news image deleted in background:", oldAvatarUrl);
-          } else {
-            console.error("Failed to delete old news image in background:", response.data.message);
-          }
-        })
-        .catch(error => {
-          console.error("Error deleting old news image in background:", error.message);
-        });
-    }
+    axios
+      .post(
+        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        params.toString(),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      )
+      .then((response) => {
+        if (response.data.success) {
+          console.log("Old news image deleted in background:", oldAvatarUrl);
+        } else {
+          console.error(
+            "Failed to delete old news image in background:",
+            response.data.message
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Error deleting old news image in background:",
+          error.message
+        );
+      });
+  }
 });
 
 exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
@@ -307,9 +309,16 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 
-  const avatarUrlToDelete = existingSB.avatar?.url;
+  const fileUsingSB = await Files.exists({ author: SbmemberID });
+  if (fileUsingSB) {
+    return res.status(400).json({
+      status: "fail",
+      message:
+        "Cannot delete SB member. This member is linked to existing files.",
+    });
+  }
 
-  // Hakbang 1: Tanggalin ang linked login at ang SB member record sa database.
+  const avatarUrlToDelete = existingSB.avatar?.url;
   const userLogin = await UserLoginSchema.findOne({ linkedId: SbmemberID });
   if (userLogin) {
     await UserLoginSchema.findByIdAndDelete(userLogin._id);
@@ -317,7 +326,6 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
 
   await SBmember.findByIdAndDelete(SbmemberID);
 
-  // Hakbang 2: Magbigay ng mabilis na success response sa user.
   res.status(200).json({
     status: "success",
     message: "SB member and related login deleted successfully.",

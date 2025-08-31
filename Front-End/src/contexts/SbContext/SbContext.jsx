@@ -22,6 +22,16 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const [totalPages, setTotalPages] = useState(1);
     const [currentPage, setCurrentPage] = useState(1);
 
+    useEffect(() => {
+        if (customError) {
+            const timer = setTimeout(() => {
+                setCustomError(null);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [customError]);
+
     const FetchDisplaySbMember = useCallback(async () => {
         if (!authToken) return;
         try {
@@ -117,7 +127,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
             if (values.avatar) formData.append("avatar", values.avatar);
 
             const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
-                 headers: {
+                headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
                 },
@@ -160,9 +170,9 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 return { success: false, error: "Unexpected response from server." };
             }
         } catch (error) {
+            console.error("Error deleting user:", error);
             setModalStatus("failed");
             setShowModal(true);
-            console.error("Error deleting user:", error);
         }
     };
 
@@ -259,7 +269,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
                 status={modalStatus}
-                errorMessage={customError}
+                error={customError}
             />
         </SbMemberDisplayContext.Provider>
     );

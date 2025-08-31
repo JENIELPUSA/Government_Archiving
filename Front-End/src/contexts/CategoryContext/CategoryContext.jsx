@@ -1,6 +1,4 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
-import axios from "axios";
-import { toast } from "react-toastify";
 import { AuthContext } from "../AuthContext";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
 import axiosInstance from "../../ReusableFolder/axioxInstance";
@@ -32,6 +30,16 @@ export const CategoryDisplayProvider = ({ children }) => {
     useEffect(() => {
         fetchCategory();
     }, [authToken]);
+
+    useEffect(() => {
+        if (customError) {
+            const timer = setTimeout(() => {
+                setCustomError(null);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [customError]);
 
     const AddCategory = async (values) => {
         try {
@@ -112,6 +120,8 @@ export const CategoryDisplayProvider = ({ children }) => {
             }
         } catch (error) {
             console.error("Error deleting user:", error);
+            setModalStatus("failed");
+            setShowModal(true);
             setCustomError(error.response?.data?.message || "Failed to delete user.");
         }
     };

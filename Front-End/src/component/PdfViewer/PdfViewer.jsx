@@ -40,8 +40,17 @@ const PdfViewer = () => {
     const [isRecieveForm, setRecieveForm] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
-
+    const [customError, setCustomError] = useState("");
     const originalPdfBytesRef = useRef(null);
+
+    useEffect(() => {
+        if (customError) {
+            const timer = setTimeout(() => {
+                setCustomError(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [customError]);
 
     useEffect(() => {
         let canceled = false;
@@ -84,16 +93,21 @@ const PdfViewer = () => {
 
                         currentPdfBytes = await pdfDoc.save();
                     } catch (err) {
-                        console.error("❗ Failed to add image watermark. Using original PDF.", err);
+                        setModalStatus("failed");
+                        setShowModal(true);
+                        setCustomError(err?.message || "Failed to apply Approved watermark to the PDF.");
+                        return; // stop execution
                     }
                 }
 
                 originalPdfBytesRef.current = currentPdfBytes;
 
-                objectUrl = URL.createObjectURL(new Blob([currentPdfBytes], { type: "application/pdf" }));
+                const objectUrl = URL.createObjectURL(new Blob([currentPdfBytes], { type: "application/pdf" }));
                 if (!canceled) setFileUrl(objectUrl);
             } catch (error) {
-                console.error("❗ Failed to load PDF:", error);
+                setModalStatus("failed");
+                setShowModal(true);
+                setCustomError(error.response?.data?.message || "Not Found Data!.");
             }
         };
 
@@ -118,33 +132,32 @@ const PdfViewer = () => {
         setShowNoteModal(true);
     };
 
-const handlePrint = async () => {
-    try {
-        const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
-        const pdfBytes = await pdfDoc.save();
-        const blob = new Blob([pdfBytes], { type: "application/pdf" });
-        const url = URL.createObjectURL(blob);
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = url;
-        document.body.appendChild(iframe);
+    const handlePrint = async () => {
+        try {
+            const pdfDoc = await PDFDocument.load(originalPdfBytesRef.current);
+            const pdfBytes = await pdfDoc.save();
+            const blob = new Blob([pdfBytes], { type: "application/pdf" });
+            const url = URL.createObjectURL(blob);
+            const iframe = document.createElement("iframe");
+            iframe.style.display = "none";
+            iframe.src = url;
+            document.body.appendChild(iframe);
 
-        iframe.onload = () => {
-            iframe.contentWindow.focus();
-            iframe.contentWindow.print();
-            
-            // Tanggalin ang iframe at i-revoke ang URL kapag sarado na ang print dialog
-            iframe.contentWindow.onafterprint = () => {
-                document.body.removeChild(iframe);
-                URL.revokeObjectURL(url);
+            iframe.onload = () => {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+
+                // Tanggalin ang iframe at i-revoke ang URL kapag sarado na ang print dialog
+                iframe.contentWindow.onafterprint = () => {
+                    document.body.removeChild(iframe);
+                    URL.revokeObjectURL(url);
+                };
             };
-        };
-    } catch (err) {
-        console.error("❌ Error during PDF print:", err);
-        alert("May error habang nagpi-print ng PDF. Tingnan ang console.");
-    }
-};
-
+        } catch (err) {
+            console.error("❌ Error during PDF print:", err);
+            alert("May error habang nagpi-print ng PDF. Tingnan ang console.");
+        }
+    };
 
     const handleZoomIn = () => setScale((prev) => prev + 0.2);
     const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5)); // Minimum scale ng 0.5
@@ -452,6 +465,7 @@ const handlePrint = async () => {
                 isOpen={showModal}
                 onClose={() => setShowModal(false)}
                 status={modalStatus}
+                error={customError}
             />
             <Notes
                 data={noteData}

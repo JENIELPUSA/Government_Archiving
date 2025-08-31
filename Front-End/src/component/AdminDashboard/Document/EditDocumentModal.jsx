@@ -11,12 +11,9 @@ const EditDocumentModal = ({ show, document, onClose }) => {
   const { isCategory } = useContext(CategoryContext);
   const [editedDoc, setEditedDoc] = useState({});
 
-  // 🔥 Normalizer para gawing _id ang author at pangalan lang ang category
   const normalizeDoc = useCallback(
     (doc) => {
       if (!doc) return {};
-
-      // Handle author (convert to _id kung name lang ang galing sa backend)
       let authorId = "";
       if (doc.author && typeof doc.author === "string") {
         const found = isDropdown?.find((m) => m.full_name === doc.author);
@@ -26,8 +23,6 @@ const EditDocumentModal = ({ show, document, onClose }) => {
       } else {
         authorId = doc.author || "";
       }
-
-      // Handle category (gamitin categoryName kung object)
       const categoryValue =
         typeof doc.category === "string"
           ? doc.category
@@ -50,6 +45,8 @@ const EditDocumentModal = ({ show, document, onClose }) => {
     e.preventDefault();
     await UpdateFiles(editedDoc._id, editedDoc);
     console.log("Submitted Data:", editedDoc);
+    // Call onClose here to close the modal after a successful submission.
+    onClose();
   };
 
   return (

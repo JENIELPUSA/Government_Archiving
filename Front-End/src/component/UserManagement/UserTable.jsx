@@ -4,7 +4,7 @@ import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import AddUserModal from "./AddUserModal";
 import "react-toastify/dist/ReactToastify.css";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
-
+import StatusVerification from "../../ReusableFolder/StatusModal";
 const ITEMS_PER_PAGE = 5;
 
 // Skeleton component para sa isang table row
@@ -40,7 +40,8 @@ const UserTable = () => {
     const [modalStatus, setModalStatus] = useState("success");
     const [loading, setLoading] = useState(false);
     const [isPageChanging, setIsPageChanging] = useState(false);
-
+    const [isVerification, setVerification] = useState(false);
+    const [isDeleteID, setIsDeleteId] = useState("");
     const totalPages = Math.ceil((isAdmin?.length || 0) / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const currentAdmins = (isAdmin || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -75,6 +76,10 @@ const UserTable = () => {
         }
     };
 
+        const handleCloseVerificationModal = () => {
+        setVerification(false);
+    };
+
     const handleEdit = (user) => {
         setEditingUser(user);
         setAddUserModalOpen(true);
@@ -88,13 +93,37 @@ const UserTable = () => {
     const handleDelete = async (id) => {
         setLoading(true);
         try {
-            await DeleteAdmin(id);
+            setLoading(true);
+            setIsDeleteId(id);
+            setVerification(true);
         } catch (error) {
             console.error("Error deleting category:", error);
         } finally {
             setLoading(false);
         }
     };
+
+
+        const handleConfirmDelete = async () => {
+        setLoading(true);
+        try {
+            const result = await DeleteAdmin(isDeleteID, "Deleted");
+            if (result.success) {
+                handleCloseVerificationModal();
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+
+
+
+
+
+
 
     return (
         <div className="relative w-full space-y-6">
@@ -266,6 +295,12 @@ const UserTable = () => {
                 status={modalStatus}
                 error={customError}
             />
+
+                        <StatusVerification
+                            isOpen={isVerification}
+                            onConfirmDelete={handleConfirmDelete}
+                            onClose={handleCloseVerificationModal}
+                        />
         </div>
     );
 };

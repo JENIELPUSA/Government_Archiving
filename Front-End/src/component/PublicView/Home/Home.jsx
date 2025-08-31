@@ -180,31 +180,31 @@ const Home = () => {
                     backgroundAttachment: "fixed",
                 }}
             >
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8 }}
-                    className="relative z-10 text-center text-white"
-                >
-                    <motion.img
-                        src={logo}
-                        alt="Provincial Government Logo"
-                        className="mx-auto mb-8 h-48 w-48 opacity-95 drop-shadow-2xl"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 0.95, scale: 1 }}
-                        transition={{ duration: 1 }}
-                    />
-                    <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl drop-shadow-lg">
-                        Provincial Government
-                    </h1>
-                    <p className="mx-auto max-w-2xl text-xl text-blue-100 md:text-2xl drop-shadow-md">
-                        Serving the community with integrity and dedication
-                    </p>
-                </motion.div>
+          <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.8 }}
+    className="relative z-10 text-center text-white"
+>
+    <motion.img
+        src={logo}
+        alt="Provincial Government Logo"
+        className="mx-auto mb-8 h-60 w-60 opacity-95 drop-shadow-2xl"
+        initial={{ opacity: 0, scale: 0.8, rotateY: 180 }} // Ibinabalik ang logo sa 180 degrees sa simula
+        animate={{ opacity: 0.95, scale: 1, rotateY: 0 }} // Ibinabalik sa normal na posisyon (0 degrees)
+        transition={{ duration: 1 }}
+    />
+    <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl drop-shadow-lg">
+        Provincial Government
+    </h1>
+    <p className="mx-auto max-w-2xl text-xl text-blue-100 md:text-2xl drop-shadow-md">
+        Serving the community with integrity and dedication
+    </p>
+</motion.div>
             </div>
 
             {/* Mission Statement Section */}
-            <section className="bg-gradient-to-r from-blue-800 via-blue-700 to-indigo-700 py-16">
+            <section className="bg-gradient-to-r from-blue-800 via-red-700 to-blue-700 py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"

@@ -382,7 +382,7 @@ exports.protect = AsyncErrorHandler(async (req, res, next) => {
   // 5. Set linkedId and assign user to req.user
   const linkId = user.linkedId || user._id;
 
-  const userData = {
+  req.user = {
     _id: user._id,
     email: user.email,
     role: user.role,
@@ -390,8 +390,10 @@ exports.protect = AsyncErrorHandler(async (req, res, next) => {
     last_name: user.last_name,
     linkId,
   };
+
   next();
 });
+
 
 exports.restrict = (role) => {
   return (req, res, next) => {

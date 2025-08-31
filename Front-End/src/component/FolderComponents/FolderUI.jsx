@@ -1,31 +1,16 @@
 import React, { useState, useContext, useEffect, useCallback } from "react";
 import {
     Folder,
-    FolderPlus,
-    Trash2,
-    X,
-    Check,
-    Search,
-    Grid,
-    List,
-    Calendar,
-    ArrowLeft,
     File,
     FileText,
-    MoreVertical,
-    Upload,
-    Edit,
-    ChevronLeft,
-    ChevronRight,
-    Eye,
+
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { FolderContext } from "../../contexts/FolderContext/FolderContext";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
-import UploadDocumentsModal from "./FormUpload/UploadDocuments";
 import FoldersView from "./FoldersView";
 import FilesView from "./FilesView";
-
+import StatusVerification from "../../ReusableFolder/StatusModal";
 const FolderCreationUI = () => {
     const {
         AddFolder,
@@ -35,7 +20,7 @@ const FolderCreationUI = () => {
         fetchSpecificData,
         isfolderFiles,
         isLoadingFolders,
-        isLoadingFiles,
+        isLoadingFiles,setIsLoadingFiles,
         currentPage: fileCurrentPage,
         totalPages: fileTotalPages,
         fetchfolder,
@@ -65,7 +50,8 @@ const FolderCreationUI = () => {
     const [fileDateTo, setFileDateTo] = useState("");
     const [openFileMenu, setOpenFileMenu] = useState(null);
     const navigate = useNavigate();
-
+    const [isVerification, setVerification] = useState(false);
+    const [isDeleteID, setIsDeleteId] = useState("");
     const fileTypeOptions = ["ordinance", "image", "video", "audio", "archive", "pdf", "document", "spreadsheet"];
 
     const handleFolderSearch = (value) => {
@@ -186,17 +172,35 @@ const FolderCreationUI = () => {
         });
     };
 
-    const handleDeleteFiles = async (id) => {
-        const result = await MOveArchived(id, "Deleted");
-        if(result.success){
-            fetchSpecificData(openFolder._id, {
-            search: "",
-            type: "",
-            dateFrom: "",
-            dateTo: "",
-            page: 1,
-        });
+    const handleCloseVerificationModal = () => {
+        setVerification(false);
+    };
+
+    const handleConfirmDelete = async () => {
+        setIsLoadingFiles(true);
+        setVerification(false);
+        try {
+            const result = await MOveArchived(isDeleteID, "Deleted");
+            if (result.success) {
+                fetchSpecificData(openFolder._id, {
+                    search: "",
+                    type: "",
+                    dateFrom: "",
+                    dateTo: "",
+                    page: 1,
+                });
+            }
+        } catch (error) {
+            console.error("Delete failed:", error);
+        } finally {
+            setIsLoadingFiles(false);
+            setIsDeleteId("");
         }
+    };
+
+    const handleDeleteFiles = async (id) => {
+        setIsDeleteId(id);
+        setVerification(true);
     };
 
     const colors = [
@@ -461,6 +465,12 @@ const FolderCreationUI = () => {
                     createFolder={createFolder}
                 />
             )}
+
+            <StatusVerification
+                isOpen={isVerification}
+                onConfirmDelete={handleConfirmDelete}
+                onClose={handleCloseVerificationModal}
+            />
         </div>
     );
 };
