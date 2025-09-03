@@ -12,7 +12,7 @@ import OldDocument from "./component/FolderComponents/FolderUI";
 import ArchiveLayout from "./component/AdminDashboard/Archive/ArchiveLayout";
 import DocumentLayout from "./component/AdminDashboard/Document/DocumentsSidebar/DocumentsLayout";
 import PublicAccessLayout from "./component/PublicView/Publicview";
-import ExpandPDFView from "./component/PublicView/ExpandPDFView";
+import ExpandPDFView from "./component/PublicView/PDFview";
 import CommentLayout from "./component/Comments/CommentLayout";
 import LogsAndAudit from "./component/LogsAudit/LogsAndAudit";
 import ResetPassword from "./component/Login/ResetPassword";

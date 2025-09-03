@@ -14,11 +14,9 @@ export const CategoryDisplayProvider = ({ children }) => {
     const [customError, setCustomError] = useState("");
 
     const fetchCategory = async () => {
-        if (!authToken) return;
         try {
             const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Category`, {
                 withCredentials: true,
-                headers: { Authorization: `Bearer ${authToken}` },
             });
             setCategory(res.data.data);
         } catch (error) {

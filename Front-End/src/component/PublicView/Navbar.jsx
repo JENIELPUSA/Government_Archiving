@@ -2,6 +2,13 @@
 import React from "react";
 
 const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }) => {
+
+  // Helper function to handle page click and force refresh
+  const handlePageClick = (page) => {
+    setCurrentPage(""); // temporarily clear the page
+    setTimeout(() => setCurrentPage(page), 0); // then set target page
+  };
+
   return (
     <nav className="bg-blue-800 p-4 shadow-md">
       <div className="container mx-auto flex flex-col md:flex-row md:items-center md:justify-between">
@@ -11,7 +18,7 @@ const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }
             <a
               href="#"
               className={`px-2 py-1 ${currentPage === "home" ? "text-yellow-300 underline" : "hover:text-yellow-300"}`}
-              onClick={() => setCurrentPage("home")}
+              onClick={() => handlePageClick("home")}
             >
               HOME
             </a>
@@ -20,7 +27,7 @@ const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }
             <a
               href="#"
               className={`px-2 py-1 ${currentPage === "sb-members" ? "text-yellow-300 underline" : "hover:text-yellow-300"}`}
-              onClick={() => setCurrentPage("sb-members")}
+              onClick={() => handlePageClick("sb-members")}
             >
               SB MEMBERS
             </a>
@@ -29,7 +36,7 @@ const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }
             <a
               href="#"
               className={`px-2 py-1 ${currentPage === "documents" ? "text-yellow-300 underline" : "hover:text-yellow-300"}`}
-              onClick={() => setCurrentPage("documents")}
+              onClick={() => handlePageClick("documents")}
             >
               DOCUMENTS
             </a>
@@ -38,13 +45,13 @@ const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }
             <a
               href="#"
               className={`px-2 py-1 ${currentPage === "about-us" ? "text-yellow-300 underline" : "hover:text-yellow-300"}`}
-              onClick={() => setCurrentPage("about-us")}
+              onClick={() => handlePageClick("about-us")}
             >
               ABOUT US
             </a>
           </li>
         </ul>
-        
+
         {/* Search Bar for Documents Page */}
         {currentPage === "documents" && (
           <div className="relative mt-4 w-full md:mt-0 md:w-auto">

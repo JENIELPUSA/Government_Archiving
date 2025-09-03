@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, Loader } from "lucide-react";
 import { debounce } from "lodash";
 
-const Documents = ({ searchKeyword }) => {
+const Documents = ({ searchKeyword,onViewFile}) => {
     const navigate = useNavigate();
     const { isCategory } = useContext(CategoryContext);
     const { isPublic, fetchPublicDisplay, loading } = useContext(FilesDisplayContext);
@@ -15,6 +15,8 @@ const Documents = ({ searchKeyword }) => {
     const [openYear, setOpenYear] = useState(null);
     const [loadingStates, setLoadingStates] = useState({});
     const [isPaginatedAction, setIsPaginatedAction] = useState(false);
+
+    console.log("isCategory",isCategory)
 
     const debouncedFetch = useMemo(
         () =>
@@ -88,7 +90,7 @@ const Documents = ({ searchKeyword }) => {
     }, [isCategory]);
 
     const handleView = (file) => {
-        navigate("/expand-pdf", {
+        navigate("/expand-PDF", {
             state: {
                 fileId: file._id,
                 fileData: file,
@@ -422,7 +424,7 @@ const Documents = ({ searchKeyword }) => {
                                                                         </div>
                                                                     </div>
                                                                     <motion.button
-                                                                        onClick={() => handleView(item)}
+                                                                        onClick={() => onViewFile (item._id,item)}
                                                                         className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
                                                                         whileHover={{ scale: 1.05 }}
                                                                         whileTap={{ scale: 0.95 }}

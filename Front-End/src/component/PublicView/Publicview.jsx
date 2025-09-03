@@ -1,28 +1,60 @@
-// App.jsx
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import SBMembers from "../PublicView/SBMember";
 import Home from "./Home/Home";
 import Documents from "./Document";
 import Navbar from "./Navbar";
-import AboutUs from "./AboutUs";
-import MyLogo from "../../assets/logo-login.png"; 
+import MyLogo from "../../assets/logo-login.png";
+import PDFview from "./PDFview";
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState("home");
     const [searchKeyword, setSearchKeyword] = useState("");
+    const [selectedFile, setSelectedFile] = useState(null);
+
+    // Ref for AboutUs DOM element
+    const aboutUsRef = useRef(null);
+
+    const handleViewFile = (fileId, fileData) => {
+        setSelectedFile({ fileId, fileData });
+        setCurrentPage("pdf-view");
+    };
+
+    const scrollToAboutUs = () => {
+        setCurrentPage("home");
+        setTimeout(() => {
+            aboutUsRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 100);
+    };
 
     const renderMainContent = () => {
         switch (currentPage) {
             case "home":
-                return <Home />;
+                return <Home aboutUsRef={aboutUsRef} />;
             case "sb-members":
                 return <SBMembers />;
             case "documents":
-                return <Documents searchKeyword={searchKeyword} />;
-            case "about-us":
-                <AboutUs />;
+                return (
+                    <Documents
+                        searchKeyword={searchKeyword}
+                        onViewFile={handleViewFile}
+                    />
+                );
+            case "pdf-view":
+                return selectedFile ? (
+                    <PDFview
+                        fileId={selectedFile.fileId}
+                        file={selectedFile.file}
+                        fileName={selectedFile.fileName}
+                        onClose={() => setCurrentPage("documents")}
+                    />
+                ) : (
+                    <Documents
+                        searchKeyword={searchKeyword}
+                        onViewFile={handleViewFile}
+                    />
+                );
             default:
-                return <AboutUs />;
+                return <Home aboutUsRef={aboutUsRef} />;
         }
     };
 
@@ -35,7 +67,7 @@ const App = () => {
             </div>
             <div className="h-4 w-full bg-yellow-400"></div>
 
-            {/* Header with Philippine Flag Theme */}
+            {/* Header */}
             <div className="bg-white shadow-lg">
                 <div className="container mx-auto flex items-center px-6 py-4">
                     <div className="flex items-center space-x-4">
@@ -69,10 +101,16 @@ const App = () => {
                 </div>
             </div>
 
-            {/* Navigation Bar - now a component */}
+            {/* Navbar */}
             <Navbar
                 currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
+                setCurrentPage={(page) => {
+                    if (page === "about-us") {
+                        scrollToAboutUs();
+                    } else {
+                        setCurrentPage(page);
+                    }
+                }}
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}
             />
@@ -93,20 +131,28 @@ const App = () => {
                             <h4 className="mb-4 font-bold">Quick Links</h4>
                             <ul className="space-y-2">
                                 <li>
-                                    <a
-                                        href="#"
+                                    <button
+                                        onClick={() => setCurrentPage("home")}
                                         className="transition-colors hover:text-yellow-300"
                                     >
                                         Home
-                                    </a>
+                                    </button>
                                 </li>
                                 <li>
-                                    <a
-                                        href="#"
+                                    <button
+                                        onClick={() => setCurrentPage("about-us")}
+                                        className="transition-colors hover:text-yellow-300"
+                                    >
+                                        About Us
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => setCurrentPage("sb-members")}
                                         className="transition-colors hover:text-yellow-300"
                                     >
                                         SB Members
-                                    </a>
+                                    </button>
                                 </li>
                             </ul>
                         </div>

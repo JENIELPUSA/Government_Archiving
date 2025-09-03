@@ -5,7 +5,7 @@ const authController = require('./../Controller/authController')
 
 router.route('/')
     .post(authController.protect,CategoryFile.createCategory)
-    .get(authController.protect,CategoryFile.DisplayCategory)
+    .get(CategoryFile.DisplayCategory)
 
 router.route('/:id')
     .patch(authController.protect,CategoryFile.UpdateCategory)

@@ -1,24 +1,100 @@
-import React, { useState, useEffect, useContext } from "react";
-import { ChevronLeft, ChevronRight, Folder, FileText, Calendar, User, Tag, Eye, Download, Search } from "lucide-react";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useContext, useRef } from "react";
+import { ChevronLeft, ChevronRight, FileText, Calendar, User, Tag, ArrowUp } from "lucide-react";
+import { motion, useScroll, useTransform, useSpring, useInView } from "framer-motion";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
 import defaultCover from "../../../../src/assets/billpicture.jpg";
-import { useNavigate } from "react-router-dom";
 import backgroundImage from "../../../../src/assets/capitol.png";
 import logo from "../../../../src/assets/logo-login.png";
+import PDFview from "../PDFview";
+import AboutUsPage from "../AboutUs";
 
-const Home = () => {
+const ScrollToTop = () => {
+  const { scrollYProgress } = useScroll();
+  const scrollY = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+  
+  const [visible, setVisible] = useState(false);
+  
+  useEffect(() => {
+    const unsubscribe = scrollY.on("change", (latest) => {
+      setVisible(latest > 0.2);
+    });
+    
+    return () => unsubscribe();
+  }, [scrollY]);
+  
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  };
+  
+  return (
+    <motion.button
+      className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-colors hover:bg-blue-700"
+      onClick={scrollToTop}
+      initial={{ opacity: 0, scale: 0.5 }}
+      animate={{ 
+        opacity: visible ? 1 : 0, 
+        scale: visible ? 1 : 0.5 
+      }}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+    >
+      <ArrowUp size={20} />
+      <motion.div
+        className="absolute inset-0 -z-10 rounded-full bg-blue-800"
+        style={{
+          scale: scrollY
+        }}
+      />
+    </motion.button>
+  );
+};
+
+const Home = ({ aboutUsRef }) => {
+    const [selectedFile, setSelectedFile] = useState(null);
     const { isLatestBill } = useContext(FilesDisplayContext);
-    const navigate = useNavigate();
     const { pictures } = useContext(NewsDisplayContext);
+    
+    // Scroll progress for header animation
+    const { scrollYProgress } = useScroll();
+    const headerScale = useTransform(scrollYProgress, [0, 0.1], [1, 0.9]);
+    const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.8]);
+    
+    // Parallax effects for hero section
+    const heroRef = useRef(null);
+    const { scrollYProgress: heroScrollY } = useScroll({
+      target: heroRef,
+      offset: ["start start", "end start"]
+    });
+    
+    const y = useTransform(heroScrollY, [0, 1], ["0%", "50%"]);
+    const opacity = useTransform(heroScrollY, [0, 0.5], [1, 0]);
+
     const newsItems = pictures.filter((item) => item.category === "Carousel");
     const documentsummary = pictures.filter((item) => item.category === "Documentation");
+
     const [currentIndex, setCurrentIndex] = useState(0);
     const [spCarouselIndex, setSPCarouselIndex] = useState(0);
     const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
     const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Ref for scroll-triggered animations
+    const featuredRef = useRef(null);
+    const billsRef = useRef(null);
+    const servicesRef = useRef(null);
+    
+    // Check if elements are in view
+    const featuredInView = useInView(featuredRef, { once: true, margin: "-20% 0px" });
+    const billsInView = useInView(billsRef, { once: true, margin: "-10% 0px" });
+    const servicesInView = useInView(servicesRef, { once: true, margin: "-10% 0px" });
 
     // Simulate loading state
     useEffect(() => {
@@ -28,14 +104,8 @@ const Home = () => {
         return () => clearTimeout(timer);
     }, []);
 
-    const handleViewDocument = (news) => {
-        navigate("/expand-pdf", {
-            state: {
-                fileId: news._id,
-                fileData: news,
-                from: "/documents",
-            },
-        });
+    const handleViewFile = (fileId, fileData) => {
+        setSelectedFile({ fileId, fileData });
     };
 
     const nextSlide = () => {
@@ -76,12 +146,12 @@ const Home = () => {
 
     // Animation variants
     const fadeInUp = {
-        hidden: { opacity: 0, y: 20 },
+        hidden: { opacity: 0, y: 60 },
         visible: {
             opacity: 1,
             y: 0,
             transition: {
-                duration: 0.7,
+                duration: 0.8,
                 ease: [0.16, 1, 0.3, 1],
                 when: "beforeChildren",
                 staggerChildren: 0.1,
@@ -111,68 +181,74 @@ const Home = () => {
         },
     };
 
-    const slideIn = {
-        hidden: { opacity: 0, y: 50 },
+    const scaleIn = {
+        hidden: { opacity: 0, scale: 0.9 },
         visible: {
             opacity: 1,
-            y: 0,
+            scale: 1,
             transition: {
-                duration: 0.7,
-                ease: [0.16, 1, 0.3, 1],
-            },
-        },
+                duration: 0.6,
+                ease: "easeOut"
+            }
+        }
     };
 
-    const currentNews = newsItems.length > 0 ? newsItems[currentIndex] : null;
     const currentSPSlide = documentsummary[spCarouselIndex];
 
-    // Skeleton Loading Components
+    // Skeletons
     const CarouselSkeleton = () => (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 to-gray-200 shadow-xl border border-slate-200">
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-100 to-gray-200 shadow-xl">
             <div className="grid min-h-[500px] grid-cols-1 lg:grid-cols-2">
                 <div className="flex flex-col justify-center p-8 lg:p-12">
-                    <div className="max-w-md mx-auto lg:mx-0">
-                        <div className="h-7 w-32 bg-gray-300 rounded-full mb-6 animate-pulse"></div>
-                        <div className="h-10 bg-gray-300 rounded-lg mb-4 animate-pulse"></div>
-                        <div className="h-6 bg-gray-300 rounded mb-2 animate-pulse"></div>
-                        <div className="h-6 bg-gray-300 rounded mb-2 animate-pulse w-3/4"></div>
-                        <div className="h-6 bg-gray-300 rounded mb-8 w-1/2 animate-pulse"></div>
+                    <div className="mx-auto max-w-md lg:mx-0">
+                        <div className="mb-6 h-7 w-32 animate-pulse rounded-full bg-gray-300"></div>
+                        <div className="mb-4 h-10 animate-pulse rounded-lg bg-gray-300"></div>
+                        <div className="mb-2 h-6 animate-pulse rounded bg-gray-300"></div>
+                        <div className="mb-2 h-6 w-3/4 animate-pulse rounded bg-gray-300"></div>
+                        <div className="mb-8 h-6 w-1/2 animate-pulse rounded bg-gray-300"></div>
                     </div>
                 </div>
-                <div className="relative overflow-hidden bg-gray-300 animate-pulse">
-                    <div className="h-full w-full flex items-center justify-center">
-                        <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                            <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd"></path>
-                        </svg>
-                    </div>
-                </div>
+                <div className="relative animate-pulse overflow-hidden bg-gray-300"></div>
             </div>
         </div>
     );
 
     const BillCardSkeleton = () => (
-        <div className="flex flex-col overflow-hidden rounded-xl bg-white shadow-md border border-slate-200">
-            <div className="h-48 flex-shrink-0 bg-gray-300 animate-pulse"></div>
+        <div className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md">
+            <div className="h-48 flex-shrink-0 animate-pulse bg-gray-300"></div>
             <div className="flex flex-grow flex-col justify-between p-6">
                 <div>
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div className="h-6 w-20 bg-gray-300 rounded-full animate-pulse"></div>
-                        <div className="h-4 w-16 bg-gray-300 rounded animate-pulse"></div>
+                        <div className="h-6 w-20 animate-pulse rounded-full bg-gray-300"></div>
+                        <div className="h-4 w-16 animate-pulse rounded bg-gray-300"></div>
                     </div>
-                    <div className="h-6 w-3/4 bg-gray-300 rounded mb-2 animate-pulse"></div>
-                    <div className="h-4 w-full bg-gray-300 rounded mb-1 animate-pulse"></div>
-                    <div className="h-4 w-2/3 bg-gray-300 rounded mb-4 animate-pulse"></div>
+                    <div className="mb-2 h-6 w-3/4 animate-pulse rounded bg-gray-300"></div>
+                    <div className="mb-1 h-4 w-full animate-pulse rounded bg-gray-300"></div>
+                    <div className="mb-4 h-4 w-2/3 animate-pulse rounded bg-gray-300"></div>
                 </div>
-                <div className="h-5 w-32 bg-gray-300 rounded animate-pulse mt-4"></div>
+                <div className="mt-4 h-5 w-32 animate-pulse rounded bg-gray-300"></div>
             </div>
         </div>
     );
+    
+    if (selectedFile) {
+        return (
+            <PDFview
+                fileId={selectedFile.fileId}
+                fileData={selectedFile.fileData}
+            />
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans text-slate-800 antialiased">
-            {/* Hero Section */}
-            <div
-                className="relative flex h-screen items-center justify-center"
+            {/* Scroll to top button */}
+            <ScrollToTop />
+            
+            {/* Hero Section with Parallax */}
+            <motion.section 
+                ref={heroRef}
+                className="relative flex h-screen items-center justify-center overflow-hidden"
                 style={{
                     backgroundImage: `linear-gradient(135deg, rgba(30, 64, 175, 0.85), rgba(55, 48, 163, 0.8)), url(${backgroundImage})`,
                     backgroundSize: "cover",
@@ -180,75 +256,89 @@ const Home = () => {
                     backgroundAttachment: "fixed",
                 }}
             >
-          <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ duration: 0.8 }}
-    className="relative z-10 text-center text-white"
->
-    <motion.img
-        src={logo}
-        alt="Provincial Government Logo"
-        className="mx-auto mb-8 h-60 w-60 opacity-95 drop-shadow-2xl"
-        initial={{ opacity: 0, scale: 0.8, rotateY: 180 }} // Ibinabalik ang logo sa 180 degrees sa simula
-        animate={{ opacity: 0.95, scale: 1, rotateY: 0 }} // Ibinabalik sa normal na posisyon (0 degrees)
-        transition={{ duration: 1 }}
-    />
-    <h1 className="mb-6 text-4xl font-bold md:text-5xl lg:text-6xl drop-shadow-lg">
-        Provincial Government
-    </h1>
-    <p className="mx-auto max-w-2xl text-xl text-blue-100 md:text-2xl drop-shadow-md">
-        Serving the community with integrity and dedication
-    </p>
-</motion.div>
-            </div>
-
-            {/* Mission Statement Section */}
-            <section className="bg-gradient-to-r from-blue-800 via-red-700 to-blue-700 py-16">
-                <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                    <motion.div
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, amount: 0.3 }}
-                        variants={fadeInUp}
-                        className="mx-auto max-w-4xl text-center"
+                <motion.div 
+                    style={{ y, opacity }}
+                    className="absolute inset-0"
+                />
+                
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="relative z-10 text-center text-white"
+                >
+                    <motion.img
+                        src={logo}
+                        alt="Provincial Government Logo"
+                        className="mx-auto mb-8 h-60 w-60 opacity-95 drop-shadow-2xl"
+                        initial={{ opacity: 0, scale: 0.8, rotateY: 180 }}
+                        animate={{ opacity: 0.95, scale: 1, rotateY: 0 }}
+                        transition={{ duration: 1 }}
+                    />
+                    <h1 className="mb-6 text-4xl font-bold drop-shadow-lg md:text-5xl lg:text-6xl">Provincial Government</h1>
+                    <p className="mx-auto max-w-2xl text-xl text-blue-100 drop-shadow-md md:text-2xl">
+                        Serving the community with integrity and dedication
+                    </p>
+                    
+                    {/* Scroll indicator */}
+                    <motion.div 
+                        className="absolute bottom-10 left-1/2 -translate-x-1/2"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 1.5 }}
                     >
-                        <h2 className="mb-6 text-3xl font-bold text-white md:text-4xl drop-shadow-md">
-                            Our Mission
+                        <motion.div
+                            animate={{ y: [0, 10, 0] }}
+                            transition={{ repeat: Infinity, duration: 1.5 }}
+                            className="h-8 w-px bg-white"
+                        />
+                    </motion.div>
+                </motion.div>
+            </motion.section>
+
+            <motion.div
+                className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 text-white"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, amount: 0.1 }}
+                variants={fadeIn}
+            >
+                <div className="px-8 py-16 text-center">
+                    <motion.div
+                        className="mx-auto max-w-6xl"
+                        variants={fadeInUp}
+                    >
+                        <h2 className="mb-8 font-serif text-2xl italic leading-relaxed md:text-4xl lg:text-5xl">
+                            "Together as one province, we commit to serve with integrity and unity, building a future where every community thrives in
+                            progress and peace."
                         </h2>
-                        <blockquote className="text-xl italic text-blue-100 md:text-2xl drop-shadow-sm">
-                            "Together as one province, we commit to serve with integrity and unity, building a future where every community thrives in progress and peace."
-                        </blockquote>
                     </motion.div>
                 </div>
-            </section>
+            </motion.div>
 
-            {/* Featured Documents Carousel */}
-            <section className="py-16 bg-white">
+            {/* Featured Documents */}
+            <section ref={featuredRef} className="bg-white py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, amount: 0.2 }}
+                        animate={featuredInView ? "visible" : "hidden"}
                         variants={fadeInUp}
                         className="mb-12 text-center"
                     >
-                        <h2 className="text-3xl font-bold text-slate-900 md:text-4xl">
-                            Featured Documents
-                        </h2>
-                        <p className="mt-4 text-lg text-slate-600">
-                            Important updates and announcements from the provincial government
-                        </p>
+                        <h2 className="text-3xl font-bold text-slate-900 md:text-4xl">Featured Documents</h2>
+                        <p className="mt-4 text-lg text-slate-600">Important updates and announcements from the provincial government</p>
                     </motion.div>
 
                     {isLoading || documentsummary.length === 0 ? (
                         <CarouselSkeleton />
                     ) : (
                         <motion.div
-                            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50 shadow-xl border border-slate-200"
+                            className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-blue-50 shadow-xl"
                             onMouseEnter={() => setIsHoveringSPCarousel(true)}
                             onMouseLeave={() => setIsHoveringSPCarousel(false)}
-                            variants={fadeIn}
+                            initial="hidden"
+                            animate={featuredInView ? "visible" : "hidden"}
+                            variants={scaleIn}
                         >
                             <div className="grid min-h-[500px] grid-cols-1 lg:grid-cols-2">
                                 <motion.div
@@ -258,16 +348,12 @@ const Home = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.6, ease: "easeOut" }}
                                 >
-                                    <div className="max-w-md mx-auto lg:mx-0">
-                                        <span className="text-sm font-semibold text-blue-700 uppercase tracking-wider bg-blue-100 px-3 py-1 rounded-full">
+                                    <div className="mx-auto max-w-md lg:mx-0">
+                                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold uppercase tracking-wider text-blue-700">
                                             Featured
                                         </span>
-                                        <h2 className="mt-4 mb-4 text-3xl font-bold text-slate-900 lg:text-4xl">
-                                            {currentSPSlide?.title}
-                                        </h2>
-                                        <p className="mb-8 text-lg text-slate-600 leading-relaxed">
-                                            {currentSPSlide?.excerpt}
-                                        </p>
+                                        <h2 className="mb-4 mt-4 text-3xl font-bold text-slate-900 lg:text-4xl">{currentSPSlide?.title}</h2>
+                                        <p className="mb-8 text-lg leading-relaxed text-slate-600">{currentSPSlide?.excerpt}</p>
                                     </div>
                                 </motion.div>
                                 <motion.div
@@ -293,142 +379,132 @@ const Home = () => {
                                     )}
                                 </motion.div>
                             </div>
-
-                            {/* Carousel Navigation */}
-                            <button
-                                onClick={prevSPSlide}
-                                className="absolute left-4 top-1/2 z-10 -translate-y-1/2 transform rounded-full bg-white/90 backdrop-blur-sm p-3 text-blue-700 shadow-lg transition-all duration-200 hover:bg-white hover:text-blue-900 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                aria-label="Previous slide"
-                            >
-                                <ChevronLeft className="h-6 w-6" />
-                            </button>
-                            <button
-                                onClick={nextSPSlide}
-                                className="absolute right-4 top-1/2 z-10 -translate-y-1/2 transform rounded-full bg-white/90 backdrop-blur-sm p-3 text-blue-700 shadow-lg transition-all duration-200 hover:bg-white hover:text-blue-900 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                aria-label="Next slide"
-                            >
-                                <ChevronRight className="h-6 w-6" />
-                            </button>
-
-                            {/* Carousel Indicators */}
-                            <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 transform space-x-3">
-                                {documentsummary.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSPCarouselIndex(index)}
-                                        className={`h-2 w-2 rounded-full transition-all duration-300 ${
-                                            index === spCarouselIndex ? "w-6 bg-blue-600 shadow-lg" : "bg-slate-400 hover:bg-slate-500"
-                                        }`}
-                                        aria-label={`Go to slide ${index + 1}`}
-                                    />
-                                ))}
-                            </div>
                         </motion.div>
                     )}
                 </div>
             </section>
-
+            
             {/* Latest Bills Section */}
-            <section className="py-16 bg-gradient-to-br from-blue-50 to-indigo-50">
+            <section ref={billsRef} className="bg-gradient-to-br from-blue-50 to-indigo-50 py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, amount: 0.2 }}
+                        animate={billsInView ? "visible" : "hidden"}
                         variants={staggerContainer}
                     >
-                        <motion.div variants={fadeInUp} className="text-center mb-12">
+                        <motion.div
+                            variants={fadeInUp}
+                            className="mb-12 text-center"
+                        >
                             <h2 className="text-3xl font-bold text-slate-900 md:text-4xl">Latest Bills</h2>
-                            <p className="mt-4 text-lg text-slate-600">
-                                Recently proposed legislation and government documents
-                            </p>
+                            <p className="mt-4 text-lg text-slate-600">Recently proposed legislation and government documents</p>
                         </motion.div>
 
                         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-                            {isLoading || isLatestBill.length === 0 ? (
-                                // Show skeleton loading when data is loading or empty
-                                Array.from({ length: 3 }).map((_, index) => (
-                                    <BillCardSkeleton key={index} />
-                                ))
-                            ) : (
-                                isLatestBill.slice(0, 3).map((news, index) => (
-                                    <motion.div
-                                        key={news.id || news._id}
-                                        className="flex flex-col overflow-hidden rounded-xl bg-white shadow-md border border-slate-200 transition-all duration-300 hover:shadow-xl hover:border-blue-300 hover:-translate-y-1"
-                                        variants={fadeInUp}
-                                        custom={index}
-                                        initial="hidden"
-                                        whileInView="visible"
-                                        viewport={{ once: true, margin: "-50px 0px -100px 0px" }}
-                                    >
-                                        <div className="h-48 flex-shrink-0 bg-slate-200 overflow-hidden">
-                                            <img
-                                                src={news.avatar?.url || defaultCover}
-                                                alt={news.title || "Default Cover"}
-                                                className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
-                                            />
-                                        </div>
-                                        <div className="flex flex-grow flex-col justify-between p-6">
-                                            <div>
-                                                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                                    <span className="rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1 text-xs font-semibold text-blue-800 border border-blue-200">
-                                                        {news.category}
-                                                    </span>
-                                                    <span className="text-sm text-slate-500">{news.date}</span>
-                                                </div>
-                                                <h3 className="mb-2 text-xl font-bold text-slate-900">{news.title}</h3>
-                                                <p className="mb-4 text-slate-600 line-clamp-3">{news.excerpt}</p>
-                                            </div>
-                                            <button
-                                                onClick={() => handleViewDocument(news)}
-                                                className="mt-4 flex items-center text-blue-700 font-medium hover:text-blue-900 transition-colors group"
-                                            >
-                                                <FileText className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                                                Read Document
-                                            </button>
-                                        </div>
-                                    </motion.div>
-                                ))
-                            )}
+                            {isLoading || isLatestBill.length === 0
+                                ? Array.from({ length: 3 }).map((_, index) => <BillCardSkeleton key={index} />)
+                                : isLatestBill.slice(0, 3).map((news, index) => (
+                                      <motion.div
+                                          key={news.id || news._id}
+                                          className="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:border-blue-300 hover:shadow-xl"
+                                          variants={fadeInUp}
+                                          custom={index}
+                                          initial="hidden"
+                                          animate={billsInView ? "visible" : "hidden"}
+                                      >
+                                          <div className="h-48 flex-shrink-0 overflow-hidden bg-slate-200">
+                                              <img
+                                                  src={news.avatar?.url || defaultCover}
+                                                  alt={news.title || "Default Cover"}
+                                                  className="h-full w-full object-cover transition-transform duration-300 hover:scale-105"
+                                              />
+                                          </div>
+                                          <div className="flex flex-grow flex-col justify-between p-6">
+                                              <div>
+                                                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                                      <span className="rounded-full border border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 px-3 py-1 text-xs font-semibold text-blue-800">
+                                                          {news.category}
+                                                      </span>
+                                                      <span className="text-sm text-slate-500">{news.date}</span>
+                                                  </div>
+                                                  <h3 className="mb-2 text-xl font-bold text-slate-900">{news.title}</h3>
+                                                  <p className="mb-4 line-clamp-3 text-slate-600">{news.excerpt}</p>
+                                              </div>
+                                              <button
+                                                  onClick={() => handleViewFile(news._id, news)}
+                                                  className="group mt-4 flex items-center font-medium text-blue-700 transition-colors hover:text-blue-900"
+                                              >
+                                                  <FileText className="mr-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                                                  Read Document
+                                              </button>
+                                          </div>
+                                      </motion.div>
+                                  ))}
                         </div>
                     </motion.div>
                 </div>
             </section>
 
-            {/* Quick Links Section */}
-            <section className="py-16 bg-white">
+            <section
+                ref={aboutUsRef}
+                id="about-us"
+                className="min-h-screen bg-white"
+            >
+                <AboutUsPage />
+            </section>
+
+            {/* Government Services */}
+            <section ref={servicesRef} className="bg-white py-16">
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true, amount: 0.2 }}
+                        animate={servicesInView ? "visible" : "hidden"}
                         variants={fadeInUp}
-                        className="text-center mb-12"
+                        className="mb-12 text-center"
                     >
                         <h2 className="text-3xl font-bold text-slate-900 md:text-4xl">Government Services</h2>
-                        <p className="mt-4 text-lg text-slate-600">
-                            Access our services and resources
-                        </p>
+                        <p className="mt-4 text-lg text-slate-600">Access our services and resources</p>
                     </motion.div>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
                         {[
-                            { icon: FileText, title: "Documents", desc: "Official forms and publications", color: "from-blue-500 to-blue-600" },
-                            { icon: Calendar, title: "Events", desc: "Government events and meetings", color: "from-green-500 to-green-600" },
-                            { icon: User, title: "Officials", desc: "Government representatives", color: "from-purple-500 to-purple-600" },
-                            { icon: Tag, title: "Services", desc: "Public services and programs", color: "from-orange-500 to-orange-600" }
+                            {
+                                icon: FileText,
+                                title: "Documents",
+                                desc: "Official forms and publications",
+                                color: "from-blue-500 to-blue-600",
+                            },
+                            {
+                                icon: Calendar,
+                                title: "Events",
+                                desc: "Government events and meetings",
+                                color: "from-green-500 to-green-600",
+                            },
+                            {
+                                icon: User,
+                                title: "Officials",
+                                desc: "Government representatives",
+                                color: "from-purple-500 to-purple-600",
+                            },
+                            {
+                                icon: Tag,
+                                title: "Services",
+                                desc: "Public services and programs",
+                                color: "from-orange-500 to-orange-600",
+                            },
                         ].map((service, index) => (
                             <motion.div
                                 key={index}
                                 variants={fadeInUp}
                                 custom={index}
                                 initial="hidden"
-                                whileInView="visible"
-                                viewport={{ once: true }}
+                                animate={servicesInView ? "visible" : "hidden"}
                                 whileHover={{ y: -8 }}
-                                className="rounded-xl bg-gradient-to-br from-slate-50 to-gray-50 p-6 text-center shadow-md border border-slate-200 transition-all duration-300 hover:shadow-lg hover:border-blue-200"
+                                className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50 p-6 text-center shadow-md transition-all duration-300 hover:border-blue-200 hover:shadow-lg"
                             >
-                                <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r ${service.color} text-white shadow-lg`}>
+                                <div
+                                    className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r ${service.color} text-white shadow-lg`}
+                                >
                                     <service.icon className="h-8 w-8" />
                                 </div>
                                 <h3 className="mb-2 text-xl font-semibold text-slate-900">{service.title}</h3>
