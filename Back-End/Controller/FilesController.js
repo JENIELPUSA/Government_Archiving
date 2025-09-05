@@ -1059,60 +1059,64 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
 
 exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
-
   const file = await Files.findById(id);
   if (!file) return res.status(404).json({ message: "File not found." });
-  if (file.ArchivedStatus === "Deleted")
-    return res.status(400).json({ message: "This file is already removed." });
 
-  const allowedRoles = ["admin", "officer"];
-  const role = req.user?.role;
-  if (role && allowedRoles.includes(role.toLowerCase())) {
-    const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-    ActivityLog.create({
-      type: "REVIEW",
-      action: "Accessed a file",
-      performedBy: req.user.linkId,
-      performedByModel: capitalizedRole,
-      file: file._id,
-      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
-      level: "info",
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-    }).catch((err) => console.error("Activity log failed:", err));
-  }
+  if (!file.fileUrl) return res.status(500).json({ message: "File URL missing in DB" });
 
-  if (!file.fileUrl)
-    return res.status(500).json({ message: "File URL missing in DB" });
+  const fileExt = path.extname(file.fileUrl).toLowerCase();
+  const tempFilePath = path.join(tempDir, file._id + ".pdf");
 
   try {
-    const fileExt = path.extname(file.fileUrl).toLowerCase();
-
-    // --- If gz, stream with gunzip ---
-    if (fileExt === ".gz") {
+    // Check if temp PDF exists, if not, download + decompress
+    if (!fs.existsSync(tempFilePath)) {
       const response = await axios.get(file.fileUrl, { responseType: "stream" });
-      res.setHeader("Content-Type", "application/pdf"); // adjust if needed
-      res.setHeader("Content-Disposition", `inline; filename="${file.fileName.replace(/\.gz$/, '')}"`);
 
-      const gunzip = zlib.createGunzip();
-      response.data.pipe(gunzip).pipe(res);
+      if (fileExt === ".gz") {
+        const gunzip = zlib.createGunzip();
+        const writeStream = fs.createWriteStream(tempFilePath);
+        response.data.pipe(gunzip).pipe(writeStream);
 
-      gunzip.on("end", () => console.log("File streamed successfully (Node.js gunzip)"));
-      gunzip.on("error", (err) => console.error("Decompression/streaming error:", err));
+        await new Promise((resolve, reject) => {
+          writeStream.on("finish", resolve);
+          writeStream.on("error", reject);
+          gunzip.on("error", reject);
+        });
+      } else {
+        const writeStream = fs.createWriteStream(tempFilePath);
+        response.data.pipe(writeStream);
+        await new Promise((resolve, reject) => {
+          writeStream.on("finish", resolve);
+          writeStream.on("error", reject);
+        });
+      }
+    }
+
+    // Stream PDF from temp file in chunks (HTTP range)
+    const stat = fs.statSync(tempFilePath);
+    const range = req.headers.range;
+    if (range) {
+      const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(startStr, 10);
+      const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+      const chunkSize = end - start + 1;
+
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunkSize,
+        "Content-Type": "application/pdf",
+      });
+
+      const fileStream = fs.createReadStream(tempFilePath, { start, end });
+      fileStream.pipe(res);
     } else {
-      // --- If not gz, normal streaming ---
-      const response = await axios.get(file.fileUrl, { responseType: "stream" });
-      res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
-      res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-      response.data.pipe(res);
-      response.data.on("end", () => console.log("File streamed successfully"));
-      response.data.on("error", (err) => console.error("Streaming error:", err));
+      res.writeHead(200, { "Content-Length": stat.size, "Content-Type": "application/pdf" });
+      fs.createReadStream(tempFilePath).pipe(res);
     }
   } catch (err) {
-    console.error("Streaming failed:", err.message || err);
-    if (!res.headersSent) {
-      res.status(500).json({ message: "File streaming failed", error: err.message });
-    }
+    console.error("Streaming failed:", err);
+    if (!res.headersSent) res.status(500).json({ message: "File streaming failed", error: err.message });
   }
 });
 
