@@ -151,7 +151,7 @@ const ApproverSettings = ({ approvers }) => {
                                             type="text"
                                             value={currentApprover.first_name}
                                             onChange={(e) => setCurrentApprover({ ...currentApprover, first_name: e.target.value })}
-                                            className="w-full rounded-lg border px-4 py-2"
+                                            className="w-full rounded-lg border px-4 py-2 dark:text-black"
                                         />
                                     </div>
                                     <div>
@@ -160,7 +160,7 @@ const ApproverSettings = ({ approvers }) => {
                                             type="text"
                                             value={currentApprover.last_name}
                                             onChange={(e) => setCurrentApprover({ ...currentApprover, last_name: e.target.value })}
-                                            className="w-full rounded-lg border px-4 py-2"
+                                            className="w-full rounded-lg border px-4 py-2 dark:text-black"
                                         />
                                     </div>
                                 </div>
@@ -171,7 +171,7 @@ const ApproverSettings = ({ approvers }) => {
                                         type="text"
                                         value={currentApprover.middle_name}
                                         onChange={(e) => setCurrentApprover({ ...currentApprover, middle_name: e.target.value })}
-                                        className="w-full rounded-lg border px-4 py-2"
+                                        className="w-full rounded-lg border px-4 py-2 dark:text-black"
                                     />
                                 </div>
 
@@ -181,7 +181,7 @@ const ApproverSettings = ({ approvers }) => {
                                         type="email"
                                         value={currentApprover.email}
                                         onChange={(e) => setCurrentApprover({ ...currentApprover, email: e.target.value })}
-                                        className="w-full rounded-lg border px-4 py-2"
+                                        className="w-full rounded-lg border px-4 py-2 dark:text-black"
                                     />
                                 </div>
                             </div>
@@ -198,7 +198,7 @@ const ApproverSettings = ({ approvers }) => {
                                     onClick={handleSubmit}
                                     disabled={loading || !currentApprover.first_name || !currentApprover.last_name || !currentApprover.email}
                                     className={`rounded-lg px-4 py-2 text-white ${
-                                        editingId ? "bg-yellow-500 hover:bg-yellow-600" : "bg-blue-500 hover:bg-blue-600"
+                                        editingId ? "bg-blue-500 hover:bg-red-600" : "bg-blue-500 hover:bg-blue-600"
                                     } disabled:cursor-not-allowed disabled:opacity-50`}
                                 >
                                     {loading ? "Saving..." : editingId ? "Update Approver" : "Add Approver"}

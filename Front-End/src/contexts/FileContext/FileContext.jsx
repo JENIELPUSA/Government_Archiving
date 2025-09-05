@@ -242,7 +242,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 fullText: values.fullText || "",
                 summary: values.summary || "",
                 title: values.title || "",
-                author: values.author || "",
+                author: values.author ? values.author : null,
             };
 
             const response = await axiosInstance.patch(

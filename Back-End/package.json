@@ -169,6 +169,7 @@
     "multer": "^2.0.2",
     "negotiator": "^0.6.3",
     "neo-async": "^2.6.2",
+    "node-cache": "^5.1.2",
     "node-cron": "^3.0.3",
     "node-releases": "^2.0.19",
     "nodemailer": "^6.9.15",

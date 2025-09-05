@@ -12,7 +12,8 @@ const axios = require("axios");
 const ftp = require("basic-ftp");
 const fs = require("fs");
 const FormData = require("form-data");
-
+const zlib = require("zlib");
+const os = require("os");
 const ftpClient = new ftp.Client();
 ftpClient.ftp.verbose = true;
 
@@ -321,12 +322,9 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
-exports.createFiles = async (req, res) => {
+exports.createFiles = AsyncErrorHandler(async (req, res) => {
   try {
-    if (!req.file) {
-      console.error("No file uploaded. Request body:", req.body);
-      return res.status(400).json({ error: "No file uploaded" });
-    }
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
     const {
       title,
@@ -345,16 +343,9 @@ exports.createFiles = async (req, res) => {
     if (!title || !admin || !category) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    if (!mongoose.Types.ObjectId.isValid(admin)) return res.status(400).json({ error: "Invalid admin ID" });
+    if (approverID && !mongoose.Types.ObjectId.isValid(approverID)) return res.status(400).json({ error: "Invalid approver ID" });
 
-    if (!mongoose.Types.ObjectId.isValid(admin)) {
-      return res.status(400).json({ error: "Invalid admin ID" });
-    }
-
-    if (approverID && !mongoose.Types.ObjectId.isValid(approverID)) {
-      return res.status(400).json({ error: "Invalid approver ID" });
-    }
-
-    // File details
     const fileName = req.file.filename;
     const fileSize = req.file.size;
     const ext = path.extname(req.file.originalname).toLowerCase();
@@ -377,49 +368,37 @@ exports.createFiles = async (req, res) => {
     };
     const fullTextType = typeMap[ext] || "Unknown";
 
-    // --- Upload to Hostinger ---
+    const originalPath = req.file.path;
+
+    // --- Stream gzip directly to Hostinger ---
+    const gzip = zlib.createGzip();
+    const readStream = fs.createReadStream(originalPath);
+
+    const form = new FormData();
+    form.append("file", readStream.pipe(gzip), req.file.originalname + ".gz");
+
     let remotePath;
     try {
-      const form = new FormData();
-      form.append(
-        "file",
-        fs.createReadStream(req.file.path),
-        req.file.originalname
-      );
-
       const response = await axios.post(
         "https://tan-kudu-520349.hostingersite.com/upload.php",
         form,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-          maxBodyLength: Infinity,
-        }
+        { headers: form.getHeaders(), maxBodyLength: Infinity }
       );
 
       if (!response.data.success) {
-        return res.status(500).json({
-          error: response.data.message || "Failed to upload to Hostinger",
-        });
+        return res.status(500).json({ error: response.data.message || "Upload failed" });
       }
 
       remotePath = response.data.url;
-      console.log("File uploaded to Hostinger:", remotePath);
 
-      // Delete temp file
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Failed to delete temp file:", err);
-      });
-    } catch (phpErr) {
-      console.error(
-        "Hostinger upload failed:",
-        phpErr.response?.data || phpErr.message || phpErr
-      );
-      return res
-        .status(500)
-        .json({ error: "Failed to upload file to Hostinger" });
+      // Delete original file after streaming
+      fs.unlink(originalPath, () => {});
+    } catch (err) {
+      console.error("Hostinger upload failed:", err.message);
+      return res.status(500).json({ error: "Failed to upload file to Hostinger" });
     }
 
-    // --- Prepare file data for DB ---
+    // --- Prepare DB entry ---
     const fileData = {
       title,
       resolutionNumber,
@@ -431,7 +410,7 @@ exports.createFiles = async (req, res) => {
       approverID,
       status,
       dateOfResolution,
-      fileName,
+      fileName: fileName + ".gz",
       fileUrl: remotePath,
       oldFile,
       folderID,
@@ -439,45 +418,25 @@ exports.createFiles = async (req, res) => {
       fullText: fullTextType,
     };
 
-    // Check category for special status
+    // Category special logic
     let categoryName = null;
     if (mongoose.Types.ObjectId.isValid(category)) {
       const categoryDoc = await Category.findById(category).lean();
       categoryName = categoryDoc?.category;
     }
-    if (oldFile === "true" || oldFile === true) {
-      if (categoryName === "Resolution" || categoryName === "Ordinance") {
-        fileData.status = "Approved";
-        fileData.ArchivedStatus = "Active";
-      } else {
-        fileData.ArchivedStatus = "Archived";
-      }
+    if (oldFile === true || oldFile === "true") {
+      fileData.ArchivedStatus = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Active" : "Archived";
+      fileData.status = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Approved" : fileData.status;
+    } else {
+      fileData.ArchivedStatus = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Active" : "Archived";
     }
 
-    if (!fileData.ArchivedStatus) {
-      if (categoryName !== "Resolution" && categoryName !== "Ordinance") {
-        fileData.ArchivedStatus = "Archived";
-      } else {
-        fileData.ArchivedStatus = "Active";
-      }
-    }
+    const savedFile = await new Files(fileData).save();
 
-    // --- Save to database ---
-    let savedFile;
-    try {
-      savedFile = await new Files(fileData);
-      await savedFile.save();
-      console.log("File saved to database:", savedFile._id);
-    } catch (dbErr) {
-      console.error("Database save error:", dbErr);
-      return res.status(500).json({ error: "Failed to save file to database" });
-    }
-
-    // --- Log activity ---
+    // --- Activity log ---
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
     const capitalizedRole = role?.charAt(0).toUpperCase() + role?.slice(1);
-
     if (allowedRoles.includes(role)) {
       await ActivityLog.create({
         type: "CREATE",
@@ -492,66 +451,35 @@ exports.createFiles = async (req, res) => {
       });
     }
 
-    // --- Notifications for Pending ---
+    // --- Notification for pending ---
     if (savedFile.status === "Pending") {
-      const fileId = savedFile._id;
-      const fileTitle = savedFile.title || "Untitled Document";
-      const categoryTitle = savedFile.category || "Unknown Category";
-      const messageText = `New document pending your approval: "${fileTitle}" from ${categoryTitle}`;
-
-      const targetViewer =
-        approverID && mongoose.Types.ObjectId.isValid(approverID)
-          ? approverID
-          : author;
-
+      const targetViewer = approverID || author;
       if (mongoose.Types.ObjectId.isValid(targetViewer)) {
-        const viewersArray = [
-          { user: targetViewer, isRead: false, isApprover: !!approverID },
-        ];
+        const notificationDoc = await Notification.create({
+          message: `New document pending your approval: "${title}"`,
+          viewers: [{ user: targetViewer, isRead: false, isApprover: !!approverID }],
+          FileId: savedFile._id,
+          relatedApprover: approverID,
+        });
 
-        if (approverID) {
-          const notificationDoc = await Notification.create({
-            message: messageText,
-            viewers: viewersArray,
-            FileId: fileId,
-            relatedApprover: approverID,
+        const io = req.app.get("io");
+        const receiver = global.connectedUsers?.[targetViewer];
+        if (io && receiver) {
+          io.to(receiver.socketId).emit("SentDocumentNotification", {
+            message: `New document pending your approval: "${title}"`,
+            data: savedFile,
+            notificationId: notificationDoc._id,
           });
-
-          const io = req.app.get("io");
-          if (io) {
-            const SendMessage = {
-              message: messageText,
-              data: savedFile,
-              notificationId: notificationDoc._id,
-              FileId: fileId,
-              approverID: approverID,
-            };
-
-            const receiver = global.connectedUsers?.[targetViewer];
-            if (receiver) {
-              io.to(receiver.socketId).emit(
-                "SentDocumentNotification",
-                SendMessage
-              );
-              console.log(
-                `📨 Sent real-time notification to USER (${targetViewer})`
-              );
-            } else {
-              console.log(
-                `📭 User (${targetViewer}) is OFFLINE - notification saved in DB`
-              );
-            }
-          }
         }
       }
     }
 
     res.status(201).json({ status: "success", data: savedFile });
   } catch (err) {
-    console.error("Upload error:", err.message || err);
+    console.error("Upload error:", err.message);
     res.status(500).json({ error: "Internal server error" });
   }
-};
+});
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -1063,75 +991,79 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   });
 });
 
+const tempDir = os.tmpdir(); // server temp folder
+
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
-
   const file = await Files.findById(id);
-  if (!file) {
-    console.log("❌ File not found in DB");
-    return res.status(404).json({ message: "File not found." });
-  }
+  if (!file) return res.status(404).json({ message: "File not found." });
 
-  if (file.ArchivedStatus === "Deleted") {
-    console.log("File is already removed:", file.fileName);
-    return res.status(400).json({ message: "This file is already removed." });
-  }
+  if (!file.fileUrl) return res.status(500).json({ message: "File URL missing in DB" });
 
-  console.log("✅ File found in DB:", file.fileName);
-
-  const allowedRoles = ["admin", "officer"];
-  const role = req.user?.role;
-  if (role && allowedRoles.includes(role.toLowerCase())) {
-    const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-    ActivityLog.create({
-      type: "REVIEW",
-      action: "Accessed a file",
-      performedBy: req.user.linkId,
-      performedByModel: capitalizedRole,
-      file: file._id,
-      message: `${capitalizedRole} accessed file: '${
-        file.title || file.fileName
-      }'`,
-      level: "info",
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-    }).catch((err) => console.error("❌ Activity log failed:", err));
-  }
-  if (!file.fileUrl) {
-    return res.status(500).json({ message: "File URL missing in DB" });
-  }
+  const fileExt = path.extname(file.fileUrl).toLowerCase();
+  const tempFilePath = path.join(tempDir, file._id + ".pdf");
 
   try {
-    const response = await axios.get(file.fileUrl, { responseType: "stream" });
-    res.setHeader(
-      "Content-Type",
-      response.headers["content-type"] || "application/octet-stream"
-    );
-    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
-    response.data.pipe(res);
-    response.data.on("end", () => console.log("📤 File streamed successfully"));
-    response.data.on("error", (err) =>
-      console.error("❗ Streaming error:", err)
-    );
-  } catch (err) {
-    console.error("❗ Hostinger streaming failed:", err.message || err);
-    if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ message: "File streaming failed", error: err.message });
+    // Check if temp PDF exists, if not, download + decompress
+    if (!fs.existsSync(tempFilePath)) {
+      const response = await axios.get(file.fileUrl, { responseType: "stream" });
+
+      if (fileExt === ".gz") {
+        const gunzip = zlib.createGunzip();
+        const writeStream = fs.createWriteStream(tempFilePath);
+        response.data.pipe(gunzip).pipe(writeStream);
+
+        await new Promise((resolve, reject) => {
+          writeStream.on("finish", resolve);
+          writeStream.on("error", reject);
+          gunzip.on("error", reject);
+        });
+      } else {
+        const writeStream = fs.createWriteStream(tempFilePath);
+        response.data.pipe(writeStream);
+        await new Promise((resolve, reject) => {
+          writeStream.on("finish", resolve);
+          writeStream.on("error", reject);
+        });
+      }
     }
+
+    // Stream PDF from temp file in chunks (HTTP range)
+    const stat = fs.statSync(tempFilePath);
+    const range = req.headers.range;
+    if (range) {
+      const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
+      const start = parseInt(startStr, 10);
+      const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
+      const chunkSize = end - start + 1;
+
+      res.writeHead(206, {
+        "Content-Range": `bytes ${start}-${end}/${stat.size}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": chunkSize,
+        "Content-Type": "application/pdf",
+      });
+
+      const fileStream = fs.createReadStream(tempFilePath, { start, end });
+      fileStream.pipe(res);
+    } else {
+      res.writeHead(200, { "Content-Length": stat.size, "Content-Type": "application/pdf" });
+      fs.createReadStream(tempFilePath).pipe(res);
+    }
+  } catch (err) {
+    console.error("Streaming failed:", err);
+    if (!res.headersSent) res.status(500).json({ message: "File streaming failed", error: err.message });
   }
 });
+
 
 exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
 
   const file = await Files.findById(id);
-  if (!file) {
-    console.log("File not found in DB");
-    return res.status(404).json({ message: "File not found." });
-  }
-  console.log("File found in DB:", file.fileName);
+  if (!file) return res.status(404).json({ message: "File not found." });
+  if (file.ArchivedStatus === "Deleted")
+    return res.status(400).json({ message: "This file is already removed." });
 
   const allowedRoles = ["admin", "officer"];
   const role = req.user?.role;
@@ -1143,44 +1075,47 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
       performedBy: req.user.linkId,
       performedByModel: capitalizedRole,
       file: file._id,
-      message: `${capitalizedRole} accessed file: '${
-        file.title || file.fileName
-      }'`,
+      message: `${capitalizedRole} accessed file: '${file.title || file.fileName}'`,
       level: "info",
       ipAddress: req.ip,
       userAgent: req.headers["user-agent"],
     }).catch((err) => console.error("Activity log failed:", err));
   }
 
-  // Stream file from Hostinger
-  if (!file.fileUrl) {
+  if (!file.fileUrl)
     return res.status(500).json({ message: "File URL missing in DB" });
-  }
 
   try {
-    const response = await axios.get(file.fileUrl, { responseType: "stream" });
+    const fileExt = path.extname(file.fileUrl).toLowerCase();
 
-    // Set headers dynamically
-    res.setHeader(
-      "Content-Type",
-      response.headers["content-type"] || "application/octet-stream"
-    );
-    res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+    // --- If gz, stream with gunzip ---
+    if (fileExt === ".gz") {
+      const response = await axios.get(file.fileUrl, { responseType: "stream" });
+      res.setHeader("Content-Type", "application/pdf"); // adjust if needed
+      res.setHeader("Content-Disposition", `inline; filename="${file.fileName.replace(/\.gz$/, '')}"`);
 
-    // Pipe the remote file stream to the client
-    response.data.pipe(res);
+      const gunzip = zlib.createGunzip();
+      response.data.pipe(gunzip).pipe(res);
 
-    response.data.on("end", () => console.log("File streamed successfully"));
-    response.data.on("error", (err) => console.error("Streaming error:", err));
+      gunzip.on("end", () => console.log("File streamed successfully (Node.js gunzip)"));
+      gunzip.on("error", (err) => console.error("Decompression/streaming error:", err));
+    } else {
+      // --- If not gz, normal streaming ---
+      const response = await axios.get(file.fileUrl, { responseType: "stream" });
+      res.setHeader("Content-Type", response.headers["content-type"] || "application/octet-stream");
+      res.setHeader("Content-Disposition", `inline; filename="${file.fileName}"`);
+      response.data.pipe(res);
+      response.data.on("end", () => console.log("File streamed successfully"));
+      response.data.on("error", (err) => console.error("Streaming error:", err));
+    }
   } catch (err) {
-    console.error("Hostinger streaming failed:", err.message || err);
+    console.error("Streaming failed:", err.message || err);
     if (!res.headersSent) {
-      res
-        .status(500)
-        .json({ message: "File streaming failed", error: err.message });
+      res.status(500).json({ message: "File streaming failed", error: err.message });
     }
   }
 });
+
 
 exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
   try {

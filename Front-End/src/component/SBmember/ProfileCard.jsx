@@ -4,14 +4,10 @@ import { Mail, Pencil, Trash, Database } from "lucide-react";
 import PopupTable from "./PopupTable";
 
 const ProfileCard = ({ member, onDelete, onEdit }) => {
-    // Added onEdit prop
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const { memberInfo, files = [], count } = member;
 
-
-
-    console.log("member",member)
     const resolutionCount = files.filter((file) => file.category === "Resolution").length;
     const ordinanceCount = files.filter((file) => file.category === "Ordinance").length;
 
@@ -33,9 +29,27 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
     return (
         <>
             <div
-                className="w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-xl dark:bg-gray-800 md:rounded-3xl"
+                className="relative w-full cursor-pointer overflow-hidden rounded-xl bg-white shadow-lg transition-all duration-300 hover:shadow-xl dark:bg-gray-800 md:rounded-3xl"
                 onClick={handleCardClick}
             >
+                {/* Action buttons positioned at top-right */}
+                <div className="absolute right-3 top-3 z-10 flex gap-2">
+                    <button
+                        className="flex items-center justify-center rounded-full bg-blue-500 p-2 text-white transition-colors hover:bg-blue-600"
+                        onClick={handleEditClick}
+                        title="Edit"
+                    >
+                        <Pencil size={16} />
+                    </button>
+                    <button
+                        className="flex items-center justify-center rounded-full bg-red-500 p-2 text-white transition-colors hover:bg-red-600"
+                        onClick={onDeletehandle}
+                        title="Delete"
+                    >
+                        <Trash size={16} />
+                    </button>
+                </div>
+
                 <div className="flex flex-col items-stretch md:flex-row">
                     <div className="flex w-full flex-col items-center justify-center bg-blue-50 p-4 dark:bg-blue-900 md:w-1/3">
                         <div className="relative">
@@ -49,27 +63,9 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
 
                     <div className="w-full p-3 md:w-2/3 md:p-4 lg:p-6">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <h5 className="line-clamp-1 text-lg font-bold text-gray-800 dark:text-gray-100 sm:text-xl md:text-2xl">
+                            <h5 className="line-clamp-1 text-lg font-bold text-gray-800 dark:text-gray-100 sm:text-xl md:text-1xl">
                                 {member.fullName}
                             </h5>
-                            <div className="flex gap-2">
-                                {/* Edit Button - now calls handleEditClick */}
-                                <button
-                                    className="flex items-center justify-center rounded-full border border-blue-500 px-2 py-1 text-xs font-semibold text-blue-500 transition-colors hover:bg-blue-500 hover:text-white md:px-4 md:text-sm"
-                                    onClick={handleEditClick}
-                                >
-                                    <EditIcon />
-                                    <span className="xs:inline hidden">Edit</span>
-                                </button>
-
-                                <button
-                                    className="flex items-center justify-center rounded-full border border-red-500 px-2 py-1 text-xs font-semibold text-red-500 transition-colors hover:bg-red-500 hover:text-white md:px-4 md:text-sm"
-                                    onClick={onDeletehandle}
-                                >
-                                    <Trash />
-                                    <span className="xs:inline hidden">Delete</span>
-                                </button>
-                            </div>
                         </div>
 
                         <div className="mt-1 space-y-1 text-gray-600 dark:text-gray-300 md:mt-2">

@@ -207,14 +207,14 @@ const FoldersView = ({
                                         <button
                                             onClick={() => setFolderCurrentPage((prev) => Math.max(prev - 1, 1))}
                                             disabled={folderCurrentPage === 1}
-                                            className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                            className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600 dark:text-white"
                                         >
                                             <ChevronLeft className="h-5 w-5" />
                                         </button>
                                         <button
                                             onClick={() => setFolderCurrentPage((prev) => Math.min(prev + 1, folderTotalPages))}
                                             disabled={folderCurrentPage === folderTotalPages || folderTotalPages === 0}
-                                            className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                            className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600 dark:text-white"
                                         >
                                             <ChevronRight className="h-5 w-5" />
                                         </button>
@@ -416,17 +416,17 @@ const FoldersView = ({
                                     <button
                                         onClick={() => setFolderCurrentPage((prev) => Math.max(prev - 1, 1))}
                                         disabled={folderCurrentPage === 1}
-                                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
+                                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:text-white"
                                     >
                                         <ChevronLeft className="h-4 w-4" /> Previous
                                     </button>
-                                    <span className="text-sm font-medium">
+                                    <span className="text-sm font-medium dark:text-white">
                                         Page {folderCurrentPage} of {folderTotalPages}
                                     </span>
                                     <button
                                         onClick={() => setFolderCurrentPage((prev) => Math.min(prev + 1, folderTotalPages))}
                                         disabled={folderCurrentPage === folderTotalPages}
-                                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600"
+                                        className="flex items-center gap-1 rounded-lg border border-gray-300 px-3 py-1 text-sm disabled:opacity-50 dark:border-gray-600 dark:text-white"
                                     >
                                         Next <ChevronRight className="h-4 w-4" />
                                     </button>
