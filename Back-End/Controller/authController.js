@@ -107,7 +107,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
       try {
         const response = await axios.post(
-          "https://government-archiving.onrender.com/upload.php",
+          "https://bp-sangguniangpanlalawigan.com/upload.php",
           form,
           {
             maxBodyLength: Infinity,
