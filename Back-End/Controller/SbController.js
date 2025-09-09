@@ -200,7 +200,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       });
 
       const uploadResponse = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        "https://bp-sangguniangpanlalawigan.com/upload.php",
         form,
         {
           headers: form.getHeaders(),
@@ -342,7 +342,7 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        "https://bp-sangguniangpanlalawigan.com/delete.php",
         params.toString(),
         {
           headers: {

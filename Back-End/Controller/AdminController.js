@@ -41,7 +41,7 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        "https://bp-sangguniangpanlalawigan.com/delete.php",
         params.toString(),
         {
           headers: {
@@ -138,7 +138,7 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
       });
 
       const uploadResponse = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        "https://bp-sangguniangpanlalawigan.com/upload.php",
         form,
         {
           headers: form.getHeaders(),
@@ -187,7 +187,7 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
 
       axios
         .post(
-          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          "https://bp-sangguniangpanlalawigan.com/delete.php",
           params.toString(),
           { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
         )

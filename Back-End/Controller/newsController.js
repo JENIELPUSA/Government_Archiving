@@ -55,7 +55,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
       form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
 
       const response = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        "https://bp-sangguniangpanlalawigan.com/upload.php",
         form,
         {
           headers: form.getHeaders(),
@@ -191,7 +191,7 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
 
       try {
         const uploadResponse = await axios.post(
-          "https://tan-kudu-520349.hostingersite.com/upload.php",
+          "https://bp-sangguniangpanlalawigan.com/upload.php",
           form,
           {
             headers: form.getHeaders(),
@@ -300,7 +300,7 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        "https://bp-sangguniangpanlalawigan.com/delete.php",
         params.toString(),
         {
           headers: {

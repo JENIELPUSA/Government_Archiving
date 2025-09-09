@@ -431,7 +431,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     let remotePath;
     try {
       const response = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
+        "https://bp-sangguniangpanlalawigan.com/upload.php",
         form,
         { headers: form.getHeaders(), maxBodyLength: Infinity }
       );
@@ -1195,7 +1195,7 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
     if (file.fileUrl) {
       try {
         const response = await axios.post(
-          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          "https://bp-sangguniangpanlalawigan.com/delete.php",
           { file: file.fileUrl }
         );
 
