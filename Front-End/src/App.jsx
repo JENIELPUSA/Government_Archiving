@@ -79,7 +79,7 @@ function App() {
                             element: <PdfViewer />,
                         },
                         {
-                            path: "/dashboard/SBmember",
+                            path: "/dashboard/SPmember",
                             element: <SBmember />,
                         },
                         {

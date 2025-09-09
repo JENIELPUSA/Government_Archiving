@@ -12,7 +12,7 @@ const UserLoginSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
   contact_number: { type: Number },
-  username: { type: String, required: true, unique: true },
+  username: { type: String},
   password: { type: String, required: true },
   role: {
     type: String,

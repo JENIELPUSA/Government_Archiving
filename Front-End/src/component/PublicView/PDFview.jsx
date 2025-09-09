@@ -33,7 +33,7 @@ export default function PDFview({ fileId, fileData }) {
 
     return (
         <div
-            className={`flex w-screen flex-col font-sans ${
+            className={`flex flex-col font-sans overflow-x-hidden ${
                 isLoading ? "h-screen justify-center" : "min-h-screen justify-start"
             } items-center`}
         >

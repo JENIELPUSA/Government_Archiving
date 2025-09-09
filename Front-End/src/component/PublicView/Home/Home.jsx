@@ -10,70 +10,70 @@ import PDFview from "../PDFview";
 import AboutUsPage from "../AboutUs";
 
 const ScrollToTop = () => {
-  const { scrollYProgress } = useScroll();
-  const scrollY = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-  
-  const [visible, setVisible] = useState(false);
-  
-  useEffect(() => {
-    const unsubscribe = scrollY.on("change", (latest) => {
-      setVisible(latest > 0.2);
+    const { scrollYProgress } = useScroll();
+    const scrollY = useSpring(scrollYProgress, {
+        stiffness: 100,
+        damping: 30,
+        restDelta: 0.001,
     });
-    
-    return () => unsubscribe();
-  }, [scrollY]);
-  
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  };
-  
-  return (
-    <motion.button
-      className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-colors hover:bg-blue-700"
-      onClick={scrollToTop}
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={{ 
-        opacity: visible ? 1 : 0, 
-        scale: visible ? 1 : 0.5 
-      }}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.9 }}
-    >
-      <ArrowUp size={20} />
-      <motion.div
-        className="absolute inset-0 -z-10 rounded-full bg-blue-800"
-        style={{
-          scale: scrollY
-        }}
-      />
-    </motion.button>
-  );
+
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        const unsubscribe = scrollY.on("change", (latest) => {
+            setVisible(latest > 0.2);
+        });
+
+        return () => unsubscribe();
+    }, [scrollY]);
+
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+        });
+    };
+
+    return (
+        <motion.button
+            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-colors hover:bg-blue-700"
+            onClick={scrollToTop}
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{
+                opacity: visible ? 1 : 0,
+                scale: visible ? 1 : 0.5,
+            }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+        >
+            <ArrowUp size={20} />
+            <motion.div
+                className="absolute inset-0 -z-10 rounded-full bg-blue-800"
+                style={{
+                    scale: scrollY,
+                }}
+            />
+        </motion.button>
+    );
 };
 
 const Home = ({ aboutUsRef }) => {
     const [selectedFile, setSelectedFile] = useState(null);
     const { isLatestBill } = useContext(FilesDisplayContext);
     const { pictures } = useContext(NewsDisplayContext);
-    
+
     // Scroll progress for header animation
     const { scrollYProgress } = useScroll();
     const headerScale = useTransform(scrollYProgress, [0, 0.1], [1, 0.9]);
     const headerOpacity = useTransform(scrollYProgress, [0, 0.1], [1, 0.8]);
-    
+
     // Parallax effects for hero section
     const heroRef = useRef(null);
     const { scrollYProgress: heroScrollY } = useScroll({
-      target: heroRef,
-      offset: ["start start", "end start"]
+        target: heroRef,
+        offset: ["start start", "end start"],
     });
-    
+
     const y = useTransform(heroScrollY, [0, 1], ["0%", "50%"]);
     const opacity = useTransform(heroScrollY, [0, 0.5], [1, 0]);
 
@@ -90,7 +90,7 @@ const Home = ({ aboutUsRef }) => {
     const featuredRef = useRef(null);
     const billsRef = useRef(null);
     const servicesRef = useRef(null);
-    
+
     // Check if elements are in view
     const featuredInView = useInView(featuredRef, { once: true, margin: "-20% 0px" });
     const billsInView = useInView(billsRef, { once: true, margin: "-10% 0px" });
@@ -188,9 +188,9 @@ const Home = ({ aboutUsRef }) => {
             scale: 1,
             transition: {
                 duration: 0.6,
-                ease: "easeOut"
-            }
-        }
+                ease: "easeOut",
+            },
+        },
     };
 
     const currentSPSlide = documentsummary[spCarouselIndex];
@@ -230,7 +230,7 @@ const Home = ({ aboutUsRef }) => {
             </div>
         </div>
     );
-    
+
     if (selectedFile) {
         return (
             <PDFview
@@ -244,9 +244,9 @@ const Home = ({ aboutUsRef }) => {
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans text-slate-800 antialiased">
             {/* Scroll to top button */}
             <ScrollToTop />
-            
+
             {/* Hero Section with Parallax */}
-            <motion.section 
+            <motion.section
                 ref={heroRef}
                 className="relative flex h-screen items-center justify-center overflow-hidden"
                 style={{
@@ -256,11 +256,11 @@ const Home = ({ aboutUsRef }) => {
                     backgroundAttachment: "fixed",
                 }}
             >
-                <motion.div 
+                <motion.div
                     style={{ y, opacity }}
                     className="absolute inset-0"
                 />
-                
+
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -279,20 +279,6 @@ const Home = ({ aboutUsRef }) => {
                     <p className="mx-auto max-w-2xl text-xl text-blue-100 drop-shadow-md md:text-2xl">
                         Serving the community with integrity and dedication
                     </p>
-                    
-                    {/* Scroll indicator */}
-                    <motion.div 
-                        className="absolute bottom-10 left-1/2 -translate-x-1/2"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 1.5 }}
-                    >
-                        <motion.div
-                            animate={{ y: [0, 10, 0] }}
-                            transition={{ repeat: Infinity, duration: 1.5 }}
-                            className="h-8 w-px bg-white"
-                        />
-                    </motion.div>
                 </motion.div>
             </motion.section>
 
@@ -317,7 +303,10 @@ const Home = ({ aboutUsRef }) => {
             </motion.div>
 
             {/* Featured Documents */}
-            <section ref={featuredRef} className="bg-white py-16">
+            <section
+                ref={featuredRef}
+                className="bg-white py-16"
+            >
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"
@@ -383,9 +372,12 @@ const Home = ({ aboutUsRef }) => {
                     )}
                 </div>
             </section>
-            
+
             {/* Latest Bills Section */}
-            <section ref={billsRef} className="bg-gradient-to-br from-blue-50 to-indigo-50 py-16">
+            <section
+                ref={billsRef}
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 py-16"
+            >
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"
@@ -428,7 +420,7 @@ const Home = ({ aboutUsRef }) => {
                                                       <span className="text-sm text-slate-500">{news.date}</span>
                                                   </div>
                                                   <h3 className="mb-2 text-xl font-bold text-slate-900">{news.title}</h3>
-                                                  <p className="mb-4 line-clamp-3 text-slate-600">{news.excerpt}</p>
+                                                  <p className="mb-4 line-clamp-3 text-slate-600">{news.summary}</p>
                                               </div>
                                               <button
                                                   onClick={() => handleViewFile(news._id, news)}
@@ -454,7 +446,10 @@ const Home = ({ aboutUsRef }) => {
             </section>
 
             {/* Government Services */}
-            <section ref={servicesRef} className="bg-white py-16">
+            <section
+                ref={servicesRef}
+                className="bg-white py-16"
+            >
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <motion.div
                         initial="hidden"

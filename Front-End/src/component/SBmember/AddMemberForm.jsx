@@ -1,17 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Image } from 'lucide-react';
-function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
+import { Image } from "lucide-react";
+function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
     const [newMember, setNewMember] = useState({
         first_name: "",
         middle_name: "",
         last_name: "",
         detailInfo: "",
-        position: "councilor",
+        position: "",
         district: "",
-        email: "",
         term_from: "",
         term_to: "",
+        term: "",
         avatar: null,
         preview: null,
     });
@@ -24,14 +24,13 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                 middle_name: memberToEdit.memberInfo?.middle_name || "",
                 last_name: memberToEdit.memberInfo?.last_name || "",
                 detailInfo: memberToEdit.detailInfo || "",
-                position: memberToEdit.Position || "councilor",
+                position: memberToEdit.Position || "",
+                term: memberToEdit.memberInfo?.term || "",
                 district: memberToEdit.district || "",
-                email: memberToEdit.memberInfo.email || "",
                 term_from: memberToEdit.memberInfo?.term_from || "",
                 term_to: memberToEdit.memberInfo?.term_to || "",
                 avatar: null,
-                preview: 
-                  Image 
+                preview: Image,
             });
         } else {
             setNewMember({
@@ -39,11 +38,11 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                 middle_name: "",
                 last_name: "",
                 detailInfo: "",
-                position: "councilor",
+                position: "",
                 district: "",
-                email: "",
                 term_from: "",
                 term_to: "",
+                term: "",
                 avatar: null,
                 preview: null,
             });
@@ -179,21 +178,43 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                                 disabled={isLoading}
                             />
 
-                            {/* Position Selector */}
+                            {/* Position Input */}
                             <div className="mt-6 w-full">
                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>
-                                <select
+                                <input
+                                    type="text"
                                     name="position"
                                     value={newMember.position}
+                                    onChange={handleInputChange}
+                                    disabled={isLoading}
+                                    placeholder="Enter position"
+                                    className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
+                                        isLoading ? "cursor-not-allowed opacity-50" : ""
+                                    }`}
+                                />
+                            </div>
+
+                            {/* Term Selector */}
+                            <div className="mt-6 w-full">
+                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Term</label>
+                                <select
+                                    name="term"
+                                    value={newMember.term}
                                     onChange={handleInputChange}
                                     disabled={isLoading}
                                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                                         isLoading ? "cursor-not-allowed opacity-50" : ""
                                     }`}
                                 >
-                                    <option value="mayor">Mayor</option>
-                                    <option value="vice-mayor">Vice Mayor</option>
-                                    <option value="councilor">Councilor</option>
+                                    <option
+                                        value=""
+                                        disabled
+                                    >
+                                        Select Number of Term
+                                    </option>
+                                    <option value="1st_term">1st Term</option>
+                                    <option value="2nd_term">2nd Term</option>
+                                    <option value="3rd_term">3rd Term</option>
                                 </select>
                             </div>
                         </div>
@@ -250,7 +271,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
 
                                 {/* district */}
                                 <div className="col-span-1">
-                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">district *</label>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Designation *</label>
                                     <input
                                         type="text"
                                         name="district"
@@ -260,30 +281,14 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                                         className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                                             isLoading ? "cursor-not-allowed opacity-50" : ""
                                         }`}
-                                        required
-                                    />
-                                </div>
-
-                                {/* Email */}
-                                <div className="col-span-1">
-                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Email *</label>
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        value={newMember.email}
-                                        onChange={handleInputChange}
-                                        disabled={isLoading}
-                                        className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
-                                            isLoading ? "cursor-not-allowed opacity-50" : ""
-                                        }`}
-                                        required
                                     />
                                 </div>
 
                                 {/* Term From */}
                                 <div className="col-span-1">
                                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Term From</label>
-                                    <select
+                                    <input
+                                        type="date"
                                         name="term_from"
                                         value={newMember.term_from}
                                         onChange={handleInputChange}
@@ -291,25 +296,13 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                                         className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                                             isLoading ? "cursor-not-allowed opacity-50" : ""
                                         }`}
-                                    >
-                                        <option value="">Select Year</option>
-                                        {Array.from({ length: 20 }, (_, i) => {
-                                            const year = new Date().getFullYear() - i;
-                                            return (
-                                                <option
-                                                    key={year}
-                                                    value={year}
-                                                >
-                                                    {year}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
+                                    />
                                 </div>
 
                                 <div className="col-span-1">
                                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Term To</label>
-                                    <select
+                                    <input
+                                        type="date"
                                         name="term_to"
                                         value={newMember.term_to}
                                         onChange={handleInputChange}
@@ -317,20 +310,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit,avatar }) {
                                         className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                                             isLoading ? "cursor-not-allowed opacity-50" : ""
                                         }`}
-                                    >
-                                        <option value="">Select Year</option>
-                                        {Array.from({ length: 20 }, (_, i) => {
-                                            const year = new Date().getFullYear() + i; // pataas mula current year
-                                            return (
-                                                <option
-                                                    key={year}
-                                                    value={year}
-                                                >
-                                                    {year}
-                                                </option>
-                                            );
-                                        })}
-                                    </select>
+                                    />
                                 </div>
                             </div>
 

@@ -28,9 +28,9 @@ export const navbarLinks = [
         title: "Member List",
         links: [
             {
-                label: "SB Member List",
+                label: "SP Member List",
                 icon: Users,
-                path: "/dashboard/SBmember",
+                path: "/dashboard/SPmember",
             },
         ],
     },

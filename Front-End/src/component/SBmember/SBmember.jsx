@@ -8,6 +8,10 @@ import { Database, ChevronDown, ChevronUp } from "lucide-react";
 import StatusVerification from "../../ReusableFolder/StatusModal";
 import { useDebounce } from "use-debounce";
 
+const formatYear = (dateString) => {
+    return dateString ? new Date(dateString).getFullYear() : "";
+};
+
 const SkeletonCard = () => (
     <div className="animate-pulse rounded-lg border border-gray-200 bg-white p-6 shadow dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center space-x-4">
@@ -35,16 +39,13 @@ const TermFolder = ({
     onTermPageChange,
     loading
 }) => {
-    // Filter members within this term folder (client-side)
     const filteredMembers = useMemo(() => {
         if (!termGroup.members || !Array.isArray(termGroup.members)) return [];
 
         return termGroup.members.filter(member => {
-            // Position filter
             if (positionFilter === "withPosition" && (!member.Position || member.Position.trim() === "")) return false;
             if (positionFilter === "withoutPosition" && (member.Position && member.Position.trim() !== "")) return false;
-            
-            // Search term filter
+
             if (searchTerm) {
                 const searchLower = searchTerm.toLowerCase();
                 const fullName = member.fullName || `${member.first_name} ${member.last_name}` || "";
@@ -58,17 +59,13 @@ const TermFolder = ({
     const getPaginationNumbers = () => {
         const pageNumbers = [];
         if (termGroup.totalPages <= 7) {
-            for (let i = 1; i <= termGroup.totalPages; i++) {
-                pageNumbers.push(i);
-            }
+            for (let i = 1; i <= termGroup.totalPages; i++) pageNumbers.push(i);
         } else {
             pageNumbers.push(1);
             const left = Math.max(termGroup.currentPage - 1, 2);
             const right = Math.min(termGroup.currentPage + 1, termGroup.totalPages - 1);
             if (left > 2) pageNumbers.push("...");
-            for (let i = left; i <= right; i++) {
-                pageNumbers.push(i);
-            }
+            for (let i = left; i <= right; i++) pageNumbers.push(i);
             if (right < termGroup.totalPages - 1) pageNumbers.push("...");
             pageNumbers.push(termGroup.totalPages);
         }
@@ -99,8 +96,7 @@ const TermFolder = ({
             )
         );
 
-    // If there are no members after client-side filtering, hide the folder
-    if (!termGroup.term_from || !termGroup.term_to) return null; // <-- TERM VALIDATION
+    if (!termGroup.term_from || !termGroup.term_to) return null;
     if (filteredMembers.length === 0 && searchTerm) return null;
 
     return (
@@ -110,7 +106,7 @@ const TermFolder = ({
                 onClick={() => onToggle(termGroup)}
             >
                 <h3 className="dark:text-white text-lg font-semibold">
-                    Term: {termGroup.term_from} - {termGroup.term_to}
+                    Term: {formatYear(termGroup.term_from)} - {formatYear(termGroup.term_to)}
                 </h3>
                 <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">
                     {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
@@ -192,6 +188,39 @@ function SBmember() {
     const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
     const [isPaginated, setIsPaginated] = useState(false);
 
+    // Merge all term groups with same year
+    const mergedTermGroups = useMemo(() => {
+        const map = new Map();
+
+        isGroupFiles.forEach(group => {
+            if (!group.term_from || !group.term_to) return;
+
+            const yearFrom = formatYear(group.term_from);
+            const yearTo = formatYear(group.term_to);
+            const key = `${yearFrom}-${yearTo}`;
+
+            if (map.has(key)) {
+                const existing = map.get(key);
+                map.set(key, {
+                    ...existing,
+                    members: [...existing.members, ...(group.members || [])],
+                    totalPages: Math.max(existing.totalPages || 1, group.totalPages || 1),
+                    currentPage: existing.currentPage || 1
+                });
+            } else {
+                map.set(key, {
+                    ...group,
+                    term_from: group.term_from,
+                    term_to: group.term_to,
+                    members: group.members || [],
+                    currentPage: group.currentPage || 1
+                });
+            }
+        });
+
+        return Array.from(map.values());
+    }, [isGroupFiles]);
+
     useEffect(() => {
         const initialFetch = async () => {
             setLoading(true);
@@ -213,8 +242,8 @@ function SBmember() {
     }, [debouncedSearchTerm, positionFilter, DisplayPerSb]);
 
     const handleTermPageChange = async (term_from, term_to, page) => {
-        const termGroup = isGroupFiles.find(
-            group => group.term_from === term_from && group.term_to === term_to
+        const termGroup = mergedTermGroups.find(
+            group => formatYear(group.term_from) === formatYear(term_from) && formatYear(group.term_to) === formatYear(term_to)
         );
         if (!termGroup || page < 1 || page > termGroup.totalPages) return;
 
@@ -226,7 +255,7 @@ function SBmember() {
     };
 
     const handleToggleTerm = async (termGroup) => {
-        const termKey = `${termGroup.term_from}-${termGroup.term_to}`;
+        const termKey = `${formatYear(termGroup.term_from)}-${formatYear(termGroup.term_to)}`;
         if (expandedTerm === termKey) {
             setExpandedTerm(null);
             if (isPaginated) {
@@ -239,7 +268,7 @@ function SBmember() {
             setExpandedTerm(termKey);
         }
     };
-    
+
     const handleEdit = (member) => {
         setMemberToEdit(member);
         setShowAddForm(true);
@@ -294,6 +323,7 @@ function SBmember() {
                     detailInfo: newMemberData.detailInfo,
                     district: newMemberData.district,
                     email: newMemberData.email,
+                    term: newMemberData.term,
                     term_from: newMemberData.term_from,
                     term_to: newMemberData.term_to,
                 };
@@ -376,27 +406,25 @@ function SBmember() {
                                     ))
                                 ) : (
                                     <>
-                                        {isGroupFiles.filter(termGroup => termGroup.term_from && termGroup.term_to).length > 0 ? (
-                                            isGroupFiles
-                                                .filter(termGroup => termGroup.term_from && termGroup.term_to)
-                                                .map(termGroup => {
-                                                    const termKey = `${termGroup.term_from}-${termGroup.term_to}`;
-                                                    return (
-                                                        <TermFolder
-                                                            key={termKey}
-                                                             className="dark:text-white"
-                                                            termGroup={termGroup}
-                                                            isExpanded={expandedTerm === termKey}
-                                                            onToggle={handleToggleTerm}
-                                                            onEdit={handleEdit}
-                                                            onDelete={handleDelete}
-                                                            positionFilter={positionFilter}
-                                                            searchTerm={debouncedSearchTerm}
-                                                            onTermPageChange={handleTermPageChange}
-                                                            loading={loading}
-                                                        />
-                                                    );
-                                                })
+                                        {mergedTermGroups.length > 0 ? (
+                                            mergedTermGroups.map(termGroup => {
+                                                const termKey = `${formatYear(termGroup.term_from)}-${formatYear(termGroup.term_to)}`;
+                                                return (
+                                                    <TermFolder
+                                                        key={termKey}
+                                                        className="dark:text-white"
+                                                        termGroup={termGroup}
+                                                        isExpanded={expandedTerm === termKey}
+                                                        onToggle={handleToggleTerm}
+                                                        onEdit={handleEdit}
+                                                        onDelete={handleDelete}
+                                                        positionFilter={positionFilter}
+                                                        searchTerm={debouncedSearchTerm}
+                                                        onTermPageChange={handleTermPageChange}
+                                                        loading={loading}
+                                                    />
+                                                );
+                                            })
                                         ) : (
                                             <div className="flex min-h-[600px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
                                                 <Database className="mb-4 h-16 w-16 text-gray-400 dark:text-gray-500" />

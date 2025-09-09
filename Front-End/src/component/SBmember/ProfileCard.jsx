@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { EditIcon, BriefcaseIcon, MapMarkerIcon } from "./IconComponents";
-import { Mail, Pencil, Trash, Database } from "lucide-react";
+import { BriefcaseIcon, MapMarkerIcon } from "./IconComponents";
+import { User, Pencil, Trash, Database } from "lucide-react";
 import PopupTable from "./PopupTable";
 
 const ProfileCard = ({ member, onDelete, onEdit }) => {
@@ -63,7 +63,7 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
 
                     <div className="w-full p-3 md:w-2/3 md:p-4 lg:p-6">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <h5 className="line-clamp-1 text-lg font-bold text-gray-800 dark:text-gray-100 sm:text-xl md:text-1xl">
+                            <h5 className="md:text-1xl line-clamp-1 text-lg font-bold text-gray-800 dark:text-gray-100 sm:text-xl">
                                 {member.fullName}
                             </h5>
                         </div>
@@ -73,10 +73,13 @@ const ProfileCard = ({ member, onDelete, onEdit }) => {
                                 <BriefcaseIcon />
                                 <span className="truncate">{memberInfo?.Position}</span>
                             </p>
-                            <p className="flex items-center gap-1 text-xs dark:text-gray-300 md:text-sm">
-                                <Mail className="h-4 w-4" />
-                                <span className="truncate">{memberInfo?.email}</span>
-                            </p>
+                            {memberInfo?.district && memberInfo.district.trim() !== "" && (
+                                <p className="flex items-center gap-1 text-xs dark:text-gray-300 md:text-sm">
+                                    <User className="h-4 w-4" />
+                                    <span className="truncate">{memberInfo.district}</span>
+                                </p>
+                            )}
+
                             <p className="flex items-center text-[10px] text-gray-500 dark:text-gray-400 md:text-xs">
                                 <MapMarkerIcon />
                                 <span>Government Official</span>

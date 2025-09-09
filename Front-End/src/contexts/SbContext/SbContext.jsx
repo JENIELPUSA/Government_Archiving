@@ -111,7 +111,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
             formData.append("last_name", values.last_name || "");
-            formData.append("email", values.email || "");
+            formData.append("term", values.term || "");
             formData.append("Position", values.Position || "");
             formData.append("term_from", values.term_from || "");
             formData.append("term_to", values.term_to || "");
@@ -194,13 +194,15 @@ export const SbMemberDisplayProvider = ({ children }) => {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
             formData.append("last_name", values.last_name || "");
-            formData.append("Position", values.Position || "");
-            formData.append("email", values.email || "");
+            formData.append("Position", values.position || "");
+            formData.append("term", values.term || "");
             formData.append("role", "sbmember");
+            formData.append("district", values.district);
             if (values.avatar) formData.append("avatar", values.avatar);
             if (values.middle_name) formData.append("middle_name", values.middle_name);
+            if (values.term_from) formData.append("term_from", values.term_from);
+            if (values.term_to) formData.append("term_to", values.term_to);
             if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
-            if (values.district) formData.append("district", values.district);
             if (values.Position) formData.append("Position", values.Position);
 
             const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/${dataID}`, formData, {

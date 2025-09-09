@@ -2547,31 +2547,69 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to } =
-    req.query;
+  const { search, district, detailInfo, Position, term_from, term_to, term } = req.query;
   const aggregationPipeline = [];
-
   const matchStage = {};
 
+  // --- Existing filters ---
   if (district) matchStage.district = district;
   if (detailInfo) matchStage.detailInfo = detailInfo;
   if (Position) matchStage.Position = Position;
 
-  const currentYear = new Date().getFullYear();
-  const fromYear = term_from ? parseInt(term_from) : currentYear;
-  const toYear = term_to ? parseInt(term_to) : undefined;
-
-  if (fromYear && toYear) {
-    matchStage.term_from = fromYear;
-    matchStage.term_to = toYear;
-  } else if (fromYear) {
-    matchStage.term_from = fromYear;
+  // --- Term text filter ---
+  if (term && term.trim() !== "") {
+    matchStage.term = {
+      $regex: new RegExp(`^\\s*${term.trim()}\\s*$`, "i"),
+    };
   }
 
   if (Object.keys(matchStage).length > 0) {
     aggregationPipeline.push({ $match: matchStage });
   }
 
+  // --- Year-based filtering for term_from and term_to ---
+  if (term_from || term_to) {
+    if (term_from && term_to) {
+      aggregationPipeline.push({
+        $match: {
+          $expr: {
+            $and: [
+              { $gte: [{ $year: "$term_from" }, parseInt(term_from)] },
+              { $lte: [{ $year: "$term_to" }, parseInt(term_to)] },
+            ],
+          },
+        },
+      });
+    } else if (term_from) {
+      aggregationPipeline.push({
+        $match: {
+          $expr: {
+            $gte: [{ $year: "$term_from" }, parseInt(term_from)],
+          },
+        },
+      });
+    } else if (term_to) {
+      aggregationPipeline.push({
+        $match: {
+          $expr: {
+            $lte: [{ $year: "$term_to" }, parseInt(term_to)],
+          },
+        },
+      });
+    }
+  } else {
+    // ✅ Default: show terms starting from current year upward
+    const currentYear = new Date().getFullYear();
+    aggregationPipeline.push({
+      $match: {
+        $expr: {
+          $gte: [{ $year: "$term_from" }, currentYear],
+        },
+      },
+    });
+  }
+
+  // --- Lookup files ---
   aggregationPipeline.push(
     {
       $lookup: {
@@ -2624,7 +2662,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   );
 
-  // Search filter
+  // --- Search filter ---
   if (search) {
     aggregationPipeline.push({
       $match: {
@@ -2640,7 +2678,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 
-  // Group results
+  // --- Group results ---
   aggregationPipeline.push(
     {
       $group: {
@@ -2649,6 +2687,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         district: { $first: "$district" },
         detailInfo: { $first: "$detailInfo" },
         Position: { $first: "$Position" },
+        term: { $first: "$term" },
         term_from: { $first: "$term_from" },
         term_to: { $first: "$term_to" },
         memberInfo: { $first: "$$ROOT" },
@@ -2672,7 +2711,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
             ],
           },
         },
-        count: { $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] } },
+        count: {
+          $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] },
+        },
         resolutionCount: {
           $sum: {
             $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
@@ -2688,9 +2729,10 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     { $sort: { fullName: 1 } }
   );
 
-  const AuthorsWithFiles = await SBmember.aggregate(
-    aggregationPipeline
-  ).allowDiskUse(true);
+  // --- Execute aggregation ---
+  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+
+  // --- Pagination ---
   const totalCount = AuthorsWithFiles.length;
   const limit = parseInt(req.query.limit) || 20;
   const currentPage = parseInt(req.query.page) || 1;
@@ -2706,3 +2748,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
+
+
+
+
+
+

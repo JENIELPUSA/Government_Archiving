@@ -151,7 +151,7 @@ const App = () => {
                                         onClick={() => setCurrentPage("sb-members")}
                                         className="transition-colors hover:text-yellow-300"
                                     >
-                                        SB Members
+                                        SP Members
                                     </button>
                                 </li>
                             </ul>

@@ -37,150 +37,182 @@ const createSendResponse = (user, statusCode, res) => {
   });
 };
 
-
 exports.signup = AsyncErrorHandler(async (req, res) => {
-   console.log("Received file:", req.file);
-  console.log("Received data:", req.body);
+  try {
+    const {
+      contact_number,
+      first_name,
+      last_name,
+      email,
+      role,
+      Position,
+      gender,
+      middle_name,
+      detailInfo,
+      district,
+      term_from,
+      term_to,
+      term,
+    } = req.body;
 
-  const {
-    contact_number,
-    first_name,
-    last_name,
-    email,
-    role,
-    Position,
-    gender,
-    middle_name,
-    detailInfo,
-    district,
-    term_from,
-    term_to,
-  } = req.body;
+    console.log("RequestBody", req.body);
 
-  const defaultPassword = "123456789";
+    const defaultPassword = "123456789";
 
-  // Validate required fields by role
-  const requiredFieldsByRole = {
-    officer: ["first_name", "middle_name", "last_name", "email", "gender"],
-    admin: ["first_name", "middle_name", "last_name", "email", "gender"],
-    approver: ["first_name", "middle_name", "last_name", "email"],
-    sbmember: ["first_name", "last_name", "email"],
-  };
+    // Validate required fields by role
+    const requiredFieldsByRole = {
+      officer: ["first_name", "middle_name", "last_name", "email", "gender"],
+      admin: ["first_name", "middle_name", "last_name", "email", "gender"],
+      approver: ["first_name", "middle_name", "last_name", "email"],
+      sbmember: ["first_name", "last_name"], // email NOT required for sbmember
+    };
 
-  const requiredFields = requiredFieldsByRole[role];
-  if (!requiredFields) {
-    return res.status(400).json({
-      message: "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
-    });
-  }
+    const requiredFields = requiredFieldsByRole[role];
+    if (!requiredFields) {
+      return res.status(400).json({
+        message:
+          "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
+      });
+    }
 
-  const missingFields = requiredFields.filter(field => !req.body[field]);
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      message: `Missing required fields: ${missingFields.join(", ")}`,
-    });
-  }
+    // Check missing fields
+    const missingFields = requiredFields.filter((field) => !req.body[field]);
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+      });
+    }
 
-  // Check if user already exists
-  const existingUser = await UserLogin.findOne({ username: email });
-  if (existingUser) {
-    return res.status(400).json({
-      message: "User with this email already exists!",
-    });
-  }
+    // Only check for existing user if email is required
+    if (role !== "sbmember") {
+      const existingUser = await UserLogin.findOne({ username: email });
+      if (existingUser) {
+        return res.status(400).json({
+          message: "User with this email already exists!",
+        });
+      }
+    }
 
-  let avatar = { url: "", public_id: "" };
+    let avatar = { url: "", public_id: "" };
 
-  // --- Upload avatar if file exists ---
-  if (req.file) {
-    const fileName = req.file.filename; // multer diskStorage filename
-    const form = new FormData();
-
-    // Node.js: use fs.createReadStream
-    form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
-
-    try {
-      const response = await axios.post(
-        "https://tan-kudu-520349.hostingersite.com/upload.php",
-        form,
-        { maxBodyLength: Infinity, headers: { "Content-Type": "multipart/form-data" } }
+    // --- Upload avatar if file exists ---
+    if (req.file) {
+      const fileName = req.file.filename; // multer diskStorage filename
+      const form = new FormData();
+      form.append(
+        "file",
+        fs.createReadStream(req.file.path),
+        req.file.originalname
       );
 
-      if (!response.data.success) {
-        return res.status(500).json({ error: response.data.message || "Failed to upload avatar" });
+      try {
+        const response = await axios.post(
+          "https://tan-kudu-520349.hostingersite.com/upload.php",
+          form,
+          {
+            maxBodyLength: Infinity,
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        if (!response.data.success) {
+          return res
+            .status(500)
+            .json({ error: response.data.message || "Failed to upload avatar" });
+        }
+
+        avatar = {
+          url: response.data.url,
+          public_id: fileName,
+        };
+
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Failed to delete temp file:", err);
+        });
+
+        console.log("✅ Avatar uploaded to Hostinger:", avatar.url);
+      } catch (err) {
+        console.error(
+          "❌ Hostinger upload failed:",
+          err.response?.data || err.message
+        );
+        return res.status(500).json({ error: "Failed to upload avatar image" });
       }
+    }
 
-      avatar = {
-        url: response.data.url,
-        public_id: fileName,
-      };
 
-      // Delete temp file
-      fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Failed to delete temp file:", err);
+
+    // --- Create profile record ---
+    const profileModels = {
+      admin: Admin,
+      officer: Officer,
+      approver: Approver,
+      sbmember: SBmember,
+    };
+    const profileModel = profileModels[role];
+
+    const profileData = {
+      avatar,
+      first_name,
+      last_name,
+      middle_name,
+      term_from,
+      term_to,
+      detailInfo,
+      district,
+      term,
+    };
+
+    if (email && role !== "sbmember") profileData.email = email; // include email only if not sbmember
+    if (gender) profileData.gender = gender;
+    if (Position)
+      profileData.Position = Array.isArray(Position) ? Position[0] : Position;
+
+    const linkedRecord = await profileModel.create(profileData);
+
+    let newUserLogin = null;
+
+    // --- Create login record ONLY if not sbmember ---
+    if (role !== "sbmember") {
+      newUserLogin = await UserLogin.create({
+        avatar,
+        first_name,
+        last_name,
+        username: email,
+        contact_number,
+        password: defaultPassword,
+        role,
+        linkedId: linkedRecord._id,
+        isVerified: true,
       });
 
-      console.log("✅ Avatar uploaded to Hostinger:", avatar.url);
-    } catch (err) {
-      console.error("❌ Hostinger upload failed:", err.response?.data || err.message);
-      return res.status(500).json({ error: "Failed to upload avatar image" });
+      sendEmail({
+        email,
+        subject: "Your Account Credentials",
+        text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
+      }).catch((err) =>
+        console.error("❌ Failed to send signup email:", err.message)
+      );
     }
-  }
 
-  // --- Create profile record ---
-  const profileModels = { admin: Admin, officer: Officer, approver: Approver, sbmember: SBmember };
-  const profileModel = profileModels[role];
-
-  const profileData = {
-    avatar,
-    first_name,
-    last_name,
-    middle_name,
-    term_from,
-    term_to,
-    detailInfo,
-    district,
-    email,
-  };
-
-  if (gender) profileData.gender = gender;
-  if (Position) profileData.Position = Array.isArray(Position) ? Position[0] : Position;
-
-  const linkedRecord = await profileModel.create(profileData);
-
-  // --- Create login record ---
-  const newUserLogin = await UserLogin.create({
-    avatar,
-    first_name,
-    last_name,
-    username: email,
-    contact_number,
-    password: defaultPassword,
-    role,
-    linkedId: linkedRecord._id,
-    isVerified: true,
-  });
-
-  res.status(201).json({
-    status: "Success",
-    user: newUserLogin,
-    profile: linkedRecord,
-  });
-
-  if (role !== "sbmember") {
-    sendEmail({
-      email,
-      subject: "Your Account Credentials",
-      text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
-    }).catch(err => console.error("❌ Failed to send signup email:", err.message));
-  }
-
-  const io = req.app.get("io");
-  if (io) {
-    io.emit("newUserSignup", {
-      user: { id: newUserLogin._id, first_name, last_name, role },
+    res.status(201).json({
+      status: "Success",
+      user: newUserLogin,
       profile: linkedRecord,
     });
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("newUserSignup", {
+        user: newUserLogin
+          ? { id: newUserLogin._id, first_name, last_name, role }
+          : null,
+        profile: linkedRecord,
+      });
+    }
+  } catch (error) {
+    console.error("❌ Signup failed:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 });
 
@@ -393,7 +425,6 @@ exports.protect = AsyncErrorHandler(async (req, res, next) => {
 
   next();
 });
-
 
 exports.restrict = (role) => {
   return (req, res, next) => {

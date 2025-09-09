@@ -29,7 +29,7 @@ const Navbar = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword }
               className={`px-2 py-1 ${currentPage === "sb-members" ? "text-yellow-300 underline" : "hover:text-yellow-300"}`}
               onClick={() => handlePageClick("sb-members")}
             >
-              SB MEMBERS
+              SP MEMBERS
             </a>
           </li>
           <li>
