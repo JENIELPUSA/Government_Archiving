@@ -150,11 +150,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
             valid = false;
         }
 
-        if (isOrdinance && !authorId && !customAuthor) {
-            setAuthorError("Please select an author");
-            valid = false;
-        }
-
         if (!valid) return;
 
         setIsPdfLoading(true);

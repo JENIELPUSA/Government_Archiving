@@ -185,7 +185,7 @@ export const MemberModal = ({ member, closeModal }) => {
                                             : member.memberInfo?.Position || ""}
                                     </p>
 
-                                    {district && district.trim() !== "" && <p className="mt-1 text-sm text-gray-600">Designation {district}</p>}
+                                    {district && district.trim() !== "" && <p className="mt-1 text-sm text-gray-600">{district}</p>}
                                 </div>
                             </motion.div>
                             <motion.div

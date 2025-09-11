@@ -23,10 +23,12 @@ import { ApproverDisplayProvider } from "./contexts/ApproverContext/ApproverCont
 import NoSignalModal from "./component/NoSignalModal/NoSignalModal";
 import { NewsDisplayProvider } from "./contexts/NewsContext/NewsContext.jsx";
 import { FolderDisplayProvider } from "./contexts/FolderContext/FolderContext.jsx";
+import AutoLogout from "./component/AutoLogout.jsx";
 createRoot(document.getElementById("root")).render(
     // <StrictMode>
     <AuthProvider>
-        <NoSignalModal />
+        <AutoLogout>
+                    <NoSignalModal />
         <FolderDisplayProvider>
             <NewsDisplayProvider>
                 <ApproverDisplayProvider>
@@ -70,6 +72,8 @@ createRoot(document.getElementById("root")).render(
                 </ApproverDisplayProvider>
             </NewsDisplayProvider>
         </FolderDisplayProvider>
+        </AutoLogout>
+
     </AuthProvider>,
     // </StrictMode>
 );

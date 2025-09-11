@@ -196,12 +196,11 @@ const sendEmail = async (options) => {
                     </p>
                     
                     <div class="action-container">
-                        <a href="https://government-archiving-web.onrender.com" class="action-btn">Access Archive Portal</a>
+                        <a href="https://bp-sangguniangpanlalawigan.com" class="action-btn">Access Archive Portal</a>
                     </div>
                     
                     <div class="contact-info">
                         📍 Biliran Province Philippines<br>
-                        📞 (02) 1234-5678 | 📱 0917 123 4567<br>
                     </div>
                 </div>
                 

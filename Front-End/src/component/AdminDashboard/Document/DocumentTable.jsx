@@ -36,7 +36,10 @@ const PaginationSkeleton = () => (
         <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-700"></div>
         <div className="flex space-x-1">
             {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700"></div>
+                <div
+                    key={i}
+                    className="h-8 w-8 rounded bg-gray-200 dark:bg-gray-700"
+                ></div>
             ))}
         </div>
         <div className="h-8 w-16 rounded bg-gray-200 dark:bg-gray-700"></div>
@@ -54,7 +57,7 @@ const DocumentTable = ({ documents, onEdit }) => {
     const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [displayedDocuments, setDisplayedDocuments] = useState([]);
-    
+
     // Save current displayed documents
     useEffect(() => {
         if (documents.length > 0 && !loading) {
@@ -73,18 +76,18 @@ const DocumentTable = ({ documents, onEdit }) => {
     const goToPage = async (page) => {
         if (page < 1 || page > totalPages) return;
 
-        setLoading(true); 
+        setLoading(true);
         setCurrentPage(page);
 
         if (typeof FetchFiles === "function") {
             try {
-                await FetchFiles(page); 
+                await FetchFiles(page);
             } catch (error) {
                 console.error("FetchFiles error:", error);
             }
         }
 
-        setLoading(false); 
+        setLoading(false);
     };
 
     const handleViewFile = (fileId, item) => {
@@ -148,7 +151,7 @@ const DocumentTable = ({ documents, onEdit }) => {
 
     const renderPageNumbers = () => {
         if (loading) return <PaginationSkeleton />;
-        
+
         const pageNumbers = [];
         const maxPagesToShow = 5;
         let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
@@ -223,15 +226,16 @@ const DocumentTable = ({ documents, onEdit }) => {
 
     const renderTableContent = () => {
         if (loading) {
-            return Array.from({ length: displayedDocuments.length || 5 }).map((_, index) => (
-                <DocumentTableRowSkeleton key={`skeleton-${index}`} />
-            ));
+            return Array.from({ length: displayedDocuments.length || 5 }).map((_, index) => <DocumentTableRowSkeleton key={`skeleton-${index}`} />);
         }
 
         if (!documents || documents.length === 0) {
             return (
                 <tr>
-                    <td colSpan="5" className="px-6 py-12 text-center">
+                    <td
+                        colSpan="5"
+                        className="px-6 py-12 text-center"
+                    >
                         <div className="flex flex-col items-center justify-center">
                             <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
                                 <Database className="h-10 w-10" />
@@ -259,7 +263,8 @@ const DocumentTable = ({ documents, onEdit }) => {
                         <span className="text-sm font-light text-gray-700 dark:text-gray-300">{document.title}</span>
                     </div>
                 </td>
-                <td className="px-6 py-3 text-left">{document.author}</td>
+                <td className="px-6 py-3 text-left">{document.author || "N/A"}</td>
+
                 <td className="px-6 py-3 text-left">
                     <span
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -333,9 +338,7 @@ const DocumentTable = ({ documents, onEdit }) => {
                             <th className="px-6 py-3 text-left">Actions</th>
                         </tr>
                     </thead>
-                    <tbody className="text-sm font-light text-gray-600 dark:text-gray-300">
-                        {renderTableContent()}
-                    </tbody>
+                    <tbody className="text-sm font-light text-gray-600 dark:text-gray-300">{renderTableContent()}</tbody>
                 </table>
             </div>
 

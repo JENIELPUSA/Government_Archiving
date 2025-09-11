@@ -46,8 +46,6 @@ const UploadForm = () => {
     const [newAuthorEmail, setNewAuthorEmail] = useState("");
     const [newAuthorPosition, setNewAuthorPosition] = useState("");
     const [customAuthorId, setCustomAuthorId] = useState(null); // NEW: Track custom author ID
-
-    // PDF Preview Modal states
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
     const [isPdfLoading, setIsPdfLoading] = useState(false);
@@ -222,13 +220,6 @@ const UploadForm = () => {
             setResolutionNumberError("Resolution number is required");
             valid = false;
         }
-
-        // UPDATED: Check for either SB member or custom author
-        if (isOrdinance && !authorId && !customAuthorId) {
-            setAuthorError("Please select an author");
-            valid = false;
-        }
-
         // Require approver for Resolution/Ordinance
         if (isResolutionOrOrdinance && (!approver || !approver._id)) {
             setApproverError("Please Add Approver Account!");
