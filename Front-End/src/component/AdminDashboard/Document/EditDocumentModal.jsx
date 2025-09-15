@@ -88,15 +88,15 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                     Document Title
                                 </label>
                                 <div className="relative">
-                                    <input
-                                        type="text"
+                                    <textarea
                                         id="editTitle"
                                         value={editedDoc.title || ""}
                                         onChange={(e) => setEditedDoc({ ...editedDoc, title: e.target.value })}
                                         className="w-full rounded-lg border border-gray-300 py-2 pl-10 pr-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                         required
+                                        rows={3} // optional: controls height
                                     />
-                                    <FileText className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+                                    <FileText className="absolute left-3 top-3 h-4 w-4 text-gray-400 dark:text-gray-500" />
                                 </div>
                             </div>
 

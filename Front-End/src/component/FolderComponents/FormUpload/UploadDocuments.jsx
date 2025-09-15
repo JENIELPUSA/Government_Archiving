@@ -8,7 +8,7 @@ import { ApproverDisplayContext } from "../../../contexts/ApproverContext/Approv
 import PdfPreviewModal from "./PDFReview";
 import AuthorModal from "./AuthorComponents";
 
-const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
+const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const { approver } = useContext(ApproverDisplayContext);
@@ -109,9 +109,9 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
         setUploadMessage("");
     };
 
-    const handleCloseAuthor=()=>{
-        setShowAuthorModal(false)
-    }
+    const handleCloseAuthor = () => {
+        setShowAuthorModal(false);
+    };
 
     const handleFileChange = (e) => handleFile(e.target.files[0]);
 
@@ -312,36 +312,37 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
                         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             <div className="space-y-5">
                                 {/* Title Field */}
-                                <div className="flex flex-col">
-                                    <label className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        <div className="flex items-center gap-1">
+                                <div className="flex gap-4">
+                                    <div className="w-full">
+                                        <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">
                                             <FiFileText className="text-blue-500" />
                                             Title <span className="text-red-500">*</span>
-                                        </div>
-                                    </label>
-                                    {isFormLoading ? (
-                                        <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
-                                    ) : (
-                                        <div className="relative">
-                                            <input
-                                                type="text"
-                                                value={title}
-                                                onChange={(e) => {
-                                                    setTitle(e.target.value);
-                                                    setTitleError("");
-                                                }}
-                                                className={`w-full rounded-xl border px-4 py-3 pl-10 shadow-sm transition-all focus:outline-none focus:ring-2 ${
-                                                    titleError
-                                                        ? "border-red-400 focus:ring-red-300 dark:border-red-500"
-                                                        : "border-gray-300 focus:border-blue-400 focus:ring-blue-300 dark:border-gray-600"
-                                                } dark:bg-gray-700/50 dark:text-gray-200`}
-                                                placeholder="e.g., Annual Financial Report"
-                                            />
-                                            <FiFileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                            {titleError && <p className="mt-1.5 text-sm text-red-500">{titleError}</p>}
-                                        </div>
-                                    )}
+                                        </label>
+                                        {isFormLoading ? (
+                                            <div className="h-20 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+                                        ) : (
+                                            <div className="relative">
+                                                <textarea
+                                                    value={title}
+                                                    onChange={(e) => {
+                                                        setTitle(e.target.value);
+                                                        setTitleError("");
+                                                    }}
+                                                    rows={4} // pwede palitan kung gaano kataas
+                                                    className={`w-full resize-none rounded-xl border px-4 py-3 pl-10 shadow-sm transition-all focus:outline-none focus:ring-2 ${
+                                                        titleError
+                                                            ? "border-red-400 focus:ring-red-300 dark:border-red-500"
+                                                            : "border-gray-300 focus:border-blue-400 focus:ring-blue-300 dark:border-gray-600"
+                                                    } dark:bg-gray-700/50 dark:text-gray-200`}
+                                                    placeholder="e.g., Annual Financial Report"
+                                                />
+                                                <FiFileText className="absolute left-3 top-3 text-gray-400" />
+                                                {titleError && <p className="mt-1.5 text-sm text-red-500">{titleError}</p>}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
+
                                 {/* End of Title Field */}
 
                                 {/* Category and Resolution Number Fields */}
@@ -440,9 +441,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
                                                 <div className="flex items-center">
                                                     {selectedMember ? (
                                                         <div className="text-left">
-                                                            <div className="font-medium">
-                                                                {selectedMember.full_name} 
-                                                            </div>
+                                                            <div className="font-medium">{selectedMember.full_name}</div>
                                                             <div className="mt-0.5 text-xs text-gray-500">{selectedMember.Position}</div>
                                                         </div>
                                                     ) : customAuthor ? (
@@ -496,9 +495,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
                                                                         }}
                                                                         className="cursor-pointer px-4 py-3 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-700"
                                                                     >
-                                                                        <div className="font-medium">
-                                                                            {member.full_name}
-                                                                        </div>
+                                                                        <div className="font-medium">{member.full_name}</div>
                                                                         <div className="mt-1 text-xs text-gray-500">{member.Position}</div>
                                                                     </div>
                                                                 ))}
@@ -669,24 +666,23 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId,isSuccess }) => {
                     isLoading={isLoading}
                 />
             )}
-                <AuthorModal
-                    showAuthorModal={showAuthorModal}
-                    onClose={handleCloseAuthor}
-                    handleAddNewAuthor={handleAddNewAuthor}
-                    newAuthorFirstName={newAuthorFirstName}
-                    setNewAuthorFirstName={setNewAuthorFirstName}
-                    newAuthorLastName={newAuthorLastName}
-                    setNewAuthorLastName={setNewAuthorLastName}
-                    newAuthorMiddleName={newAuthorMiddleName}
-                    setNewAuthorMiddleName={setNewAuthorMiddleName}
-                    newAuthorEmail={newAuthorEmail}
-                    setNewAuthorEmail={setNewAuthorEmail}
-                    newAuthorPosition={newAuthorPosition}
-                    setNewAuthorPosition={setNewAuthorPosition}
-                    customAuthorError={customAuthorError}
-                    setCustomAuthorError={setCustomAuthorError}
-                />
-            
+            <AuthorModal
+                showAuthorModal={showAuthorModal}
+                onClose={handleCloseAuthor}
+                handleAddNewAuthor={handleAddNewAuthor}
+                newAuthorFirstName={newAuthorFirstName}
+                setNewAuthorFirstName={setNewAuthorFirstName}
+                newAuthorLastName={newAuthorLastName}
+                setNewAuthorLastName={setNewAuthorLastName}
+                newAuthorMiddleName={newAuthorMiddleName}
+                setNewAuthorMiddleName={setNewAuthorMiddleName}
+                newAuthorEmail={newAuthorEmail}
+                setNewAuthorEmail={setNewAuthorEmail}
+                newAuthorPosition={newAuthorPosition}
+                setNewAuthorPosition={setNewAuthorPosition}
+                customAuthorError={customAuthorError}
+                setCustomAuthorError={setCustomAuthorError}
+            />
         </div>
     );
 };

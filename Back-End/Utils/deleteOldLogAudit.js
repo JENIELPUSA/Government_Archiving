@@ -2,7 +2,7 @@ const LogAudit = require("../Models/LogActionAudit");
 
 const deleteOldLogAudits = async () => {
   try {
-    const deleteAfterDays = 15; // direktang 15 days
+    const deleteAfterDays = 7; 
     const daysAgo = new Date();
     daysAgo.setDate(daysAgo.getDate() - deleteAfterDays);
 

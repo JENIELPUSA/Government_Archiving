@@ -14,5 +14,8 @@ router.route('/:id')
 router.route('/getFilesByFolderId/:id')
     .get(authController.protect,Folder.getFilesByFolderId)
 
+router.route('/getUploadedCategoriesByFolderId/:id')
+    .get(authController.protect,Folder.getUploadedCategoriesByFolderId)
+
 
 module.exports=router

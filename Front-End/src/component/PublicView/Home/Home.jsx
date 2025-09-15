@@ -419,7 +419,8 @@ const Home = ({ aboutUsRef }) => {
                                                       </span>
                                                       <span className="text-sm text-slate-500">{news.date}</span>
                                                   </div>
-                                                  <h3 className="mb-2 text-xl font-bold text-slate-900">{news.title}</h3>
+                                                  <h3 className="mb-2 line-clamp-2 text-xl font-bold text-slate-900">{news.title}</h3>
+
                                                   <p className="mb-4 line-clamp-3 text-slate-600">{news.summary}</p>
                                               </div>
                                               <button

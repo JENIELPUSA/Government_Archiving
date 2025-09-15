@@ -57,8 +57,6 @@ function cleanupTempFiles() {
 
 setInterval(cleanupTempFiles, 60 * 60 * 1000);
 
-
-
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
     const updateData = { ...req.body };
@@ -127,6 +125,8 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
         userAgent: req.headers["user-agent"],
       });
     }
+    const io = req.app.get("io");
+    io.emit("UpdateFileDocuData", updatedFile);
 
     res.status(200).json({ status: "success", data: updatedFile });
   } catch (err) {
@@ -213,6 +213,7 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
           tags: 1,
           notes: 1,
           approverID: 1,
+          folderID: 1,
           createdAt: 1,
           updatedAt: 1,
           ArchivedStatus: 1,
@@ -356,6 +357,8 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
         userAgent: req.headers["user-agent"],
       });
     }
+    const io = req.app.get("io");
+    io.emit("DeleteDocument", updatedFile);
 
     res.status(200).json({ status: "success", data: updatedFile });
   } catch (err) {
@@ -367,10 +370,9 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
 const sanitizeFilename = (name) => {
   const ext = path.extname(name); // .pdf, .docx, etc
   const baseName = path.basename(name, ext); // remove extension temporarily
-  const safeBase = baseName.replace(/[#.\/\\?%*:|"<>]/g, ''); // tanggalin lahat ng # at .
-  return safeBase + ext; 
+  const safeBase = baseName.replace(/[#.\/\\?%*:|"<>]/g, ""); // tanggalin lahat ng # at .
+  return safeBase + ext;
 };
-
 
 exports.createFiles = AsyncErrorHandler(async (req, res) => {
   try {
@@ -393,8 +395,10 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     if (!title || !admin || !category) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-    if (!mongoose.Types.ObjectId.isValid(admin)) return res.status(400).json({ error: "Invalid admin ID" });
-    if (approverID && !mongoose.Types.ObjectId.isValid(approverID)) return res.status(400).json({ error: "Invalid approver ID" });
+    if (!mongoose.Types.ObjectId.isValid(admin))
+      return res.status(400).json({ error: "Invalid admin ID" });
+    if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
+      return res.status(400).json({ error: "Invalid approver ID" });
 
     // --- Sanitize server filename ---
     const originalName = req.file.originalname; // original name for display
@@ -430,21 +434,24 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
 
     let remotePath;
     try {
-      const response = await axios.post(
-        process.env.UPLOAD_URL, 
-        form,
-        { headers: form.getHeaders(), maxBodyLength: Infinity }
-      );
+      const response = await axios.post(process.env.UPLOAD_URL, form, {
+        headers: form.getHeaders(),
+        maxBodyLength: Infinity,
+      });
 
       if (!response.data.success) {
-        return res.status(500).json({ error: response.data.message || "Upload failed" });
+        return res
+          .status(500)
+          .json({ error: response.data.message || "Upload failed" });
       }
 
       remotePath = response.data.url;
       fs.unlink(originalPath, () => {});
     } catch (err) {
       console.error("Hostinger upload failed:", err.message);
-      return res.status(500).json({ error: "Failed to upload file to Hostinger" });
+      return res
+        .status(500)
+        .json({ error: "Failed to upload file to Hostinger" });
     }
 
     // --- Prepare DB entry ---
@@ -464,7 +471,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       fileUrl: remotePath,
       oldFile,
       folderID,
-      folderPath:process.env.UPLOAD_FOLDER,
+      folderPath: process.env.UPLOAD_FOLDER,
       fullText: fullTextType,
     };
     let categoryName = null;
@@ -474,10 +481,19 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     }
 
     if (oldFile === true || oldFile === "true") {
-      fileData.ArchivedStatus = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Active" : "Archived";
-      fileData.status = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Approved" : fileData.status;
+      fileData.ArchivedStatus =
+        categoryName === "Resolution" || categoryName === "Ordinance"
+          ? "Active"
+          : "Archived";
+      fileData.status =
+        categoryName === "Resolution" || categoryName === "Ordinance"
+          ? "Approved"
+          : fileData.status;
     } else {
-      fileData.ArchivedStatus = (categoryName === "Resolution" || categoryName === "Ordinance") ? "Active" : "Archived";
+      fileData.ArchivedStatus =
+        categoryName === "Resolution" || categoryName === "Ordinance"
+          ? "Active"
+          : "Archived";
     }
 
     const savedFile = await new Files(fileData).save();
@@ -499,19 +515,20 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
         userAgent: req.headers["user-agent"],
       });
     }
-
+    const io = req.app.get("io");
     // --- Notification for pending ---
     if (savedFile.status === "Pending") {
       const targetViewer = approverID || author;
       if (mongoose.Types.ObjectId.isValid(targetViewer)) {
         const notificationDoc = await Notification.create({
           message: `New document pending your approval: "${title}"`,
-          viewers: [{ user: targetViewer, isRead: false, isApprover: !!approverID }],
+          viewers: [
+            { user: targetViewer, isRead: false, isApprover: !!approverID },
+          ],
           FileId: savedFile._id,
           relatedApprover: approverID,
         });
 
-        const io = req.app.get("io");
         const receiver = global.connectedUsers?.[targetViewer];
         if (io && receiver) {
           io.to(receiver.socketId).emit("SentDocumentNotification", {
@@ -522,14 +539,13 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
         }
       }
     }
-
+    io.emit("AddOldFile", savedFile);
     res.status(201).json({ status: "success", data: savedFile });
   } catch (err) {
     console.error("Upload error:", err.message);
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -1192,10 +1208,9 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
 
     if (file.fileUrl) {
       try {
-        const response = await axios.post(
-          process.env.VITE_REMOVE_URL,
-          { file: file.fileUrl }
-        );
+        const response = await axios.post(process.env.VITE_REMOVE_URL, {
+          file: file.fileUrl,
+        });
 
         if (!response.data.success) {
           console.error("Hostinger deletion failed:", response.data.message);
@@ -2116,7 +2131,6 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     matchStage.title = { $regex: escapedTitle, $options: "i" };
   }
-  
 
   if (tags) {
     const tagArray = Array.isArray(tags)
@@ -2334,6 +2348,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
   // --- Single year search ---
   if (year) {
     matchStage.dateOfResolution = {
+      $ne: null,
+      $exists: true,
       $gte: new Date(`${year}-01-01T00:00:00.000Z`),
       $lte: new Date(`${year}-12-31T23:59:59.999Z`),
     };
@@ -2432,7 +2448,12 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 
   // --- All years search with total count per year ---
   const yearCounts = await Files.aggregate([
-    { $match: matchStage },
+    {
+      $match: {
+        ...matchStage,
+        dateOfResolution: { $ne: null, $exists: true },
+      },
+    },
     {
       $group: {
         _id: { $year: "$dateOfResolution" },
@@ -2448,6 +2469,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
     const yearMatch = {
       ...matchStage,
       dateOfResolution: {
+        $ne: null,
+        $exists: true,
         $gte: new Date(`${y}-01-01T00:00:00.000Z`),
         $lte: new Date(`${y}-12-31T23:59:59.999Z`),
       },
@@ -2535,7 +2558,7 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
     results.push({
       status: "success",
       year: y.toString(),
-      totalCount: totalDocuments, // <-- total count per year
+      totalCount: totalDocuments,
       currentPage: page,
       results: formattedFiles.length,
       data: formattedFiles,
@@ -2546,7 +2569,8 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to, term } = req.query;
+  const { search, district, detailInfo, Position, term_from, term_to, term } =
+    req.query;
   const aggregationPipeline = [];
   const matchStage = {};
 
@@ -2729,7 +2753,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   );
 
   // --- Execute aggregation ---
-  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+  const AuthorsWithFiles = await SBmember.aggregate(
+    aggregationPipeline
+  ).allowDiskUse(true);
 
   // --- Pagination ---
   const totalCount = AuthorsWithFiles.length;
@@ -2747,9 +2773,3 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
-
-
-
-
-
-

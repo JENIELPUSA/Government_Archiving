@@ -259,10 +259,11 @@ const DocumentTable = ({ documents, onEdit }) => {
                 onClick={(e) => handleClickDocument(document, e)}
             >
                 <td className="px-6 py-3 text-left">
-                    <div className="flex max-w-[10rem] flex-col break-words">
-                        <span className="text-sm font-light text-gray-700 dark:text-gray-300">{document.title}</span>
+                    <div className="max-w-[12rem]">
+                        <span className="line-clamp-6 overflow-hidden text-sm font-light text-gray-700 dark:text-gray-300">{document.title}</span>
                     </div>
                 </td>
+
                 <td className="px-6 py-3 text-left">{document.author || "N/A"}</td>
 
                 <td className="px-6 py-3 text-left">

@@ -45,10 +45,6 @@ const UserTable = () => {
     const totalPages = Math.ceil((isAdmin?.length || 0) / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const currentAdmins = (isAdmin || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
-
-
-    console.log("isAdmin",isAdmin)
-
     const goToPage = (page) => {
         if (page < 1 || page > totalPages) return;
 

@@ -40,7 +40,6 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             setSBMember(res.data.data);
-            console.log("SB MEMBER", res.data.data);
         } catch (error) {
             console.error("Error fetching SB member:", error);
         }
@@ -105,7 +104,6 @@ export const SbMemberDisplayProvider = ({ children }) => {
     );
 
     const AddSbData = async (values) => {
-        console.log("values", values);
 
         try {
             const formData = new FormData();

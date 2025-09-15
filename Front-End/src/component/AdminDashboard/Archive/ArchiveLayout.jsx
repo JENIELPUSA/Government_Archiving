@@ -169,7 +169,7 @@ const ArchiveLayout = () => {
 
     // Debounce search query to prevent excessive API calls
     useEffect(() => {
-        const handler = setTimeout(() => setDebouncedSearch(searchQuery), 500);
+        const handler = setTimeout(() => setDebouncedSearch(searchQuery), 2000);
         return () => clearTimeout(handler);
     }, [searchQuery]);
 
@@ -204,9 +204,6 @@ const ArchiveLayout = () => {
             return allTags;
         }, []);
     }, [isArchived, isLoading]);
-
-    console.log("isArchived", isArchived);
-
     // Optimized logic for organizing and counting data
     const organizedData = useMemo(() => {
         const organized = {

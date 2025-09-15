@@ -222,9 +222,9 @@ const UploadForm = () => {
         }
         // Require approver for Resolution/Ordinance
         //if (isResolutionOrOrdinance && (!approver || !approver._id)) {
-            //setApproverError("Please Add Approver Account!");
-           // valid = false;
-       // }
+        //setApproverError("Please Add Approver Account!");
+        // valid = false;
+        // }
 
         if (!valid) return;
 
@@ -351,29 +351,30 @@ const UploadForm = () => {
                                     Title <span className="text-red-500">*</span>
                                 </label>
                                 {isFormLoading ? (
-                                    <div className="h-10 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
+                                    <div className="h-20 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" />
                                 ) : (
                                     <div className="relative">
-                                        <input
-                                            type="text"
+                                        <textarea
                                             value={title}
                                             onChange={(e) => {
                                                 setTitle(e.target.value);
                                                 setTitleError("");
                                             }}
-                                            className={`w-full rounded-xl border px-4 py-3 pl-10 shadow-sm transition-all focus:outline-none focus:ring-2 ${
+                                            rows={4} // pwede palitan kung gaano kataas
+                                            className={`w-full resize-none rounded-xl border px-4 py-3 pl-10 shadow-sm transition-all focus:outline-none focus:ring-2 ${
                                                 titleError
                                                     ? "border-red-400 focus:ring-red-300 dark:border-red-500"
                                                     : "border-gray-300 focus:border-blue-400 focus:ring-blue-300 dark:border-gray-600"
                                             } dark:bg-gray-700/50 dark:text-gray-200`}
                                             placeholder="e.g., Annual Financial Report"
                                         />
-                                        <FiFileText className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                        <FiFileText className="absolute left-3 top-3 text-gray-400" />
                                         {titleError && <p className="mt-1.5 text-sm text-red-500">{titleError}</p>}
                                     </div>
                                 )}
                             </div>
                         </div>
+
                         <div className="grid grid-cols-1 gap-4">
                             <div>
                                 <label className="mb-1 flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300">

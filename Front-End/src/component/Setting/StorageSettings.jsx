@@ -14,8 +14,6 @@ const StorageSettings = () => {
         "auto-delete-temp": false,
     });
 
-    console.log("OPY",isOptimized)
-
     // Sync from isOptimized (context value)
     useEffect(() => {
         if (isOptimized && typeof isOptimized.enabled === 'boolean') {
@@ -46,13 +44,13 @@ const StorageSettings = () => {
                     "auto-delete-temp": true,
                 };
                 setOptimizationSettings(updatedSettings);
-                AddOptimized(30, true);
+                AddOptimized(7, true);
             } else {
                 setOptimizationSettings({
                     "auto-delete-notification": false,
                     "auto-delete-temp": false,
                 });
-                AddOptimized(30, false);
+                AddOptimized(7, false);
             }
 
             return newState;
@@ -148,13 +146,13 @@ const StorageSettings = () => {
                         {[
                             {
                                 label: "Auto-delete Notification",
-                                desc: "Delete Notification after 30 days",
+                                desc: "Delete Notification after 7 days",
                                 id: "auto-delete-notification",
                                 icon: <FaBell className="mr-3 text-blue-500" />,
                             },
                             {
                                 label: "Auto-delete temporary files",
-                                desc: "Delete temporary files after 30 days",
+                                desc: "Delete temporary files after 7 days",
                                 id: "auto-delete-temp",
                                 icon: <FaTrash className="mr-3 text-green-500" />,
                             },

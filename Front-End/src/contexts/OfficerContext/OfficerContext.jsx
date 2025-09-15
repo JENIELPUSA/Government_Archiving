@@ -99,9 +99,6 @@ export const OfficerDisplayProvider = ({ children }) => {
             );
 
             const { pending, approved, rejected, counts, totalPages, recentData } = res.data;
-
-
-            console.log("TOTAL SIZED",counts.totalFileSize)
             setPendingData(pending);
             setApproved(approved);
             setRecentData(recentData);

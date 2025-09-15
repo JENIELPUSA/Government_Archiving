@@ -15,9 +15,6 @@ const Documents = ({ searchKeyword,onViewFile}) => {
     const [openYear, setOpenYear] = useState(null);
     const [loadingStates, setLoadingStates] = useState({});
     const [isPaginatedAction, setIsPaginatedAction] = useState(false);
-
-    console.log("isCategory",isCategory)
-
     const debouncedFetch = useMemo(
         () =>
             debounce((params) => {

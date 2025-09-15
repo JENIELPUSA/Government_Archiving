@@ -36,10 +36,6 @@ const GeneralSettings = ({
   const handleAutoMoveToggle = () => {
     const newStatus = !autoMoveArchive;
     setAutoMoveArchive(newStatus);
-
-    console.log(
-      `Auto Move Archive status: ${newStatus}, Retention: ${fileRetention} days`
-    );
     AddRetention(fileRetention, newStatus);
   };
 

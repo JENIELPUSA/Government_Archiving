@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
     ArrowLeft,
     Upload,
@@ -17,6 +17,46 @@ import {
 import EditDocumentModal from "../AdminDashboard/Document/EditDocumentModal";
 import UploadDocumentModal from "./FormUpload/UploadDocuments";
 
+// Skeleton Loading Components
+const FileItemSkeleton = () => (
+    <div className="group p-6 transition-all duration-200 hover:bg-gray-50 hover:shadow-sm dark:hover:bg-gray-700">
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
+                <div className="h-12 w-12 rounded-lg bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                <div className="space-y-2">
+                    <div className="h-5 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                    <div className="h-4 w-64 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                </div>
+            </div>
+            <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+        </div>
+    </div>
+);
+
+const SearchBarSkeleton = () => (
+    <div className="relative min-w-[250px] flex-1">
+        <div className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        <div className="w-full rounded-xl bg-gray-200 dark:bg-gray-700 h-10 animate-pulse"></div>
+    </div>
+);
+
+const DateFilterSkeleton = () => (
+    <div className="flex items-center gap-2">
+        <div className="h-4 w-12 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        <div className="h-8 w-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+    </div>
+);
+
+const PaginationSkeleton = () => (
+    <div className="flex items-center gap-4">
+        <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+        <div className="flex gap-2">
+            <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+            <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+        </div>
+    </div>
+);
+
 const FilesView = ({
     openFolder,
     closeFolderWithEffect,
@@ -24,7 +64,7 @@ const FilesView = ({
     isfolderFiles,
     isLoadingFiles,
     fileSearchTerm,
-    handleFileSearch,
+    setFileSearchTerm,
     fileDateFrom,
     setFileDateFrom,
     fileDateTo,
@@ -37,24 +77,18 @@ const FilesView = ({
     setOpenFileMenu,
     handleViewPdf,
     handleDeleteFiles,
-    getColorClasses,
-    getFileTypeColor,
     getFileIcon,
     isUploadModalOpen,
     closeUploadModal,
     Success,
 }) => {
-    const colorClasses = getColorClasses(openFolder.color);
     const [isEditing, setIsEditing] = useState(false);
     const [currentDocument, setCurrentDocument] = useState(null);
-
+    const [searchTimer, setSearchTimer] = useState(null);
+    
     const handleEditSave = (updatedDocument) => {
-        // This would typically update the document in your backend
-        console.log("Saving document:", updatedDocument);
         setIsEditing(false);
         setCurrentDocument(null);
-        
-        // Refetch data to update the UI
         fetchSpecificData(openFolder._id, {
             search: fileSearchTerm,
             type: "",
@@ -70,235 +104,189 @@ const FilesView = ({
         setOpenFileMenu(null);
     };
 
-    if (isLoadingFiles) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-                <div className={`${colorClasses.bg} border-b-2 ${colorClasses.border} shadow-sm`}>
-                    <div className="mx-auto max-w-7xl px-6 py-8">
-                        <div className="mb-8 flex items-center justify-between">
-                            <button
-                                onClick={closeFolderWithEffect}
-                                className="flex transform items-center gap-2 rounded-xl border bg-white px-4 py-2 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                                Back to Folders
-                            </button>
-                        </div>
-                        <div className="flex items-center gap-8">
-                            <div
-                                className={`rounded-3xl bg-white p-6 shadow-xl ${colorClasses.border} transform border-2 transition-transform duration-200 hover:scale-105 dark:bg-gray-800`}
-                            >
-                                <Folder className={`h-20 w-20 ${colorClasses.icon}`} />
-                            </div>
-                            <div>
-                                <h1 className="mb-3 text-5xl font-bold text-gray-900 dark:text-white">{openFolder.folderName}</h1>
-                                <div className="flex items-center gap-8 text-gray-600 dark:text-gray-400">
-                                    <span className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">
-                                        <Calendar className="h-5 w-5" />
-                                        Loading files...
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    const handleFileSearch = (e) => {
+        const newSearchTerm = e.target.value;
+        setFileSearchTerm(newSearchTerm);
 
-                {/* SEARCH SKELETON */}
-                <div className="mx-auto max-w-7xl px-6 py-4">
-                    <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex flex-1 flex-wrap items-center gap-4">
-                            <div className="relative min-w-[250px] flex-1">
-                                <div className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform rounded bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="h-10 w-full rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                            </div>
+        if (searchTimer) {
+            clearTimeout(searchTimer);
+        }
 
-                            <div className="flex items-center gap-2">
-                                <div className="h-4 w-12 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="h-10 w-32 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                            </div>
+        const timer = setTimeout(() => {
+            fetchSpecificData(openFolder._id, {
+                search: newSearchTerm,
+                type: "",
+                dateFrom: fileDateFrom,
+                dateTo: fileDateTo,
+                page: 1,
+            });
+        }, 2000);
 
-                            <div className="flex items-center gap-2">
-                                <div className="h-4 w-8 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="h-10 w-32 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                            </div>
-                        </div>
+        setSearchTimer(timer);
+    };
 
-                        <div className="flex items-center gap-4">
-                            <div className="h-4 w-24 rounded bg-gray-200 dark:bg-gray-700"></div>
-                            <div className="flex gap-2">
-                                <div className="h-10 w-10 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="h-10 w-10 rounded-xl bg-gray-200 dark:bg-gray-700"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+    const handleDateFromChange = (e) => {
+        setFileDateFrom(e.target.value);
+        fetchSpecificData(openFolder._id, {
+            search: fileSearchTerm,
+            type: "",
+            dateFrom: e.target.value,
+            dateTo: fileDateTo,
+            page: 1,
+        });
+    };
 
-                {/* FILES SKELETON */}
-                <div className="mx-auto max-w-7xl px-6 pb-8">
-                    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
-                        <div className="animate-pulse">
-                            <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-8 dark:border-gray-700 dark:from-gray-800 dark:to-gray-800">
-                                <div className="h-6 w-1/4 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="mt-2 h-4 w-1/3 rounded bg-gray-200 dark:bg-gray-700"></div>
-                            </div>
-                            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                {[...Array(5)].map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="p-6"
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-6">
-                                                <div className="h-16 w-16 rounded-2xl bg-gray-200 dark:bg-gray-700"></div>
-                                                <div className="space-y-2">
-                                                    <div className="h-5 w-48 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                                    <div className="h-4 w-32 rounded bg-gray-200 dark:bg-gray-700"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    const handleDateToChange = (e) => {
+        setFileDateTo(e.target.value);
+        fetchSpecificData(openFolder._id, {
+            search: fileSearchTerm,
+            type: "",
+            dateFrom: fileDateFrom,
+            dateTo: e.target.value,
+            page: 1,
+        });
+    };
+
+    const filteredFiles = useMemo(() => {
+        return isfolderFiles.filter((file) => {
+            const matchesSearch =
+                file.title?.toLowerCase().includes(fileSearchTerm.toLowerCase()) ||
+                file.fileName?.toLowerCase().includes(fileSearchTerm.toLowerCase());
+
+            const fileDate = new Date(file.createdAt);
+            const fromDate = fileDateFrom ? new Date(fileDateFrom) : null;
+            const toDate = fileDateTo ? new Date(fileDateTo) : null;
+
+            const matchesDateRange = (!fromDate || fileDate >= fromDate) && (!toDate || fileDate <= toDate);
+
+            return matchesSearch && matchesDateRange;
+        });
+    }, [isfolderFiles, fileSearchTerm, fileDateFrom, fileDateTo]);
+
+    const colorClasses = {
+        bg: "bg-blue-100 dark:bg-blue-900",
+        icon: "text-blue-500 dark:text-blue-300",
+    };
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-            {/* Folder Header */}
-            <div className={`${colorClasses.bg} border-b-2 ${colorClasses.border} shadow-sm`}>
-                <div className="mx-auto max-w-7xl px-6 py-8">
-                    <div className="mb-8 flex items-center justify-between">
-                        <button
-                            onClick={closeFolderWithEffect}
-                            className="flex transform items-center gap-2 rounded-xl border bg-white px-4 py-2 shadow-sm transition-all duration-200 hover:scale-105 hover:bg-gray-50 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to Folders
-                        </button>
-                        <button
-                            onClick={handleUploadFiles}
-                            className="flex transform items-center gap-3 rounded-xl bg-blue-600 px-6 py-3 font-medium text-white shadow-lg transition-all duration-200 hover:scale-105 hover:bg-blue-700 hover:shadow-xl"
-                        >
-                            <Upload className="h-5 w-5" />
-                            Upload Files
-                        </button>
-                    </div>
-                    <div className="flex items-center gap-8">
-                        <div
-                            className={`rounded-3xl bg-white p-6 shadow-xl ${colorClasses.border} transform border-2 transition-transform duration-200 hover:scale-105 dark:bg-gray-800`}
-                        >
-                            <Folder className={`h-20 w-20 ${colorClasses.icon}`} />
-                        </div>
-                        <div>
-                            <h1 className="mb-3 text-5xl font-bold text-gray-900 dark:text-white">{openFolder.folderName}</h1>
-                            <div className="flex items-center gap-8 text-gray-600 dark:text-gray-400">
-                                <span className="flex items-center gap-2 rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">
-                                    <Calendar className="h-5 w-5" />
-                                    Created {new Date(openFolder.createdAt).toLocaleDateString()}
-                                </span>
-                                <span className="rounded-xl bg-white px-4 py-2 shadow-sm dark:bg-gray-800">{isfolderFiles.length} files</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* File Filter Controls */}
             <div className="mx-auto max-w-7xl px-6 py-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                     {/* Combined search and filter bar */}
                     <div className="flex flex-1 flex-wrap items-center gap-4">
-                        {/* File Search Input */}
-                        <div className="relative min-w-[250px] flex-1">
-                            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search files..."
-                                value={fileSearchTerm}
-                                onChange={(e) => handleFileSearch(e.target.value)}
-                                className="w-full rounded-xl border border-gray-300 py-2 pl-12 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
+                        {isLoadingFiles ? (
+                            <>
+                                <SearchBarSkeleton />
+                                <DateFilterSkeleton />
+                                <DateFilterSkeleton />
+                            </>
+                        ) : (
+                            <>
+                                {/* File Search Input */}
+                                <div className="relative min-w-[250px] flex-1">
+                                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search files..."
+                                        value={fileSearchTerm}
+                                        onChange={handleFileSearch}
+                                        className="w-full rounded-xl border border-gray-300 py-2 pl-12 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
 
-                        {/* Date Range */}
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From:</label>
-                            <input
-                                type="date"
-                                value={fileDateFrom}
-                                onChange={(e) => setFileDateFrom(e.target.value)}
-                                className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
+                                {/* Date Range */}
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">From:</label>
+                                    <input
+                                        type="date"
+                                        value={fileDateFrom}
+                                        onChange={handleDateFromChange}
+                                        className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
 
-                        <div className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
-                            <input
-                                type="date"
-                                value={fileDateTo}
-                                onChange={(e) => setFileDateTo(e.target.value)}
-                                className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                            />
-                        </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">To:</label>
+                                    <input
+                                        type="date"
+                                        value={fileDateTo}
+                                        onChange={handleDateToChange}
+                                        className="rounded-xl border border-gray-300 px-2 py-1 shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                                    />
+                                </div>
 
-                        {/* Reset Button */}
-                        {(fileSearchTerm || fileDateFrom || fileDateTo) && (
-                            <button
-                                onClick={resetFileFilters}
-                                className="rounded-lg px-3 py-1 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-gray-700"
-                            >
-                                Reset Filters
-                            </button>
+                                {/* Reset Button */}
+                                {(fileSearchTerm || fileDateFrom || fileDateTo) && (
+                                    <button
+                                        onClick={resetFileFilters}
+                                        className="rounded-lg px-3 py-1 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-gray-700"
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </>
                         )}
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                            Page {fileCurrentPage} of {fileTotalPages}
-                        </span>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() =>
-                                    fetchSpecificData(openFolder._id, {
-                                        search: fileSearchTerm,
-                                        type: "",
-                                        dateFrom: fileDateFrom,
-                                        dateTo: fileDateTo,
-                                        page: Math.max(fileCurrentPage - 1, 1),
-                                    })
-                                }
-                                disabled={fileCurrentPage === 1}
-                                className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                            >
-                                <ChevronLeft className="h-5 w-5" />
-                            </button>
-                            <button
-                                onClick={() =>
-                                    fetchSpecificData(openFolder._id, {
-                                        search: fileSearchTerm,
-                                        type: "",
-                                        dateFrom: fileDateFrom,
-                                        dateTo: fileDateTo,
-                                        page: Math.min(fileCurrentPage + 1, fileTotalPages),
-                                    })
-                                }
-                                disabled={fileCurrentPage === fileTotalPages || fileTotalPages === 0}
-                                className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                            >
-                                <ChevronRight className="h-5 w-5" />
-                            </button>
+                    {isLoadingFiles ? (
+                        <PaginationSkeleton />
+                    ) : (
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">
+                                Page {fileCurrentPage} of {fileTotalPages}
+                            </span>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() =>
+                                        fetchSpecificData(openFolder._id, {
+                                            search: fileSearchTerm,
+                                            type: "",
+                                            dateFrom: fileDateFrom,
+                                            dateTo: fileDateTo,
+                                            page: Math.max(fileCurrentPage - 1, 1),
+                                        })
+                                    }
+                                    disabled={fileCurrentPage === 1}
+                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                >
+                                    <ChevronLeft className="h-5 w-5" />
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        fetchSpecificData(openFolder._id, {
+                                            search: fileSearchTerm,
+                                            type: "",
+                                            dateFrom: fileDateFrom,
+                                            dateTo: fileDateTo,
+                                            page: Math.min(fileCurrentPage + 1, fileTotalPages),
+                                        })
+                                    }
+                                    disabled={fileCurrentPage === fileTotalPages || fileTotalPages === 0}
+                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                >
+                                    <ChevronRight className="h-5 w-5" />
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
             {/* Folder Content */}
             <div className="mx-auto max-w-7xl px-6 pb-8">
-                {isfolderFiles.length === 0 ? (
+                {isLoadingFiles ? (
+                    <div className="overflow-visible rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                        <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-8 dark:border-gray-700 dark:from-gray-800 dark:to-gray-800">
+                            <div className="h-7 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-2"></div>
+                            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <FileItemSkeleton key={index} />
+                            ))}
+                        </div>
+                    </div>
+                ) : filteredFiles.length === 0 ? (
                     <div className="py-20 text-center">
                         <div className={`h-32 w-32 ${colorClasses.bg} mx-auto mb-8 flex items-center justify-center rounded-3xl shadow-lg`}>
                             <Folder className={`h-16 w-16 ${colorClasses.icon}`} />
@@ -320,13 +308,12 @@ const FilesView = ({
                     <div className="overflow-visible rounded-2xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
                         <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white p-8 dark:border-gray-700 dark:from-gray-800 dark:to-gray-800">
                             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Files in this folder</h2>
-                            <p className="mt-1 text-gray-600 dark:text-gray-400">Showing {isfolderFiles.length} files</p>
+                            <p className="mt-1 text-gray-600 dark:text-gray-400">Showing {filteredFiles.length} files</p>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                            {isfolderFiles.map((file, index) => {
+                            {filteredFiles.map((file, index) => {
                                 const fileExtension = file.fileName?.split(".").pop()?.toLowerCase() || "";
                                 const fileType = file.category || fileExtension;
-                                const colorClasses = getFileTypeColor(fileType.toLowerCase());
                                 const IconComponent = getFileIcon(fileType);
 
                                 return (
@@ -337,17 +324,15 @@ const FilesView = ({
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-6">
-                                                <div
-                                                    className={`rounded-2xl p-4 ${colorClasses.bg} ${colorClasses.text} shadow-sm transition-transform duration-200 group-hover:scale-110`}
-                                                >
-                                                    <IconComponent className="h-8 w-8" />
+                                                <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                                    <IconComponent className="h-6 w-6" />
                                                 </div>
                                                 <div>
                                                     <h3 className="mb-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
                                                         {file.title || file.fileName}
                                                     </h3>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {file.category} • {file.fileSize} bytes • {new Date(file.uploadDate).toLocaleDateString()}
+                                                        {file.category} • {file.fileSize} bytes • {new Date(file.createdAt).toLocaleDateString()}
                                                     </p>
                                                 </div>
                                             </div>
@@ -466,6 +451,5 @@ const FilesView = ({
         </div>
     );
 };
-
 
 export default FilesView;

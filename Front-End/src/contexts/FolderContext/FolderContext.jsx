@@ -20,6 +20,37 @@ export const FolderDisplayProvider = ({ children }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalFolderPages, setTotalFolderPages] = useState(1);
     const [currentFolderPage, setCurrentFolderPage] = useState(1);
+    const [isCategoryFolder, setCategoriesFiles] = useState("");
+
+    const fetchSpecifiCategory = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
+
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getUploadedCategoriesByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
+
+                const { totalPages, page, totalCategories } = res.data;
+                setCategoriesFiles(res.data.data);
+                setTotalPages(totalPages);
+                setCurrentPage(page);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
 
     const fetchfolder = useCallback(
         async (queryParams = {}) => {
@@ -49,8 +80,9 @@ export const FolderDisplayProvider = ({ children }) => {
     useEffect(() => {
         if (authToken) {
             fetchfolder();
+            fetchSpecifiCategory();
         }
-    }, [authToken, fetchfolder]);
+    }, [authToken, fetchfolder, fetchSpecifiCategory]);
 
     useEffect(() => {
         if (customError) {
@@ -194,6 +226,8 @@ export const FolderDisplayProvider = ({ children }) => {
                 setCurrentFolderPage,
                 currentFolderPage,
                 setIsLoadingFiles,
+                fetchSpecifiCategory,
+                isCategoryFolder,
             }}
         >
             {children}
