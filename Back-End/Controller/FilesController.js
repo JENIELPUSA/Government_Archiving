@@ -60,8 +60,19 @@ setInterval(cleanupTempFiles, 60 * 60 * 1000);
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
     const updateData = { ...req.body };
+    if (updateData.category && typeof updateData.category === "object") {
+      updateData.category = updateData.category._id;
+    }
+    if (!updateData.category || typeof updateData.category === "string" && updateData.category.trim() === "") {
+      delete updateData.category;
+    }
+    if (updateData.author === null) {
+      delete updateData.author; // huwag galawin kapag null
+    }
+
     const newStatus = req.body.ArchivedStatus;
     const admin = req.user.linkId;
+
     if (newStatus === "Deleted") {
       updateData.archivedMetadata = {
         dateArchived: new Date(),
@@ -110,7 +121,6 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
         logLevel = "info";
       }
 
-      // Note: Removed 'Archived' logging logic
       await ActivityLog.create({
         type: logType,
         action: logAction,
@@ -125,6 +135,7 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
         userAgent: req.headers["user-agent"],
       });
     }
+
     const io = req.app.get("io");
     io.emit("UpdateFileDocuData", updatedFile);
 
@@ -134,6 +145,7 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
+
 
 exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -392,9 +404,23 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       status = "Approved",
     } = req.body;
 
-    if (!title || !admin || !category) {
+    if (!title) {
+      return res.status(400).json({ error: "Please Enter Title!" });
+    }
+
+    if (!admin) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    if (!category) {
+      return res.status(400).json({ error: "Please Select Category" });
+    }
+
+    if (!dateOfResolution) {
+      return res
+        .status(400)
+        .json({ error: "Please Select Date Of Resolution!" });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(admin))
       return res.status(400).json({ error: "Invalid admin ID" });
     if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
@@ -548,14 +574,15 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
+  // Convert page & limit to numbers
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 5;
-  const skip = (page - 1) * limit;
+  const limitNumber = parseInt(req.query.limit) || 5; // default 5 per page
+  const skip = (page - 1) * limitNumber;
+
   const { title, tags, status, category, dateFrom, dateTo } = req.query;
 
-  const matchStage = {
-    ArchivedStatus: "Active",
-  };
+  // Build match stage
+  const matchStage = { ArchivedStatus: "Active" };
 
   if (title) {
     matchStage.title = { $regex: title, $options: "i" };
@@ -563,32 +590,20 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
   if (tags) {
     let tagArray = [];
-
-    if (Array.isArray(tags)) {
+    if (Array.isArray(tags))
       tagArray = tags.map((tag) => tag.trim().toLowerCase());
-    } else if (typeof tags === "string") {
+    else if (typeof tags === "string")
       tagArray = tags.split(",").map((tag) => tag.trim().toLowerCase());
-    }
 
-    if (tagArray.length > 0) {
-      matchStage.tags = { $in: tagArray };
-    }
+    if (tagArray.length > 0) matchStage.tags = { $in: tagArray };
   }
 
-  if (status) {
-    matchStage.status = status;
-  }
+  if (status) matchStage.status = status;
+  if (category) matchStage.category = new mongoose.Types.ObjectId(category);
 
-  if (category) {
-    matchStage.category = new mongoose.Types.ObjectId(category);
-  }
-
-  // Add date range filter
   if (dateFrom || dateTo) {
     matchStage.createdAt = {};
-    if (dateFrom) {
-      matchStage.createdAt.$gte = new Date(dateFrom);
-    }
+    if (dateFrom) matchStage.createdAt.$gte = new Date(dateFrom);
     if (dateTo) {
       const endOfDay = new Date(dateTo);
       endOfDay.setHours(23, 59, 59, 999);
@@ -596,6 +611,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     }
   }
 
+  // Get all active tags
   const activeTagDocs = await Files.aggregate([
     { $match: { ArchivedStatus: "Active" } },
     { $project: { tags: 1 } },
@@ -603,13 +619,12 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
   const allActiveTagsSet = new Set();
   activeTagDocs.forEach((doc) => {
-    if (Array.isArray(doc.tags)) {
+    if (Array.isArray(doc.tags))
       doc.tags.forEach((tag) => allActiveTagsSet.add(tag));
-    }
   });
-
   const allActiveTags = Array.from(allActiveTagsSet);
 
+  // Main aggregation for files
   const result = await Files.aggregate([
     { $match: matchStage },
     {
@@ -662,7 +677,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
       $facet: {
         data: [
           { $skip: skip },
-          { $limit: limit },
+          { $limit: limitNumber },
           {
             $project: {
               title: 1,
@@ -714,21 +729,20 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
   const files = result[0].data || [];
   const totalCount = result[0].totalCount[0]?.count || 0;
-  const totalPages = Math.ceil(totalCount / limit);
+  const totalPages = Math.ceil(totalCount / limitNumber);
 
+  // Today documents
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
 
   const totalDocumentsToday = await Files.countDocuments({
-    createdAt: {
-      $gte: startOfDay,
-      $lte: endOfDay,
-    },
+    createdAt: { $gte: startOfDay, $lte: endOfDay },
     ArchivedStatus: { $ne: "For Restore" },
   });
 
+  // Latest approved bills of the week
   const now = new Date();
   const startOfWeek = new Date(now);
   startOfWeek.setDate(now.getDate() - now.getDay());
@@ -741,10 +755,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const latestBill = await Files.find({
     ArchivedStatus: "Active",
     status: "Approved",
-    dateOfResolution: {
-      $gte: startOfWeek,
-      $lte: endOfWeek,
-    },
+    dateOfResolution: { $gte: startOfWeek, $lte: endOfWeek },
   })
     .sort({ dateOfResolution: -1 })
     .limit(3)

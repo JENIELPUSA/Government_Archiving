@@ -15,13 +15,14 @@ export const FolderDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [customError, setCustomError] = useState("");
-    const [isfolderFiles, setFolderFiles] = useState("");
+    const [isfolderFiles, setFolderFiles] = useState([]);
     const [totalPages, setTotalPages] = useState(1);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalFolderPages, setTotalFolderPages] = useState(1);
     const [currentFolderPage, setCurrentFolderPage] = useState(1);
     const [isCategoryFolder, setCategoriesFiles] = useState("");
-
+    const [show, setShow] = useState(10);
+    const [isTags, setTags] = useState("");
     const fetchSpecifiCategory = useCallback(
         async (folderID, params = {}) => {
             if (!authToken || !folderID) return;
@@ -42,6 +43,33 @@ export const FolderDisplayProvider = ({ children }) => {
                 setCategoriesFiles(res.data.data);
                 setTotalPages(totalPages);
                 setCurrentPage(page);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
+
+    const fetchFilterTags = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
+
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getUniqueTagsByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
+
+                setTags(res.data.data);
             } catch (error) {
                 console.error("Error fetching files:", error);
                 setError("Failed to fetch files.");
@@ -81,8 +109,9 @@ export const FolderDisplayProvider = ({ children }) => {
         if (authToken) {
             fetchfolder();
             fetchSpecifiCategory();
+            fetchFilterTags();
         }
-    }, [authToken, fetchfolder, fetchSpecifiCategory]);
+    }, [authToken, fetchfolder, fetchSpecifiCategory, fetchFilterTags]);
 
     useEffect(() => {
         if (customError) {
@@ -181,11 +210,17 @@ export const FolderDisplayProvider = ({ children }) => {
             setError(null);
 
             try {
+                // Kung may tags array, i-join sa comma
+                const queryParams = { ...params };
+                if (queryParams.tags && Array.isArray(queryParams.tags)) {
+                    queryParams.tags = queryParams.tags.join(","); // <-- dito nagiging "tag1,tag2,tag3"
+                }
+
                 const res = await axiosInstance.get(
                     `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getFilesByFolderId/${folderID}`,
                     {
                         withCredentials: true,
-                        params,
+                        params: queryParams,
                         headers: { Authorization: `Bearer ${authToken}` },
                     },
                 );
@@ -224,10 +259,14 @@ export const FolderDisplayProvider = ({ children }) => {
                 setCurrentPage,
                 totalFolderPages,
                 setCurrentFolderPage,
+                fetchFilterTags,
                 currentFolderPage,
                 setIsLoadingFiles,
                 fetchSpecifiCategory,
                 isCategoryFolder,
+                show,
+                setShow,
+                isTags,
             }}
         >
             {children}

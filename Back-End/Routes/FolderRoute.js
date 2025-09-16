@@ -16,6 +16,8 @@ router.route('/getFilesByFolderId/:id')
 
 router.route('/getUploadedCategoriesByFolderId/:id')
     .get(authController.protect,Folder.getUploadedCategoriesByFolderId)
+router.route('/getUniqueTagsByFolderId/:id')
+    .get(authController.protect,Folder.getUniqueTagsByFolderId)
 
 
 module.exports=router

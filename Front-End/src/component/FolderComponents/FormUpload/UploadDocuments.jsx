@@ -150,6 +150,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             valid = false;
         }
 
+
         if (!valid) return;
 
         setIsPdfLoading(true);

@@ -4,7 +4,7 @@ import DocumentTable from "../DocumentTable";
 import { FilesDisplayContext } from "../../../../contexts/FileContext/FileContext";
 import EditDocumentModal from "../EditDocumentModal";
 import DocumentFilterSkeleton from "./DocumentFilterSkeleton"; // Import the new component
-import DocumentTableSkeleton from "./DocumentTableSkeleton";   // Import the new component
+import DocumentTableSkeleton from "./DocumentTableSkeleton"; // Import the new component
 
 const DocumentLayout = () => {
     const { isFile, setIsFile, filters, setFilters, FetchFiles, currentPage, isActiveTags } = useContext(FilesDisplayContext);
@@ -34,6 +34,7 @@ const DocumentLayout = () => {
                 tags: newFilters.tags,
                 dateFrom: newFilters.dateFrom,
                 dateTo: newFilters.dateTo,
+                limit: newFilters.limit,
             });
 
         if (!isEqual) {
@@ -44,6 +45,7 @@ const DocumentLayout = () => {
                 tags: newFilters.tags,
                 dateFrom: newFilters.dateFrom,
                 dateTo: newFilters.dateTo,
+                limit: newFilters.limit,
             });
         }
     };
@@ -95,7 +97,7 @@ const DocumentLayout = () => {
                     <DocumentTableSkeleton />
                 ) : (
                     <DocumentTable
-                        documents={isFile.filter((doc) => doc.ArchivedStatus === 'Active')}
+                        documents={isFile.filter((doc) => doc.ArchivedStatus === "Active")}
                         onPreview={() => {}}
                         onEdit={onEdit}
                         onDelete={onDelete}

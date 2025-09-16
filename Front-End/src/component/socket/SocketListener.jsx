@@ -70,17 +70,17 @@ const SocketListener = () => {
         };
 
         const handleUpdateFileData = (updatedDoc) => {
-            setFiles((prev) => prev.map((f) => (f._id === updatedDoc._id ? { ...f, ...updatedDoc } : f)));
+            fetchSpecifiCategory(updatedDoc.folderID, { categoryId: updatedDoc.category });
             FetchOfficerFiles();
         };
 
         const handleDeleteDocument = (deleteData) => {
-            fetchSpecifiCategory(deleteData.folderID ,{});
+            fetchSpecifiCategory(deleteData.folderID, {});
             fetchSpecificData(deleteData.folderID, { categoryId: deleteData.categoryID });
         };
 
         const handleAddDocument = (Adddata) => {
-            fetchSpecifiCategory(Adddata.folderID ,{});
+            fetchSpecifiCategory(Adddata.folderID, {});
             fetchSpecificData(Adddata.folderID, { categoryId: Adddata.category });
         };
 

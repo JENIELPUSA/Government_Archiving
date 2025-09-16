@@ -17,6 +17,7 @@ const FolderCreationUI = () => {
         fetchSpecificData,
         isfolderFiles,
         isLoadingFolders,
+        isTags,
         isLoadingFiles,
         setIsLoadingFiles,
         currentPage: fileCurrentPage,
@@ -27,6 +28,9 @@ const FolderCreationUI = () => {
         setCurrentFolderPage: setFolderCurrentPage,
         fetchSpecifiCategory,
         isCategoryFolder,
+        show,
+        setShow,
+        fetchFilterTags,
     } = useContext(FolderContext);
 
     const { MOveArchived } = useContext(FilesDisplayContext);
@@ -54,7 +58,9 @@ const FolderCreationUI = () => {
     const [isVerification, setVerification] = useState(false);
     const [isDeleteID, setIsDeleteId] = useState("");
     const fileTypeOptions = ["ordinance", "image", "video", "audio", "archive", "pdf", "document", "spreadsheet"];
-
+    const [searchTimer, setSearchTimer] = useState(null);
+    const [selectedTags, setSelectedTags] = useState([]);
+    const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
     const handleFolderSearch = (value) => {
         setSearchTerm(value);
     };
@@ -89,7 +95,8 @@ const FolderCreationUI = () => {
     }, [searchTerm, folderCurrentPage]);
 
     useEffect(() => {
-        if (openCategory) { // Inayos para gamitin ang openCategory
+        if (openCategory) {
+            // Inayos para gamitin ang openCategory
             const timer = setTimeout(() => {
                 fetchSpecificData(openCategory._id, {
                     search: fileSearchTerm,
@@ -151,9 +158,11 @@ const FolderCreationUI = () => {
     const closeFolderWithEffect = () => {
         setIsOpening(true);
         setTimeout(() => {
-            if (openCategory) { // Kung nasa FilesView, bumalik sa CategoryFolder
+            if (openCategory) {
+                // Kung nasa FilesView, bumalik sa CategoryFolder
                 setOpenCategory(null);
-            } else { // Kung nasa CategoryFolder, bumalik sa FoldersView
+            } else {
+                // Kung nasa CategoryFolder, bumalik sa FoldersView
                 setOpenFolder(null);
             }
             setIsOpening(false);
@@ -439,6 +448,8 @@ const FolderCreationUI = () => {
                     getColorClasses={getColorClasses}
                     getFileTypeColor={getFileTypeColor}
                     getFileIcon={getFileIcon}
+                    show={show}
+                    setShow={setShow}
                     isUploadModalOpen={isUploadModalOpen}
                     closeUploadModal={closeUploadModal}
                     isCategoryFolder={isCategoryFolder}
@@ -446,6 +457,12 @@ const FolderCreationUI = () => {
                 />
             ) : openFolder ? ( // Kung may main folder na na-click, ipakita ang CategoryFolder
                 <CategoryFolder
+                isTagsDropdownOpen={isTagsDropdownOpen}
+                setIsTagsDropdownOpen={setIsTagsDropdownOpen}
+                    selectedTags={selectedTags}
+                    setSelectedTags={setSelectedTags}
+                    fetchFilterTags={fetchFilterTags}
+                    isTags={isTags}
                     openFolder={openFolder}
                     closeFolderWithEffect={closeFolderWithEffect}
                     handleUploadFiles={handleUploadFiles}
@@ -474,8 +491,11 @@ const FolderCreationUI = () => {
                     isCategoryFolder={isCategoryFolder}
                     Success={Success}
                     openFiles={openFiles}
+                    show={show}
+                    setShow={setShow}
                 />
-            ) : ( // Kung walang folder na bukas, ipakita ang FoldersView
+            ) : (
+                // Kung walang folder na bukas, ipakita ang FoldersView
                 <FoldersView
                     foldersToDisplay={foldersToDisplay}
                     searchTerm={searchTerm}

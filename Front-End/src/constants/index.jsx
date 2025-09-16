@@ -38,14 +38,14 @@ export const navbarLinks = [
         title: "Document Management",
         links: [
             {
-                label: "Upload Document",
-                icon: Upload,
-                path: "/dashboard/upload-documents",
-            },
-            {
                 label: "Archive File",
                 icon: FolderArchive,
                 path: "/dashboard/search-archiving",
+            },
+            {
+                label: "Files",
+                icon: FolderClock,
+                path: "/dashboard/oldFiles",
             },
             {
                 label: "View Documents",
@@ -53,14 +53,14 @@ export const navbarLinks = [
                 path: "/dashboard/view-documents",
             },
             {
+                label: "Upload Document",
+                icon: Upload,
+                path: "/dashboard/upload-documents",
+            },
+            {
                 label: "Category",
                 icon: SquareMenu,
                 path: "/dashboard/Category",
-            },
-            {
-                label: "Old Documents",
-                icon: FolderClock,
-                path: "/dashboard/oldFiles",
             },
         ],
     },

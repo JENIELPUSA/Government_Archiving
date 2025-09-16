@@ -78,15 +78,6 @@ const DocumentTable = ({ documents, onEdit }) => {
 
         setLoading(true);
         setCurrentPage(page);
-
-        if (typeof FetchFiles === "function") {
-            try {
-                await FetchFiles(page);
-            } catch (error) {
-                console.error("FetchFiles error:", error);
-            }
-        }
-
         setLoading(false);
     };
 

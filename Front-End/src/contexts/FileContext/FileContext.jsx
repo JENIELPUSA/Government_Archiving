@@ -145,7 +145,10 @@ export const FilesDisplayProvider = ({ children }) => {
             if (!authToken) return;
 
             try {
-                const params = { page, limit: 5 };
+                const params = {
+                    page,
+                    limit: customFilters.limit || 5, // default 5
+                };
 
                 if (customFilters.title?.trim()) params.title = customFilters.title;
                 if (customFilters.tags?.length) params.tags = customFilters.tags;
@@ -237,12 +240,24 @@ export const FilesDisplayProvider = ({ children }) => {
 
     const UpdateFiles = async (bornID, values) => {
         try {
+            // sanitize category at author
+            let categoryValue = values.categoryID;
+            if (typeof categoryValue === "string" && !/^[0-9a-fA-F]{24}$/.test(categoryValue)) {
+                categoryValue = ""; // invalid string, set to empty
+            }
+
+            let authorValue = values.author;
+            if (typeof authorValue === "string" && !/^[0-9a-fA-F]{24}$/.test(authorValue)) {
+                authorValue = ""; // invalid string, set to empty
+            }
+
             const dataToSend = {
-                category: values.categoryID || "",
+                category: categoryValue || "",
                 fullText: values.fullText || "",
                 summary: values.summary || "",
                 title: values.title || "",
-                author: values.author ? values.author : null,
+                dateOfResolution: values.dateOfResolution || "",
+                author: authorValue || null,
             };
 
             const response = await axiosInstance.patch(
