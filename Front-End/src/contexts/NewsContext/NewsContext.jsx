@@ -45,7 +45,7 @@ export const NewsDisplayProvider = ({ children }) => {
         const fetchAllData = async () => {
             setLoading(true);
             try {
-                DisplayNews();
+                await DisplayNews(); // <-- await here
             } catch (err) {
                 console.error("Error fetching SB data", err);
             } finally {
@@ -125,7 +125,7 @@ export const NewsDisplayProvider = ({ children }) => {
             formData.append("date", values.date || "");
             formData.append("excerpt", values.excerpt || "");
             formData.append("category", values.category || "");
-              if (values.image) formData.append("avatar", values.image);
+            if (values.image) formData.append("avatar", values.image);
 
             const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/News/${dataID}`, formData, {
                 headers: {

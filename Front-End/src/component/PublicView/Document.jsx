@@ -6,7 +6,61 @@ import { useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronUp, Loader } from "lucide-react";
 import { debounce } from "lodash";
 
-const Documents = ({ searchKeyword,onViewFile}) => {
+// Skeleton Components
+const SkeletonFilter = () => (
+  <div className="rounded-lg bg-blue-50 p-4 shadow-sm animate-pulse">
+    <div className="h-4 w-24 bg-gray-300 rounded mb-2"></div>
+    <div className="h-10 w-full bg-gray-300 rounded"></div>
+  </div>
+);
+
+const SkeletonDocumentItem = () => (
+  <div className="rounded-lg border border-gray-200 p-5 animate-pulse">
+    <div className="flex flex-col gap-4 md:flex-row md:items-start">
+      <div className="flex-grow">
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+          <div className="h-6 w-3/4 bg-gray-300 rounded"></div>
+          <div className="h-6 w-32 bg-gray-300 rounded"></div>
+        </div>
+        <div className="mb-4 space-y-2">
+          <div className="h-4 w-full bg-gray-300 rounded"></div>
+          <div className="h-4 w-5/6 bg-gray-300 rounded"></div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+          <div className="flex items-center rounded-lg bg-blue-50 p-3">
+            <div className="h-4 w-16 bg-gray-300 rounded"></div>
+          </div>
+          <div className="flex items-center rounded-lg bg-blue-50 p-3">
+            <div className="h-4 w-20 bg-gray-300 rounded"></div>
+          </div>
+          <div className="flex items-center rounded-lg bg-blue-50 p-3">
+            <div className="h-4 w-24 bg-gray-300 rounded"></div>
+          </div>
+        </div>
+      </div>
+      <div className="h-10 w-32 bg-gray-300 rounded md:self-center"></div>
+    </div>
+  </div>
+);
+
+const SkeletonYearSection = () => (
+  <div className="overflow-hidden rounded-xl shadow-md animate-pulse">
+    <div className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-200 to-blue-300 p-5">
+      <div className="flex items-center gap-3">
+        <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
+        <div className="h-6 w-40 bg-gray-300 rounded"></div>
+      </div>
+      <div className="h-6 w-6 bg-gray-300 rounded"></div>
+    </div>
+    <div className="bg-white p-6 space-y-4">
+      <SkeletonDocumentItem />
+      <SkeletonDocumentItem />
+      <SkeletonDocumentItem />
+    </div>
+  </div>
+);
+
+const Documents = ({ searchKeyword, onViewFile }) => {
     const navigate = useNavigate();
     const { isCategory } = useContext(CategoryContext);
     const { isPublic, fetchPublicDisplay, loading } = useContext(FilesDisplayContext);
@@ -193,313 +247,324 @@ const Documents = ({ searchKeyword,onViewFile}) => {
                 DOCUMENTS
             </motion.h1>
 
-            <motion.div 
-                className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-            >
+            {/* Skeleton for initial loading */}
+            {loading && !isPaginatedAction && (
                 <motion.div 
-                    className="rounded-lg bg-blue-50 p-4 shadow-sm"
-                    variants={itemVariants}
-                >
-                    <label
-                        htmlFor="year-select"
-                        className="mb-2 block text-sm font-medium text-blue-800"
-                    >
-                        Filter by Year:
-                    </label>
-                    <select
-                        id="year-select"
-                        className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        value={selectedYear}
-                        onChange={(e) => {
-                            const year = e.target.value;
-                            setSelectedYear(year);
-                            setOpenYear(year !== "All Years" ? year : null);
-                        }}
-                    >
-                        {years.map((year) => (
-                            <option
-                                key={year}
-                                value={year}
-                            >
-                                {year}
-                            </option>
-                        ))}
-                    </select>
-                </motion.div>
-
-                {/* Category Filter */}
-                <motion.div 
-                    className="rounded-lg bg-blue-50 p-4 shadow-sm"
-                    variants={itemVariants}
-                >
-                    <label
-                        htmlFor="category-select"
-                        className="mb-2 block text-sm font-medium text-blue-800"
-                    >
-                        Filter by Category:
-                    </label>
-                    <select
-                        id="category-select"
-                        className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                        value={selectedCategory || ""}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                    >
-                        {categories.map((category) => (
-                            <option
-                                key={category.id}
-                                value={category.id}
-                            >
-                                {category.name}
-                            </option>
-                        ))}
-                    </select>
-                </motion.div>
-            </motion.div>
-
-            {/* Document List */}
-            {loading && !isPaginatedAction && Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
-                <motion.div 
-                    className="py-12 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <div className="inline-block h-16 w-16 animate-spin rounded-full border-4 border-solid border-blue-800 border-t-transparent"></div>
-                    <p className="mt-4 text-lg text-gray-600">Loading documents...</p>
-                </motion.div>
-            ) : Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
-                <motion.div 
-                    className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4 }}
-                >
-                    <h3 className="mt-4 text-xl font-semibold text-blue-800">No documents found</h3>
-                    <p className="mx-auto mt-2 max-w-md text-gray-600">Try adjusting your search or filter criteria.</p>
-                </motion.div>
-            ) : (
-                <motion.div
-                    id="document-list"
                     className="space-y-6"
-                    variants={containerVariants}
                     initial="hidden"
                     animate="visible"
+                    variants={containerVariants}
                 >
-                    {Object.entries(filteredData)
-                        .sort(([a], [b]) => {
-                            if (a === "Unknown") return 1;
-                            if (b === "Unknown") return -1;
-                            return parseInt(b, 10) - parseInt(a, 10);
-                        })
-                        .map(([year, yearData]) => {
-                            const yearFiles = yearData.data;
-                            const currentPage = yearData.currentPage;
-                            const totalPages = yearData.totalPages;
-                            const totalCount = yearData.totalCount || 0;
-                            const isLoading = loadingStates[year];
-                            const isOpen = openYear === year;
+                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
+                        <SkeletonFilter />
+                        <SkeletonFilter />
+                    </div>
+                    <SkeletonYearSection />
+                    <SkeletonYearSection />
+                </motion.div>
+            )}
 
-                            const startIndex = (currentPage - 1) * 10 + 1;
-                            const endIndex = Math.min(currentPage * 10, totalCount);
-
-                            return (
-                                <motion.div
-                                    key={year}
-                                    className="overflow-hidden rounded-xl shadow-md"
-                                    variants={itemVariants}
-                                    layout
-                                >
-                                    <motion.div
-                                        className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 text-white transition-all hover:from-blue-800 hover:to-blue-900"
-                                        onClick={() => toggleYear(year)}
-                                        whileHover={{ scale: 1.005 }}
-                                        whileTap={{ scale: 0.995 }}
+            {/* Actual content when not loading */}
+            {!loading && (
+                <>
+                    <motion.div 
+                        className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2"
+                        variants={containerVariants}
+                        initial="hidden"
+                        animate="visible"
+                    >
+                        <motion.div 
+                            className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                            variants={itemVariants}
+                        >
+                            <label
+                                htmlFor="year-select"
+                                className="mb-2 block text-sm font-medium text-blue-800"
+                            >
+                                Filter by Year:
+                            </label>
+                            <select
+                                id="year-select"
+                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                value={selectedYear}
+                                onChange={(e) => {
+                                    const year = e.target.value;
+                                    setSelectedYear(year);
+                                    setOpenYear(year !== "All Years" ? year : null);
+                                }}
+                            >
+                                {years.map((year) => (
+                                    <option
+                                        key={year}
+                                        value={year}
                                     >
-                                        <h2 className="flex items-center gap-3 text-xl font-bold">
-                                            <motion.span 
-                                                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900"
-                                                whileHover={{ rotate: 5 }}
-                                            >
-                                                {year === "Unknown" ? "?" : year.substring(2)}
-                                            </motion.span>
-                                            <span>
-                                                {year} • {totalCount} document
-                                                {totalCount !== 1 ? "s" : ""}
-                                                {isLoading && (
-                                                    <span className="ml-2 inline-flex">
-                                                        <Loader
-                                                            className="animate-spin"
-                                                            size={18}
-                                                        />
-                                                    </span>
-                                                )}
-                                            </span>
-                                        </h2>
-                                        <motion.div
-                                            animate={{ rotate: isOpen ? 180 : 0 }}
-                                            transition={{ duration: 0.3 }}
-                                        >
-                                            {isOpen ? (
-                                                <ChevronUp
-                                                    className="text-blue-200"
-                                                    size={24}
-                                                />
-                                            ) : (
-                                                <ChevronDown
-                                                    className="text-blue-200"
-                                                    size={24}
-                                                />
-                                            )}
-                                        </motion.div>
-                                    </motion.div>
+                                        {year}
+                                    </option>
+                                ))}
+                            </select>
+                        </motion.div>
 
-                                    <AnimatePresence>
-                                        {isOpen && (
-                                            <motion.div 
-                                                className="bg-white"
-                                                variants={yearSectionVariants}
-                                                initial="closed"
-                                                animate="open"
-                                                exit="closed"
-                                                layout
+                        {/* Category Filter */}
+                        <motion.div 
+                            className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                            variants={itemVariants}
+                        >
+                            <label
+                                htmlFor="category-select"
+                                className="mb-2 block text-sm font-medium text-blue-800"
+                            >
+                                Filter by Category:
+                            </label>
+                            <select
+                                id="category-select"
+                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                value={selectedCategory || ""}
+                                onChange={(e) => setSelectedCategory(e.target.value)}
+                            >
+                                {categories.map((category) => (
+                                    <option
+                                        key={category.id}
+                                        value={category.id}
+                                    >
+                                        {category.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </motion.div>
+                    </motion.div>
+
+                    {/* Document List */}
+                    {Object.values(filteredData).flatMap((yearData) => yearData.data).length === 0 ? (
+                        <motion.div 
+                            className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ duration: 0.4 }}
+                        >
+                            <h3 className="mt-4 text-xl font-semibold text-blue-800">No documents found</h3>
+                            <p className="mx-auto mt-2 max-w-md text-gray-600">Try adjusting your search or filter criteria.</p>
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            id="document-list"
+                            className="space-y-6"
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                        >
+                            {Object.entries(filteredData)
+                                .sort(([a], [b]) => {
+                                    if (a === "Unknown") return 1;
+                                    if (b === "Unknown") return -1;
+                                    return parseInt(b, 10) - parseInt(a, 10);
+                                })
+                                .map(([year, yearData]) => {
+                                    const yearFiles = yearData.data;
+                                    const currentPage = yearData.currentPage;
+                                    const totalPages = yearData.totalPages;
+                                    const totalCount = yearData.totalCount || 0;
+                                    const isLoading = loadingStates[year];
+                                    const isOpen = openYear === year;
+
+                                    const startIndex = (currentPage - 1) * 10 + 1;
+                                    const endIndex = Math.min(currentPage * 10, totalCount);
+
+                                    return (
+                                        <motion.div
+                                            key={year}
+                                            className="overflow-hidden rounded-xl shadow-md"
+                                            variants={itemVariants}
+                                            layout
+                                        >
+                                            <motion.div
+                                                className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 text-white transition-all hover:from-blue-800 hover:to-blue-900"
+                                                onClick={() => toggleYear(year)}
+                                                whileHover={{ scale: 1.005 }}
+                                                whileTap={{ scale: 0.995 }}
                                             >
-                                                <div className="space-y-4 p-6">
-                                                    {isLoading && yearFiles.length === 0 ? (
-                                                        <div className="flex justify-center py-8">
-                                                            <Loader
-                                                                className="animate-spin text-blue-700"
-                                                                size={32}
-                                                            />
-                                                        </div>
-                                                    ) : yearFiles.length === 0 ? (
-                                                        <div className="py-8 text-center">
-                                                            <p className="text-gray-500">No documents found for {year}</p>
-                                                        </div>
+                                                <h2 className="flex items-center gap-3 text-xl font-bold">
+                                                    <motion.span 
+                                                        className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900"
+                                                        whileHover={{ rotate: 5 }}
+                                                    >
+                                                        {year === "Unknown" ? "?" : year.substring(2)}
+                                                    </motion.span>
+                                                    <span>
+                                                        {year} • {totalCount} document
+                                                        {totalCount !== 1 ? "s" : ""}
+                                                        {isLoading && (
+                                                            <span className="ml-2 inline-flex">
+                                                                <Loader
+                                                                    className="animate-spin"
+                                                                    size={18}
+                                                                />
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </h2>
+                                                <motion.div
+                                                    animate={{ rotate: isOpen ? 180 : 0 }}
+                                                    transition={{ duration: 0.3 }}
+                                                >
+                                                    {isOpen ? (
+                                                        <ChevronUp
+                                                            className="text-blue-200"
+                                                            size={24}
+                                                        />
                                                     ) : (
-                                                        yearFiles.map((item) => (
-                                                            <motion.div
-                                                                key={item?._id}
-                                                                className="rounded-lg border border-gray-200 p-5 transition-all hover:bg-blue-50"
-                                                                initial={{ opacity: 0, y: 10 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                transition={{ duration: 0.3 }}
-                                                                whileHover={{ y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+                                                        <ChevronDown
+                                                            className="text-blue-200"
+                                                            size={24}
+                                                        />
+                                                    )}
+                                                </motion.div>
+                                            </motion.div>
+
+                                            <AnimatePresence>
+                                                {isOpen && (
+                                                    <motion.div 
+                                                        className="bg-white"
+                                                        variants={yearSectionVariants}
+                                                        initial="closed"
+                                                        animate="open"
+                                                        exit="closed"
+                                                        layout
+                                                    >
+                                                        <div className="space-y-4 p-6">
+                                                            {isLoading && yearFiles.length === 0 ? (
+                                                                <div className="space-y-4">
+                                                                    <SkeletonDocumentItem />
+                                                                    <SkeletonDocumentItem />
+                                                                    <SkeletonDocumentItem />
+                                                                </div>
+                                                            ) : yearFiles.length === 0 ? (
+                                                                <div className="py-8 text-center">
+                                                                    <p className="text-gray-500">No documents found for {year}</p>
+                                                                </div>
+                                                            ) : (
+                                                                yearFiles.map((item) => (
+                                                                    <motion.div
+                                                                        key={item?._id}
+                                                                        className="rounded-lg border border-gray-200 p-5 transition-all hover:bg-blue-50"
+                                                                        initial={{ opacity: 0, y: 10 }}
+                                                                        animate={{ opacity: 1, y: 0 }}
+                                                                        transition={{ duration: 0.3 }}
+                                                                        whileHover={{ y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
+                                                                    >
+                                                                        <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                                                                            <div className="flex-grow">
+                                                                                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                                                                                    <h3 className="text-lg font-bold text-gray-800">{item?.title}</h3>
+                                                                                    {item?.resolutionNumber && (
+                                                                                        <span className="whitespace-nowrap rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
+                                                                                            Resolution #: {item.resolutionNumber}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <p className="mb-4 line-clamp-2 text-gray-600">{item?.summary}</p>
+                                                                                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                                                                                    <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Author:</div>
+                                                                                        <div className="truncate font-medium text-gray-700">
+                                                                                            {item?.author || "N/A"}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Category:</div>
+                                                                                        <div className="truncate font-medium text-gray-700">
+                                                                                            {item?.category || "Uncategorized"}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center rounded-lg bg-blue-50 p-3">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Created:</div>
+                                                                                        <div className="font-medium text-gray-700">
+                                                                                            {formatDate(item?.createdAt)}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                            <motion.button
+                                                                                onClick={() => onViewFile(item._id, item)}
+                                                                                className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
+                                                                                whileHover={{ scale: 1.05 }}
+                                                                                whileTap={{ scale: 0.95 }}
+                                                                            >
+                                                                                View Document
+                                                                            </motion.button>
+                                                                        </div>
+                                                                    </motion.div>
+                                                                ))
+                                                            )}
+                                                        </div>
+
+                                                        {/* Pagination */}
+                                                        {isOpen && totalPages > 1 && (
+                                                            <motion.div 
+                                                                className="mb-6 mt-2 flex flex-col items-center justify-between gap-4 px-6 sm:flex-row"
+                                                                initial={{ opacity: 0 }}
+                                                                animate={{ opacity: 1 }}
+                                                                transition={{ delay: 0.2 }}
                                                             >
-                                                                <div className="flex flex-col gap-4 md:flex-row md:items-start">
-                                                                    <div className="flex-grow">
-                                                                        <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                                                                            <h3 className="text-lg font-bold text-gray-800">{item?.title}</h3>
-                                                                            {item?.resolutionNumber && (
-                                                                                <span className="whitespace-nowrap rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                                                                                    Resolution #: {item.resolutionNumber}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        <p className="mb-4 line-clamp-2 text-gray-600">{item?.summary}</p>
-                                                                        <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
-                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Author:</div>
-                                                                                <div className="truncate font-medium text-gray-700">
-                                                                                    {item?.author || "N/A"}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Category:</div>
-                                                                                <div className="truncate font-medium text-gray-700">
-                                                                                    {item?.category || "Uncategorized"}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                <div className="mr-2 text-xs font-medium text-blue-700">Created:</div>
-                                                                                <div className="font-medium text-gray-700">
-                                                                                    {formatDate(item?.createdAt)}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
+                                                                <div className="text-sm text-gray-600">
+                                                                    Showing {startIndex} to {endIndex} of {totalCount} documents
+                                                                </div>
+                                                                <div className="flex gap-2">
+                                                                    <motion.button
+                                                                        onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
+                                                                        disabled={currentPage === 1 || isLoading}
+                                                                        className={`rounded-lg border px-4 py-2 ${
+                                                                            currentPage === 1 || isLoading
+                                                                                ? "cursor-not-allowed border-gray-300 text-gray-400"
+                                                                                : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                                        }`}
+                                                                        whileHover={{ scale: currentPage === 1 || isLoading ? 1 : 1.05 }}
+                                                                        whileTap={{ scale: currentPage === 1 || isLoading ? 1 : 0.95 }}
+                                                                    >
+                                                                        Previous
+                                                                    </motion.button>
+                                                                    <div className="flex flex-wrap items-center justify-center gap-1">
+                                                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                                            <motion.button
+                                                                                key={page}
+                                                                                onClick={() => handlePageChange(year, page)}
+                                                                                disabled={isLoading}
+                                                                                className={`h-10 min-w-[2.5rem] rounded-lg px-2 ${
+                                                                                    page === currentPage
+                                                                                        ? "bg-blue-700 text-white"
+                                                                                        : "text-blue-700 hover:bg-blue-50"
+                                                                                } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
+                                                                                whileHover={{ scale: isLoading ? 1 : 1.1 }}
+                                                                                whileTap={{ scale: isLoading ? 1 : 0.9 }}
+                                                                            >
+                                                                                {page}
+                                                                            </motion.button>
+                                                                        ))}
                                                                     </div>
                                                                     <motion.button
-                                                                        onClick={() => onViewFile (item._id,item)}
-                                                                        className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
-                                                                        whileHover={{ scale: 1.05 }}
-                                                                        whileTap={{ scale: 0.95 }}
+                                                                        onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
+                                                                        disabled={currentPage === totalPages || isLoading}
+                                                                        className={`rounded-lg border px-4 py-2 ${
+                                                                            currentPage === totalPages || isLoading
+                                                                                ? "cursor-not-allowed border-gray-300 text-gray-400"
+                                                                                : "border-blue-300 text-blue-700 hover:bg-blue-50"
+                                                                        }`}
+                                                                        whileHover={{ scale: currentPage === totalPages || isLoading ? 1 : 1.05 }}
+                                                                        whileTap={{ scale: currentPage === totalPages || isLoading ? 1 : 0.95 }}
                                                                     >
-                                                                        View Document
+                                                                        Next
                                                                     </motion.button>
                                                                 </div>
                                                             </motion.div>
-                                                        ))
-                                                    )}
-                                                </div>
-
-                                                {/* Pagination */}
-                                                {isOpen && totalPages > 1 && (
-                                                    <motion.div 
-                                                        className="mb-6 mt-2 flex flex-col items-center justify-between gap-4 px-6 sm:flex-row"
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        transition={{ delay: 0.2 }}
-                                                    >
-                                                        <div className="text-sm text-gray-600">
-                                                            Showing {startIndex} to {endIndex} of {totalCount} documents
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <motion.button
-                                                                onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
-                                                                disabled={currentPage === 1 || isLoading}
-                                                                className={`rounded-lg border px-4 py-2 ${
-                                                                    currentPage === 1 || isLoading
-                                                                        ? "cursor-not-allowed border-gray-300 text-gray-400"
-                                                                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                                }`}
-                                                                whileHover={{ scale: currentPage === 1 || isLoading ? 1 : 1.05 }}
-                                                                whileTap={{ scale: currentPage === 1 || isLoading ? 1 : 0.95 }}
-                                                            >
-                                                                Previous
-                                                            </motion.button>
-                                                            <div className="flex flex-wrap items-center justify-center gap-1">
-                                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                                                    <motion.button
-                                                                        key={page}
-                                                                        onClick={() => handlePageChange(year, page)}
-                                                                        disabled={isLoading}
-                                                                        className={`h-10 min-w-[2.5rem] rounded-lg px-2 ${
-                                                                            page === currentPage
-                                                                                ? "bg-blue-700 text-white"
-                                                                                : "text-blue-700 hover:bg-blue-50"
-                                                                        } ${isLoading ? "cursor-not-allowed opacity-70" : ""}`}
-                                                                        whileHover={{ scale: isLoading ? 1 : 1.1 }}
-                                                                        whileTap={{ scale: isLoading ? 1 : 0.9 }}
-                                                                    >
-                                                                        {page}
-                                                                    </motion.button>
-                                                                ))}
-                                                            </div>
-                                                            <motion.button
-                                                                onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
-                                                                disabled={currentPage === totalPages || isLoading}
-                                                                className={`rounded-lg border px-4 py-2 ${
-                                                                    currentPage === totalPages || isLoading
-                                                                        ? "cursor-not-allowed border-gray-300 text-gray-400"
-                                                                        : "border-blue-300 text-blue-700 hover:bg-blue-50"
-                                                                }`}
-                                                                whileHover={{ scale: currentPage === totalPages || isLoading ? 1 : 1.05 }}
-                                                                whileTap={{ scale: currentPage === totalPages || isLoading ? 1 : 0.95 }}
-                                                            >
-                                                                Next
-                                                            </motion.button>
-                                                        </div>
+                                                        )}
                                                     </motion.div>
                                                 )}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            );
-                        })}
-                </motion.div>
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    );
+                                })}
+                        </motion.div>
+                    )}
+                </>
             )}
         </motion.div>
     );

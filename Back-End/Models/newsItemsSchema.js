@@ -16,7 +16,7 @@ const newsSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ["Documentation", "Carousel"],
+    enum: ["Documentation", "News","Announcement"],
   },
   fileUrl: {
     type: String,

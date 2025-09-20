@@ -5,18 +5,27 @@ import Documents from "./Document";
 import Navbar from "./Navbar";
 import MyLogo from "../../assets/logo-login.png";
 import PDFview from "./PDFview";
+import NewsContent from "./NewandInformation/NewsContent";
+import NewandInformation from "./NewandInformation/NewsandInformation";
+import NewsandLatest from "./NewandInformation/NewsandLatest";
+import { FaFacebook, FaEnvelope } from "react-icons/fa";
 
 const App = () => {
     const [currentPage, setCurrentPage] = useState("home");
     const [searchKeyword, setSearchKeyword] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
+    const [selectedNews, setSelectedNews] = useState(null);
 
-    // Ref for AboutUs DOM element
     const aboutUsRef = useRef(null);
 
-    const handleViewFile = (fileId, fileData) => {
-        setSelectedFile({ fileId, fileData });
+    const handleViewFile = (fileId, fileData, fileName) => {
+        setSelectedFile({ fileId, fileData, fileName });
         setCurrentPage("pdf-view");
+    };
+
+    const handleViewNews = (news) => {
+        setSelectedNews(news);
+        setCurrentPage("newsLatest");
     };
 
     const scrollToAboutUs = () => {
@@ -32,6 +41,23 @@ const App = () => {
                 return <Home aboutUsRef={aboutUsRef} />;
             case "sb-members":
                 return <SBMembers />;
+            case "news-and-information":
+                return (
+                    <NewandInformation
+                        onViewLatestNews={handleViewNews}
+                        selectedNews={selectedNews}
+                    />
+                );
+            case "newsLatest":
+                return selectedNews ? (
+                    <NewsContent
+                        news={selectedNews}
+                        onBack={() => setCurrentPage("news-and-information")}
+                    />
+                ) : (
+                    <NewsandLatest onViewLatestNews={handleViewNews} />
+                );
+
             case "documents":
                 return (
                     <Documents
@@ -43,7 +69,7 @@ const App = () => {
                 return selectedFile ? (
                     <PDFview
                         fileId={selectedFile.fileId}
-                        file={selectedFile.file}
+                        file={selectedFile.fileData}
                         fileName={selectedFile.fileName}
                         onClose={() => setCurrentPage("documents")}
                     />
@@ -60,7 +86,7 @@ const App = () => {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-100 font-sans">
-            {/* Philippines Flag Banner */}
+            {/* Flag Banner */}
             <div className="flex w-full">
                 <div className="h-4 w-1/2 bg-blue-800"></div>
                 <div className="h-4 w-1/2 bg-red-700"></div>
@@ -85,7 +111,7 @@ const App = () => {
                             ))}
                         </div>
                         <div className="relative h-16 w-16">
-                            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-yellow-400">
+                            <div className="absolute inset-0 flex items-center justify-center rounded-full ">
                                 <img
                                     src={MyLogo}
                                     alt="Logo"
@@ -105,11 +131,8 @@ const App = () => {
             <Navbar
                 currentPage={currentPage}
                 setCurrentPage={(page) => {
-                    if (page === "about-us") {
-                        scrollToAboutUs();
-                    } else {
-                        setCurrentPage(page);
-                    }
+                    if (page === "about-us") scrollToAboutUs();
+                    else setCurrentPage(page);
                 }}
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}
@@ -119,14 +142,43 @@ const App = () => {
             {renderMainContent()}
 
             {/* Footer */}
-            <footer className="mt-12 bg-blue-800 py-8 text-white">
+            {/* Footer */}
+            <footer className="mt-4 bg-blue-800 py-8 text-white">
                 <div className="container mx-auto px-6">
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-                        <div>
-                            <h3 className="mb-4 text-xl font-bold">Sangguniang Panlalawigan Archiving System</h3>
+                        {/* Logo & Info */}
+                        <div className="flex flex-col items-center text-center">
+                            <div className="mb-2 flex items-center justify-center space-x-4">
+                                <img
+                                    src={MyLogo}
+                                    alt="Logo"
+                                    className="h-20 w-20"
+                                />
+                            </div>
+                            <h3 className="mb-2 text-xl font-bold">Sangguniang Panlalawigan Archiving System</h3>
                             <p className="text-sm">Biliran Province</p>
                             <p className="mt-2 text-sm">Tel: (632) 8931-5001</p>
+
+                            {/* Social Icons */}
+                            <div className="mt-4 flex space-x-6">
+                                <a
+                                    href="https://web.facebook.com/provincialgovernmentofbiliran"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-white transition-colors hover:text-yellow-300"
+                                >
+                                    <FaFacebook size={24} />
+                                </a>
+                                <a
+                                    href="#"
+                                    className="text-white transition-colors hover:text-yellow-300"
+                                >
+                                    <FaEnvelope size={24} />
+                                </a>
+                            </div>
                         </div>
+
+                        {/* Quick Links */}
                         <div>
                             <h4 className="mb-4 font-bold">Quick Links</h4>
                             <ul className="space-y-2">
@@ -140,7 +192,7 @@ const App = () => {
                                 </li>
                                 <li>
                                     <button
-                                        onClick={() => setCurrentPage("about-us")}
+                                        onClick={() => scrollToAboutUs()}
                                         className="transition-colors hover:text-yellow-300"
                                     >
                                         About Us
@@ -152,6 +204,14 @@ const App = () => {
                                         className="transition-colors hover:text-yellow-300"
                                     >
                                         SP Members
+                                    </button>
+                                </li>
+                                <li>
+                                    <button
+                                        onClick={() => setCurrentPage("news-and-information")}
+                                        className="transition-colors hover:text-yellow-300"
+                                    >
+                                        News and Information
                                     </button>
                                 </li>
                             </ul>

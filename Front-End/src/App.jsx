@@ -21,6 +21,7 @@ import SBmember from "./component/SBmember/SBmember";
 import UnderMaintenance from "./component/PublicView/AboutUs";
 import CategoryTable from "./component/AdminDashboard/Category/ManageCategoryTable";
 import UserManagement from "./component/UserManagement/UserManagement";
+import LatestNews from "./component/PublicView/NewandInformation/NewsContent";
 
 function App() {
     const router = createBrowserRouter([
@@ -32,6 +33,7 @@ function App() {
                 { path: "/public-access", element: <PublicAccessLayout /> },
                 { path: "/reset-password/:token", element: <ResetPassword /> },
                 { path: "/expand-PDF", element: <ExpandPDFView /> },
+                { path: "/expand-LatestNews", element: <LatestNews /> },
             ],
         },
 
@@ -70,7 +72,8 @@ function App() {
                         {
                             path: "/dashboard/logs",
                             element: <LogsAndAudit />,
-                        },                   {
+                        },
+                        {
                             path: "/dashboard/Category",
                             element: <CategoryTable />,
                         },

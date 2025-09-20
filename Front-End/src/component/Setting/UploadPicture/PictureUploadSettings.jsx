@@ -164,7 +164,8 @@ const PictureUploadSettings = () => {
                                         <td className="px-4 py-2">{picture._id || picture.id}</td>
                                         <td className="px-4 py-2">{picture.title}</td>
                                         <td className="px-4 py-2">{picture.date}</td>
-                                        <td className="px-4 py-2">{picture.excerpt}</td>
+                                        <td className="px-4 py-2 truncate max-w-xs">{picture.excerpt}</td>
+
                                         <td className="px-4 py-2">{picture.category}</td>
                                         <td className="px-4 py-2">
                                             {picture.avatar?.url ? (
@@ -220,7 +221,7 @@ const PictureUploadSettings = () => {
                     }}
                     onSave={handleAddPicture}
                     picture={editingPicture}
-                    categories={["Documentation"]}
+                    categories={["Documentation", "News", "Announcement"]}
                 />
             )}
         </div>

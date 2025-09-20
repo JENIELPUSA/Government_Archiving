@@ -16,15 +16,12 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 
   let { title, date, excerpt, category } = req.body;
 
-  // --- 2Date Validation ---
   if (typeof date === "string") {
     date = new Date(date);
     if (isNaN(date.getTime())) {
       return res.status(400).json({ message: "Invalid date format." });
     }
   }
-
-  // --- 3Category Limits ---
   const categoryLimits = {
     Carousel: 5,
     Documentation: 10,
@@ -39,7 +36,6 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  // --- 4Image Upload to Hostinger ---
   let avatar = { url: "", public_id: "" };
 
   if (req.file) {
