@@ -31,12 +31,12 @@ const NewsandInformation = ({ onViewLatestNews }) => {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">News and Information</h1>
+    <div className="p-8 max-w-5xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 xs:mb-1 xs:text-lg max-xs:text-2xl">News and Information</h1>
 
       {currentNews.map((news) => (
         <div key={news.id} className="border-b last:border-b-0 py-4 flex flex-col md:flex-row">
-          <div className="md:w-1/3 mb-4 md:mb-0 md:mr-4">
+          <div className="md:w-1/3 mb-4 xs:mb-2 md:mb-0 md:mr-4">
             <img
               src={news.avatar.url}
               alt={news.title || "News image"}
@@ -44,11 +44,11 @@ const NewsandInformation = ({ onViewLatestNews }) => {
             />
           </div>
           <div className="md:w-2/3">
-            <h2 className="font-bold text-xl mb-2">{news.title}</h2>
-            <p className="text-gray-600 mb-2">{truncateExcerpt(news.excerpt, 150)}</p>
+            <h2 className="font-bold text-xl mb-2 xs:text-sm">{news.title}</h2>
+            <p className="text-gray-600 mb-2 xs:text-[12px]">{truncateExcerpt(news.excerpt, 150)}</p>
             <button
               onClick={() => onViewLatestNews(news)}
-              className="text-blue-600 hover:text-blue-800 font-medium"
+              className="text-blue-600 hover:text-blue-800 font-medium xs:text-[12px]"
             >
               Read more
             </button>

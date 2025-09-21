@@ -233,13 +233,13 @@ const Documents = ({ searchKeyword, onViewFile }) => {
 
     return (
         <motion.div 
-            className="container mx-auto mt-8 max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl"
+            className="container mx-auto mt-8 xs:mt-2 max-w-7xl flex-grow rounded-lg bg-white p-6 xs:p-2 shadow-xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
         >
             <motion.h1 
-                className="mb-6 text-3xl font-bold text-blue-800"
+                className="mb-6 text-3xl font-bold text-blue-800 xs:text-sm"
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
@@ -268,24 +268,24 @@ const Documents = ({ searchKeyword, onViewFile }) => {
             {!loading && (
                 <>
                     <motion.div 
-                        className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2"
+                        className="mb-8 xs:mb-2 grid grid-cols-1 gap-6 xs:gap-2 md:grid-cols-2"
                         variants={containerVariants}
                         initial="hidden"
                         animate="visible"
                     >
                         <motion.div 
-                            className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                            className="rounded-lg bg-blue-50 p-4 xs:p-2 shadow-sm"
                             variants={itemVariants}
                         >
                             <label
                                 htmlFor="year-select"
-                                className="mb-2 block text-sm font-medium text-blue-800"
+                                className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]"
                             >
                                 Filter by Year:
                             </label>
                             <select
                                 id="year-select"
-                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100 xs:text-[12px]"
                                 value={selectedYear}
                                 onChange={(e) => {
                                     const year = e.target.value;
@@ -306,18 +306,18 @@ const Documents = ({ searchKeyword, onViewFile }) => {
 
                         {/* Category Filter */}
                         <motion.div 
-                            className="rounded-lg bg-blue-50 p-4 shadow-sm"
+                            className="rounded-lg bg-blue-50 p-4 xs:p-2  shadow-sm"
                             variants={itemVariants}
                         >
                             <label
                                 htmlFor="category-select"
-                                className="mb-2 block text-sm font-medium text-blue-800"
+                                className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]"
                             >
                                 Filter by Category:
                             </label>
                             <select
                                 id="category-select"
-                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner focus:border-blue-400 focus:ring-2 focus:ring-blue-100 xs:text-[12px]"
                                 value={selectedCategory || ""}
                                 onChange={(e) => setSelectedCategory(e.target.value)}
                             >
@@ -382,7 +382,7 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                 whileHover={{ scale: 1.005 }}
                                                 whileTap={{ scale: 0.995 }}
                                             >
-                                                <h2 className="flex items-center gap-3 text-xl font-bold">
+                                                <h2 className="flex items-center gap-3 text-xl xs:text-sm font-bold">
                                                     <motion.span 
                                                         className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900"
                                                         whileHover={{ rotate: 5 }}
@@ -430,7 +430,7 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                         exit="closed"
                                                         layout
                                                     >
-                                                        <div className="space-y-4 p-6">
+                                                        <div className="space-y-4 p-6 xs:p-2">
                                                             {isLoading && yearFiles.length === 0 ? (
                                                                 <div className="space-y-4">
                                                                     <SkeletonDocumentItem />
@@ -445,39 +445,39 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                                 yearFiles.map((item) => (
                                                                     <motion.div
                                                                         key={item?._id}
-                                                                        className="rounded-lg border border-gray-200 p-5 transition-all hover:bg-blue-50"
+                                                                        className="rounded-lg border border-gray-200 p-5 xs:p-2 transition-all hover:bg-blue-50"
                                                                         initial={{ opacity: 0, y: 10 }}
                                                                         animate={{ opacity: 1, y: 0 }}
                                                                         transition={{ duration: 0.3 }}
                                                                         whileHover={{ y: -2, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}
                                                                     >
-                                                                        <div className="flex flex-col gap-4 md:flex-row md:items-start">
+                                                                        <div className="flex flex-col gap-4 xs:gap-1 md:flex-row md:items-start">
                                                                             <div className="flex-grow">
-                                                                                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                                                                                    <h3 className="text-lg font-bold text-gray-800">{item?.title}</h3>
+                                                                                <div className="mb-2 xs:mb-1 flex flex-wrap items-start justify-between gap-2">
+                                                                                    <h3 className="text-lg font-bold text-gray-800 xs:text-[12px] xs:leading-4">{item?.title}</h3>
                                                                                     {item?.resolutionNumber && (
                                                                                         <span className="whitespace-nowrap rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
                                                                                             Resolution #: {item.resolutionNumber}
                                                                                         </span>
                                                                                     )}
                                                                                 </div>
-                                                                                <p className="mb-4 line-clamp-2 text-gray-600">{item?.summary}</p>
-                                                                                <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                                                                                <p className="mb-4 line-clamp-2 text-gray-600 xs:text-[10px] xs:leading-4">{item?.summary}</p>
+                                                                                <div className="grid grid-cols-1 gap-3 xs:gap-1 text-sm sm:grid-cols-3">
                                                                                     <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Author:</div>
-                                                                                        <div className="truncate font-medium text-gray-700">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700 xs:text-[10px]">Author:</div>
+                                                                                        <div className="truncate font-medium text-gray-700 xs:text-[10px]">
                                                                                             {item?.author || "N/A"}
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Category:</div>
-                                                                                        <div className="truncate font-medium text-gray-700">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700 xs:text-[10px]">Category:</div>
+                                                                                        <div className="truncate font-medium text-gray-700 xs:text-[10px]">
                                                                                             {item?.category || "Uncategorized"}
                                                                                         </div>
                                                                                     </div>
                                                                                     <div className="flex items-center rounded-lg bg-blue-50 p-3">
-                                                                                        <div className="mr-2 text-xs font-medium text-blue-700">Created:</div>
-                                                                                        <div className="font-medium text-gray-700">
+                                                                                        <div className="mr-2 text-xs font-medium text-blue-700 xs:text-[10px]">Created:</div>
+                                                                                        <div className="font-medium text-gray-700 xs:text-[10px]">
                                                                                             {formatDate(item?.createdAt)}
                                                                                         </div>
                                                                                     </div>
@@ -485,7 +485,7 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                                             </div>
                                                                             <motion.button
                                                                                 onClick={() => onViewFile(item._id, item)}
-                                                                                className="whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
+                                                                                className="xs:text-[10px] whitespace-nowrap rounded-lg bg-blue-700 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-800 md:self-center"
                                                                                 whileHover={{ scale: 1.05 }}
                                                                                 whileTap={{ scale: 0.95 }}
                                                                             >
@@ -505,14 +505,14 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                                 animate={{ opacity: 1 }}
                                                                 transition={{ delay: 0.2 }}
                                                             >
-                                                                <div className="text-sm text-gray-600">
+                                                                <div className="text-sm text-gray-600 xs:text-[12px]">
                                                                     Showing {startIndex} to {endIndex} of {totalCount} documents
                                                                 </div>
                                                                 <div className="flex gap-2">
                                                                     <motion.button
                                                                         onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
                                                                         disabled={currentPage === 1 || isLoading}
-                                                                        className={`rounded-lg border px-4 py-2 ${
+                                                                        className={`rounded-lg border px-4 py-2 xs:px-2 xs:py-1 xs:text-[10px]  ${
                                                                             currentPage === 1 || isLoading
                                                                                 ? "cursor-not-allowed border-gray-300 text-gray-400"
                                                                                 : "border-blue-300 text-blue-700 hover:bg-blue-50"
@@ -522,13 +522,13 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                                     >
                                                                         Previous
                                                                     </motion.button>
-                                                                    <div className="flex flex-wrap items-center justify-center gap-1">
+                                                                    <div className="flex flex-wrap items-center justify-center gap-1 xs:text-[8px]">
                                                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                                                                             <motion.button
                                                                                 key={page}
                                                                                 onClick={() => handlePageChange(year, page)}
                                                                                 disabled={isLoading}
-                                                                                className={`h-10 min-w-[2.5rem] rounded-lg px-2 ${
+                                                                                className={`xs:h-5 h-10 min-w-[2.5rem] rounded-lg px-2 ${
                                                                                     page === currentPage
                                                                                         ? "bg-blue-700 text-white"
                                                                                         : "text-blue-700 hover:bg-blue-50"
@@ -543,7 +543,7 @@ const Documents = ({ searchKeyword, onViewFile }) => {
                                                                     <motion.button
                                                                         onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
                                                                         disabled={currentPage === totalPages || isLoading}
-                                                                        className={`rounded-lg border px-4 py-2 ${
+                                                                        className={`rounded-lg border px-4 py-2 xs:px-2 xs:py-1 xs:text-[10px] ${
                                                                             currentPage === totalPages || isLoading
                                                                                 ? "cursor-not-allowed border-gray-300 text-gray-400"
                                                                                 : "border-blue-300 text-blue-700 hover:bg-blue-50"

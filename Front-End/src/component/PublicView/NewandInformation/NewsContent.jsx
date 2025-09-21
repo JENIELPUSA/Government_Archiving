@@ -16,7 +16,7 @@ const NewsContent = ({ news, onBack }) => {
 
     // Improved Skeleton Loading Component with proper width
     const SkeletonLoading = () => (
-        <div className="relative z-10 w-full max-w-6xl rounded-xl bg-white p-4 shadow-lg md:p-8">
+        <div className="relative z-10 w-full max-w-5xl rounded-xl bg-white p-4 shadow-lg md:p-8">
             {/* Header Skeleton */}
             <header className="mb-6">
                 <div className="h-5 w-32 animate-pulse rounded-md bg-gray-200"></div>
@@ -65,8 +65,8 @@ const NewsContent = ({ news, onBack }) => {
 
     // Actual content
     return (
-        <div className="relative flex min-h-screen items-center justify-center bg-gray-100 p-4 text-gray-800 antialiased">
-            <div className="relative z-10 w-full max-w-6xl rounded-xl bg-white p-4 shadow-lg md:p-8">
+        <div className="relative flex min-h-screen items-center justify-center p-4 text-gray-800 antialiased">
+            <div className="relative z-10 w-full max-w-5xl rounded-xl bg-white p-4 shadow-lg md:p-8">
                 {/* Header */}
                 <header className="mb-6">
                     <p className="text-sm text-gray-500">

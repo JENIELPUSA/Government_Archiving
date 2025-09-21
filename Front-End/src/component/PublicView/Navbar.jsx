@@ -150,37 +150,37 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
 
             {/* Mobile Scroll Navbar */}
             <nav
-                className={`fixed left-0 right-0 top-0 z-50 block border-b border-white/20 shadow-2xl backdrop-blur-xl transition-all duration-500 md:hidden ${
+                className={`fixed left-0 right-0 top-0 z-[999] block border-b shadow-2xl transition-all duration-500 md:hidden ${
                     showScrollNavbar ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
-                } ${isScrolled ? "bg-white/10" : "bg-blue-900/90"}`}
+                } ${isScrolled ? "bg-white" : "bg-blue-700"}`}
             >
-                <div className="flex items-center justify-between p-4">
+                <div className="flex items-center justify-between p-3 xs:p-2">
                     {/* Logo */}
                     <div className="flex-shrink-0">
                         <img
                             src={BiliranHeader}
                             alt="Biliran Header"
-                            className="h-12 w-auto transition-all duration-300"
+                            className="h-9 w-auto transition-all duration-300 xs:h-8"
                         />
                     </div>
 
                     {/* Hamburger Button */}
                     <button
-                        className="relative z-10 flex h-10 w-10 items-center justify-center rounded-lg text-white transition-all duration-300 hover:bg-white/20 focus:outline-none"
+                        className="relative z-10 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-all duration-300 hover:bg-blue-600 focus:outline-none xs:h-8 xs:w-8"
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                     >
                         <div className="relative">
                             <span
-                                className={`block h-0.5 w-6 bg-current transition-all duration-300 ${
-                                    mobileMenuOpen ? "translate-y-0 rotate-45" : "-translate-y-1.5"
+                                className={`block h-0.5 w-5 bg-current transition-all duration-300 xs:w-4 ${
+                                    mobileMenuOpen ? "translate-y-1.5 rotate-45" : "-translate-y-1"
                                 }`}
                             ></span>
                             <span
-                                className={`block h-0.5 w-6 bg-current transition-all duration-300 ${mobileMenuOpen ? "opacity-0" : "opacity-100"}`}
+                                className={`block h-0.5 w-5 bg-current transition-all duration-300 xs:w-4 ${mobileMenuOpen ? "opacity-0" : "opacity-100"}`}
                             ></span>
                             <span
-                                className={`block h-0.5 w-6 bg-current transition-all duration-300 ${
-                                    mobileMenuOpen ? "translate-y-0 -rotate-45" : "translate-y-1.5"
+                                className={`block h-0.5 w-5 bg-current transition-all duration-300 xs:w-4 ${
+                                    mobileMenuOpen ? "translate-y-0 -rotate-45" : "translate-y-1"
                                 }`}
                             ></span>
                         </div>
@@ -193,20 +193,20 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                         mobileMenuOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
                     }`}
                 >
-                    <div className="border-t border-white/20 bg-gradient-to-b from-blue-900/95 to-blue-800/95 px-4 py-6 backdrop-blur-xl">
+                    <div className=" bg-gradient-to-b from-blue-800 to-gray-700 px-3 py-4 shadow-inner xs:px-2 xs:py-3">
                         {/* Search Bar for Documents page */}
                         {currentPage === "documents" && (
-                            <div className="mb-6">
+                            <div className="mb-4 xs:mb-3">
                                 <div className="relative">
                                     <input
                                         type="text"
                                         placeholder="Search documents..."
                                         value={searchKeyword}
                                         onChange={(e) => setSearchKeyword(e.target.value)}
-                                        className="w-full rounded-full border border-white/30 bg-white/10 px-4 py-3 pl-10 text-center text-white placeholder-white/70 backdrop-blur-sm transition-all duration-300 focus:border-amber-300 focus:bg-white/20 focus:outline-none focus:ring-2 focus:ring-amber-300/50"
+                                        className="w-full rounded-full border border-blue-300 bg-white px-3 py-2 pl-8 text-sm text-blue-900 placeholder-blue-400 transition-all duration-300 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 xs:px-2 xs:py-1.5 xs:pl-7 xs:text-xs"
                                     />
                                     <svg
-                                        className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70"
+                                        className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400 xs:h-3.5 xs:w-3.5"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -223,26 +223,34 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                         )}
 
                         {/* Navigation Links */}
-                        <ul className="space-y-2">
+                        <ul className="space-y-2 xs:space-y-1.5">
                             {pages.map((page, index) => (
                                 <li key={page.id}>
                                     <button
                                         onClick={() => handlePageClick(page.id)}
-                                        className={`group relative w-full rounded-xl px-4 py-3 text-left font-semibold transition-all duration-300 ${
-                                            currentPage === page.id
-                                                ? "bg-amber-300/20 text-amber-300"
-                                                : "text-white hover:bg-white/10 hover:text-amber-200"
+                                        className={`group relative w-full rounded-xl px-3 py-2 text-sm font-semibold transition-all duration-300 xs:px-2 xs:py-1.5 xs:text-xs ${
+                                            currentPage === page.id ? "bg-orange-500 text-white shadow-md" : "text-white hover:bg-blue-600"
                                         }`}
                                         style={{
                                             animationDelay: `${index * 100}ms`,
                                         }}
                                     >
-                                        <span className="relative z-10">{page.label}</span>
-                                        <div
-                                            className={`absolute inset-0 rounded-xl bg-gradient-to-r from-amber-400/20 to-amber-300/20 transition-all duration-300 ${
-                                                currentPage === page.id ? "opacity-100" : "opacity-0 group-hover:opacity-50"
-                                            }`}
-                                        ></div>
+                                        <span className="relative z-10 flex items-center justify-center">
+                                            {page.label}
+                                            {currentPage === page.id && (
+                                                <svg
+                                                    className="ml-1.5 h-3.5 w-3.5 xs:ml-1 xs:h-3 xs:w-3"
+                                                    fill="currentColor"
+                                                    viewBox="0 0 20 20"
+                                                >
+                                                    <path
+                                                        fillRule="evenodd"
+                                                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                            )}
+                                        </span>
                                     </button>
                                 </li>
                             ))}

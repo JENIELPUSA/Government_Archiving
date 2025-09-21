@@ -107,34 +107,34 @@ const AboutUsPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 ">
             {/* Hero Section */}
             <motion.section
                 ref={heroRef}
                 initial="hidden"
                 animate={heroInView ? "visible" : "hidden"}
                 variants={fadeInUp}
-                className="relative bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 py-20 text-white"
+                className="relative bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 py-20 xs:py-6 xs-max:py-8 text-white"
             >
-                <div className="container mx-auto max-w-6xl">
-                    <h1 className="mb-4 text-4xl font-bold md:text-5xl">🏛️ About Us</h1>
-                    <p className="max-w-3xl text-xl">
+                <div className="container mx-auto max-w-5xl xs:px-[16px] xs-max:px-[20px] xm:px-[20px]">
+                    <h1 className="mb-4 text-4xl font-bold md:text-5xl xs:text-xl xs-max:text-2xl">🏛️ About Us</h1>
+                    <p className="max-w-3xl text-xl xs:text-[14px] xs:leading-5 xs-max:text-sm xs-max:leading-5">
                         The Sangguniang Panlalawigan of Biliran is the heart of legislative governance in the province.
                     </p>
                 </div>
             </motion.section>
 
             {/* Main Content */}
-            <div className="container mx-auto -mt-16 max-w-7xl  py-12">
+            <div className="container mx-auto -mt-16 max-w-8xl xs:p-12 xs-max:p-13 lg:px-16  xs:px-0 xs-max:px-0">
                 {/* Intro Card */}
                 <motion.div
                     ref={introRef}
                     initial="hidden"
                     animate={introInView ? "visible" : "hidden"}
                     variants={fadeInUp}
-                    className="mb-12 rounded-xl bg-white bg-opacity-90 p-6 shadow-lg backdrop-blur-sm"
+                    className="mb-8 xs:mb-2 rounded-xl bg-white bg-opacity-90 p-6 shadow-lg backdrop-blur-sm"
                 >
-                    <p className="text-lg text-gray-700">
+                    <p className="text-lg text-gray-700 xm:text-[12px] xm:leading-5 xs:text-[10px] xs:leading-4 xs-max:text-[12px] xs-max:leading-4 lg-custom:text-lg">
                         From ordinances to policies, we drive initiatives that promote development, justice, and the common good of the people.
                         Composed of elected representatives from the two districts, with the Vice Governor as chairperson, our body ensures orderly
                         and effective governance of all provincial matters.
@@ -142,10 +142,10 @@ const AboutUsPage = () => {
                 </motion.div>
 
                 {/* Combined Carousel Section */}
-                <div className="mb-12 overflow-hidden rounded-xl bg-white shadow-lg">
+                <div className="mb-8 xs:mb-2 overflow-hidden rounded-xl bg-white shadow-lg">
                     <div className="grid grid-cols-1 lg:grid-cols-2">
                         {/* Content Side */}
-                        <div className="relative min-h-[500px] p-8">
+                        <div className="relative min-h-[500px] xs-max:min-h-[400px] xs:min-h-[370px]  p-8">
                             {carouselContent.map((item, index) => (
                                 <div
                                     key={index}
@@ -153,22 +153,22 @@ const AboutUsPage = () => {
                                         index === currentSlide ? "opacity-100" : "pointer-events-none opacity-0"
                                     }`}
                                 >
-                                    <div className="mb-6 flex items-center">
+                                    <div className="mb-6 flex items-center xs:h-2">
                                         {item.icon}
-                                        <h2 className="text-2xl font-bold text-gray-800">{item.title}</h2>
+                                        <h2 className="text-2xl font-bold text-gray-800 xs:text-[14px] lg-custom:text-2xl xs-max:text-lg">{item.title}</h2>
                                     </div>
 
-                                    <div className="mb-4 text-gray-700">{item.content}</div>
+                                    <div className="mb-4 text-gray-700 xm:text-[12px] xm:leading-5 xs:text-[12px] xs:leading-5 lg-custom:text-lg xs-max:text-[12px]">{item.content}</div>
 
                                     {item.list && (
-                                        <ul className="mb-4 list-inside list-disc space-y-2 text-gray-700">
+                                        <ul className="mb-4 list-inside list-disc space-y-2 text-gray-700 xm:text-[12px] xm:leading-5 xs:text-[12px] lg-custom:text-lg xs-max:text-[12px]">
                                             {item.list.map((listItem, i) => (
                                                 <li key={i}>{listItem}</li>
                                             ))}
                                         </ul>
                                     )}
 
-                                    {item.additionalContent && <p className="text-gray-700">{item.additionalContent}</p>}
+                                    {item.additionalContent && <p className="text-gray-700 xm:text-[12px] xm:leading-5 xs:text-[12px] xs-max:text-[12px] lg-custom:text-lg">{item.additionalContent}</p>}
                                 </div>
                             ))}
 
@@ -245,20 +245,20 @@ const AboutUsPage = () => {
 
                         {/* Contact Info */}
                         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 text-white">
-                            <h2 className="mb-4 text-3xl font-bold">Contact Us</h2>
-                            <p className="mb-6 text-xl">
+                            <h2 className="mb-4 text-3xl font-bold xs:text-lg">Contact Us</h2>
+                            <p className="mb-6 text-xl xs:text-sm">
                                 We are here to listen and serve you. We invite you to collaborate for the progress of Biliran.
                             </p>
 
-                            <div className="mb-6 space-y-4">
+                            <div className="mb-2 space-y-4">
                                 <div className="flex items-start">
                                     <Map
                                         className="mr-3 mt-1 flex-shrink-0"
                                         size={20}
                                     />
                                     <div>
-                                        <h3 className="font-semibold">Address</h3>
-                                        <p>Biliran Provincial Capitol, Barangay Calumpang, Naval, Biliran</p>
+                                        <h3 className="font-semibold xs:text-[12px]">Address</h3>
+                                        <p className="xs:text-[10px]">Biliran Provincial Capitol, Barangay Calumpang, Naval, Biliran</p>
                                     </div>
                                 </div>
 
@@ -268,8 +268,8 @@ const AboutUsPage = () => {
                                         size={20}
                                     />
                                     <div>
-                                        <h3 className="font-semibold">Phone</h3>
-                                        <p>(053) 500-0000</p>
+                                        <h3 className="font-semibold xs:text-[12px]">Phone</h3>
+                                        <p className="xs:text-[10px]">(053) 500-0000</p>
                                     </div>
                                 </div>
 
@@ -279,8 +279,8 @@ const AboutUsPage = () => {
                                         size={20}
                                     />
                                     <div>
-                                        <h3 className="font-semibold">Email</h3>
-                                        <p>info@biliransp.gov.ph</p>
+                                        <h3 className="font-semibold xs:text-[12px]">Email</h3>
+                                        <p className="xs:text-[10px]">info@biliransp.gov.ph</p>
                                     </div>
                                 </div>
                             </div>

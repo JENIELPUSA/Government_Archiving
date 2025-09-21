@@ -64,54 +64,57 @@ const termLabels = {
 };
 
 export const MemberCard = ({ member, openModal }) => (
-    <motion.div
-        className="flex flex-col items-start rounded-lg border border-gray-100 bg-white p-3 shadow-sm hover:border-blue-100 sm:flex-row"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover="hover"
-        layout
-    >
-        <div className="mb-3 flex w-full justify-center sm:mb-0 sm:mr-3 sm:block sm:w-24">
-            <motion.img
-                src={member.memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg"}
-                alt="Profile Picture"
-                className="h-32 w-20 rounded-lg object-cover shadow-sm"
-                whileHover={{ scale: 1.03 }}
-                transition={{ duration: 0.2 }}
-            />
-        </div>
-        <div className="flex-grow">
-            <h2 className="mb-1 flex items-center text-base font-bold text-gray-900">
-                <FaUserAlt className="mr-1 text-xs text-blue-600" />
-                {member.memberInfo?.first_name} {member.memberInfo?.last_name}
-            </h2>
-            {(member.district || member.memberInfo?.district) && (
-                <p className="mb-1 flex items-center text-xs text-gray-600">
-                    <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                    {member.district || member.memberInfo?.district}
-                </p>
-            )}
+  <motion.div
+    className="flex flex-col items-center rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:border-blue-100 sm:flex-row sm:items-start"
+    variants={cardVariants}
+    initial="hidden"
+    animate="visible"
+    whileHover="hover"
+    layout
+  >
+    <div className="mb-3 flex justify-center sm:mb-0 sm:mr-4 sm:block">
+      <motion.img
+        src={member.memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg"}
+        alt="Profile Picture"
+        className="h-32 w-24 rounded-lg object-cover shadow-sm sm:h-28 sm:w-20"
+        whileHover={{ scale: 1.03 }}
+        transition={{ duration: 0.2 }}
+      />
+    </div>
+    <div className="w-full text-center sm:text-left">
+      <h2 className="mb-2 text-lg font-bold text-gray-900 sm:mb-1">
+        <FaUserAlt className="mr-2 inline text-sm text-blue-600" />
+        {member.memberInfo?.first_name} {member.memberInfo?.last_name}
+      </h2>
 
-            <p className="mb-2 flex items-center text-xs capitalize text-gray-600">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                {member.memberInfo?.Position || member.memberInfo?.position || "No position specified"}
-            </p>
-            <p className="mb-1 flex items-center text-xs text-gray-600">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                {termLabels[member.term || member.memberInfo?.term] || "No term specified"}
-            </p>
-            <motion.button
-                onClick={() => openModal(member)}
-                className="mt-1 flex items-center text-xs font-medium text-blue-600 transition-colors duration-200 hover:text-blue-800 focus:outline-none"
-                whileHover={{ x: 3 }}
-                transition={{ type: "spring", stiffness: 500 }}
-            >
-                <span className="mr-1 border-b border-dotted border-blue-600 hover:border-blue-800">View Full Profile</span>
-                <FaChevronRight className="text-xs" />
-            </motion.button>
-        </div>
-    </motion.div>
+      {(member.district || member.memberInfo?.district) && (
+        <p className="mb-2 text-sm text-gray-600 sm:mb-1">
+          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+          {member.district || member.memberInfo?.district}
+        </p>
+      )}
+
+      <p className="mb-3 text-sm capitalize text-gray-600 sm:mb-2">
+        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+        {member.memberInfo?.Position || member.memberInfo?.position || "No position specified"}
+      </p>
+
+      <p className="mb-4 text-sm text-gray-600 sm:mb-3">
+        <span className="mr-2 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
+        {termLabels[member.term || member.memberInfo?.term] || "No term specified"}
+      </p>
+
+      <motion.button
+        onClick={() => openModal(member)}
+        className="text-sm font-medium text-blue-600 transition-colors duration-200 hover:text-blue-800 focus:outline-none sm:text-xs"
+        whileHover={{ x: 3 }}
+        transition={{ type: "spring", stiffness: 500 }}
+      >
+        <span className="border-b border-dotted border-blue-600 hover:border-blue-800">View Full Profile</span>
+        <FaChevronRight className="ml-1 inline text-xs" />
+      </motion.button>
+    </div>
+  </motion.div>
 );
 
 // MemberModal Component with enhancements
@@ -132,7 +135,7 @@ export const MemberModal = ({ member, closeModal }) => {
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 xs:p-0 max-xs:p-0  backdrop-blur-sm"
                 variants={modalBackdropVariants}
                 initial="hidden"
                 animate="visible"

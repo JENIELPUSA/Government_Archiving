@@ -293,18 +293,18 @@ const SBmember = () => {
                 >
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div>
-                            <h1 className="flex items-center text-2xl font-bold text-gray-800 md:text-3xl">
-                                <span className="mr-3 rounded-lg bg-blue-100 p-2 text-blue-600">
+                            <h1 className="xs:text-lg  flex items-center text-2xl font-bold text-gray-800 md:text-3xl">
+                                <span className="xs:text-sm mr-3 rounded-lg bg-blue-100 p-2 text-blue-600">
                                     <FaUserAlt />
                                 </span>
                                 SP Members Directory
                             </h1>
-                            <p className="mt-2 text-gray-600">Browse and search through the complete list of Sangguniang Panlalawigan members</p>
+                            <p className="mt-2 text-gray-600 xs:text-sm">Browse and search through the complete list of Sangguniang Panlalawigan members</p>
                         </div>
                     </div>
 
                     <div className="mt-4 flex items-center">
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+                        <span className="xs:text-sm rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
                             {isGroupPublicAuthor?.length || 0} Members
                         </span>
                         {hasActiveFilters && (
@@ -323,7 +323,7 @@ const SBmember = () => {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                         <div className="mb-4 w-full md:mb-0 md:w-1/2">
                             <div className="relative">
-                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                <div className="xs:text-sm pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                     <FaSearch className="text-gray-400" />
                                 </div>
                                 <input
@@ -331,7 +331,7 @@ const SBmember = () => {
                                     placeholder="Search by name..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="xs:text-sm w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                                 {searchTerm && (
                                     <button
@@ -346,15 +346,15 @@ const SBmember = () => {
 
                         <button
                             onClick={() => setShowFilters(!showFilters)}
-                            className="ml-auto flex items-center justify-center rounded-lg bg-gray-100 px-4 py-2 transition-all duration-300 hover:bg-gray-200 hover:shadow-sm md:justify-start"
+                            className="xs:text-[10px] ml-auto flex items-center justify-center rounded-lg bg-gray-100 px-4 py-2 transition-all duration-300 hover:bg-gray-200 hover:shadow-sm md:justify-start"
                         >
-                            <FaFilter className="mr-2 text-gray-600" />
+                            <FaFilter className="xs:text-[8px] mr-2 text-gray-600" />
                             <span>{showFilters ? "Hide" : "Show"} Filters</span>
                         </button>
                     </div>
 
                     {showFilters && (
-                        <div className="mt-4 grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 transition-all duration-500 ease-in-out md:grid-cols-4 lg:grid-cols-6">
+                        <div className="mt-4 grid grid-cols-1 gap-4 xs:gap-2 rounded-lg bg-gray-50 p-4 transition-all duration-500 ease-in-out md:grid-cols-4 lg:grid-cols-6">
                             {loading ? (
                                 <>
                                     <SkeletonFilter />
@@ -364,15 +364,15 @@ const SBmember = () => {
                                 <>
                                     {/* Position */}
                                     <div className="md:col-span-2 lg:col-span-2">
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Position</label>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700 xs:text-[10px]">Position</label>
                                         <div className="relative">
-                                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <div className="xs:text-[10px] pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                                 <FaFilter className="text-gray-400" />
                                             </div>
                                             <select
                                                 value={positionFilter}
                                                 onChange={(e) => setPositionFilter(e.target.value)}
-                                                className="w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="xs:text-[10px] w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
                                                 <option value="all">All Positions</option>
                                                 {availablePositions.map((position, index) => (
@@ -389,15 +389,15 @@ const SBmember = () => {
 
                                     {/* Number of Term */}
                                     <div className="md:col-span-2 lg:col-span-2">
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Number of Term</label>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700 xs:text-[10px]">Number of Term</label>
                                         <div className="relative">
-                                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <div className="xs:text-[10px] pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                                 <FaListUl className="text-gray-400" />
                                             </div>
                                             <select
                                                 value={termFilter}
                                                 onChange={(e) => setTermFilter(e.target.value)}
-                                                className="w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="xs:text-[10px] w-full appearance-none rounded-lg border border-gray-300 bg-white p-3 pl-10 font-medium shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             >
                                                 <option value="">All Terms</option>
                                                 <option value="1st_term">1st Term</option>
@@ -409,10 +409,10 @@ const SBmember = () => {
 
                                     {/* Term Start (Year) */}
                                     <div className="md:col-span-1 lg:col-span-1">
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Term Start (Year)</label>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700 xs:text-[10px]">Term Start (Year)</label>
                                         <div className="relative">
                                             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                                <FaCalendarAlt className="text-gray-400" />
+                                                <FaCalendarAlt className="text-gray-400 xs:text-[10px]" />
                                             </div>
                                             <input
                                                 type="number"
@@ -421,16 +421,16 @@ const SBmember = () => {
                                                 placeholder="YYYY"
                                                 min={1900}
                                                 max={2100}
-                                                className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="xs:text-[10px] w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>
 
                                     {/* Term End (Year) */}
                                     <div className="md:col-span-1 lg:col-span-1">
-                                        <label className="mb-1 block text-sm font-medium text-gray-700">Term End (Year)</label>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700 xs:text-[10px]">Term End (Year)</label>
                                         <div className="relative">
-                                            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                            <div className="xs:text-[10px] pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                                 <FaCalendarAlt className="text-gray-400" />
                                             </div>
                                             <input
@@ -440,7 +440,7 @@ const SBmember = () => {
                                                 placeholder="YYYY"
                                                 min={1900}
                                                 max={2100}
-                                                className="w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="xs:text-[10px] w-full rounded-lg border border-gray-300 p-3 pl-10 shadow-sm transition-all duration-300 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
                                     </div>

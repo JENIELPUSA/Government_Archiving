@@ -58,6 +58,27 @@ const PaginationSkeleton = () => (
     </div>
 );
 
+const TagsFilterSkeleton = () => (
+    <div className="h-10 w-32 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+);
+
+const ShowPerPageSkeleton = () => (
+    <div className="flex items-center gap-2">
+        <div className="h-4 w-12 animate-pulse rounded bg-gray-200 dark:bg-gray-700"></div>
+        <div className="h-8 w-20 animate-pulse rounded-xl bg-gray-200 dark:bg-gray-700"></div>
+    </div>
+);
+
+const FilterSectionSkeleton = () => (
+    <div className="flex flex-1 flex-wrap items-center gap-4">
+        <SearchBarSkeleton />
+        <TagsFilterSkeleton />
+        <DateFilterSkeleton />
+        <DateFilterSkeleton />
+        <ShowPerPageSkeleton />
+    </div>
+);
+
 const FilesView = ({
     fetchFilterTags,
     setIsTagsDropdownOpen,
@@ -223,15 +244,14 @@ const FilesView = ({
             <div className="mx-auto max-w-7xl px-6 py-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                     {/* Combined search and filter bar */}
-                    <div className="flex flex-1 flex-wrap items-center gap-4">
-                        {isLoadingFiles ? (
-                            <>
-                                <SearchBarSkeleton />
-                                <DateFilterSkeleton />
-                                <DateFilterSkeleton />
-                            </>
-                        ) : (
-                            <>
+                    {isLoadingFiles ? (
+                        <>
+                            <FilterSectionSkeleton />
+                            <PaginationSkeleton />
+                        </>
+                    ) : (
+                        <>
+                            <div className="flex flex-1 flex-wrap items-center gap-4">
                                 {/* File Search Input with Tag Suggestions */}
                                 <div className="relative min-w-[250px] flex-1">
                                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
@@ -394,52 +414,48 @@ const FilesView = ({
                                         Reset Filters
                                     </button>
                                 )}
-                            </>
-                        )}
-                    </div>
-
-                    {isLoadingFiles ? (
-                        <PaginationSkeleton />
-                    ) : (
-                        <div className="flex items-center gap-4">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">
-                                Page {fileCurrentPage} of {fileTotalPages}
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() =>
-                                        fetchSpecificData(openFolder._id, {
-                                            search: fileSearchTerm,
-                                            type: "",
-                                            dateFrom: fileDateFrom,
-                                            dateTo: fileDateTo,
-                                            page: Math.max(fileCurrentPage - 1, 1),
-                                            tags: selectedTags,
-                                        })
-                                    }
-                                    disabled={fileCurrentPage === 1}
-                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                >
-                                    <ChevronLeft className="h-5 w-5" />
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        fetchSpecificData(openFolder._id, {
-                                            search: fileSearchTerm,
-                                            type: "",
-                                            dateFrom: fileDateFrom,
-                                            dateTo: fileDateTo,
-                                            page: Math.min(fileCurrentPage + 1, fileTotalPages),
-                                            tags: selectedTags,
-                                        })
-                                    }
-                                    disabled={fileCurrentPage === fileTotalPages || fileTotalPages === 0}
-                                    className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
-                                >
-                                    <ChevronRight className="h-5 w-5" />
-                                </button>
                             </div>
-                        </div>
+
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    Page {fileCurrentPage} of {fileTotalPages}
+                                </span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() =>
+                                            fetchSpecificData(openFolder._id, {
+                                                search: fileSearchTerm,
+                                                type: "",
+                                                dateFrom: fileDateFrom,
+                                                dateTo: fileDateTo,
+                                                page: Math.max(fileCurrentPage - 1, 1),
+                                                tags: selectedTags,
+                                            })
+                                        }
+                                        disabled={fileCurrentPage === 1}
+                                        className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                    >
+                                        <ChevronLeft className="h-5 w-5" />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            fetchSpecificData(openFolder._id, {
+                                                search: fileSearchTerm,
+                                                type: "",
+                                                dateFrom: fileDateFrom,
+                                                dateTo: fileDateTo,
+                                                page: Math.min(fileCurrentPage + 1, fileTotalPages),
+                                                tags: selectedTags,
+                                            })
+                                        }
+                                        disabled={fileCurrentPage === fileTotalPages || fileTotalPages === 0}
+                                        className="rounded-lg border border-gray-300 p-2 disabled:opacity-50 dark:border-gray-600"
+                                    >
+                                        <ChevronRight className="h-5 w-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
 

@@ -150,7 +150,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             valid = false;
         }
 
-
         if (!valid) return;
 
         setIsPdfLoading(true);
@@ -473,7 +472,13 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
                                                                     type="radio"
                                                                     name="authorType"
                                                                     checked={authorType === "none"}
-                                                                    onChange={() => setAuthorType("none")}
+                                                                    onChange={() => {
+                                                                        setAuthorType("none");
+                                                                        setAuthorId(null); // Clear author ID
+                                                                        setCustomAuthor(""); // Clear custom author
+                                                                        setIsAuthorDropdownOpen(false); // Close dropdown
+                                                                        setAuthorError(""); // Clear any author errors
+                                                                    }}
                                                                     className="h-4 w-4 text-blue-600"
                                                                 />
                                                                 None

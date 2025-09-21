@@ -17,9 +17,8 @@ const SkeletonCard = () => (
     </div>
 );
 
-// News Card Component
 const NewsCard = ({ title, excerpt, linkText, imageUrl, onClick }) => (
-    <div className="mb-4 flex items-start rounded-lg bg-white p-6 shadow-md">
+    <div className="mb-4 xs:mb-2 flex items-start rounded-lg bg-white p-6 shadow-md">
         {imageUrl && (
             <div className="mr-4 h-24 w-24 flex-shrink-0">
                 <img
@@ -30,11 +29,11 @@ const NewsCard = ({ title, excerpt, linkText, imageUrl, onClick }) => (
             </div>
         )}
         <div className="flex-1">
-            <h2 className="text-xl font-bold leading-tight text-blue-700 md:text-2xl">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-gray-700">{excerpt}</p>
+            <h2 className="text-xl font-bold leading-tight text-blue-700 md:text-2xl xs:text-[15px]">{title}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-700 xs:text-[10px]">{excerpt}</p>
             <button
                 onClick={onClick}
-                className="mt-4 inline-block text-blue-500 hover:underline"
+                className="mt-4 inline-block text-blue-500 hover:underline xs:text-[10px]"
             >
                 {linkText}
             </button>
@@ -54,8 +53,8 @@ const NewsandLatest = ({ onNewsView }) => {
 
     return (
         <div className="mt-4 flex min-h-screen items-start justify-center">
-            <div className="w-full max-w-4xl">
-                <h1 className="2xs:text-2xl mb-4 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 p-6 text-center font-bold text-white shadow-lg lg:text-3xl">
+            <div className="w-full">
+                <h1 className=" 2xs:text-2xl mb-4 xs:mb-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 p-6 text-center font-bold text-white shadow-lg lg:text-3xl xs:text-sm">
                     News and Information
                 </h1>
 

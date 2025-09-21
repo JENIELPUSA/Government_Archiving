@@ -8,15 +8,20 @@ export default {
                 sans: ["Poppins"],
             },
             screens: {
-                "2xs": "320px",
+                // 320px and below
+                "2xs": { max: "320px" },
 
-                xs: "360px",
-                "xs-max": "430px",
+                // 321px to 360px
+                xs: { min: "321px", max: "360px" },
+
+                // 361px to 430px
+                "xs-max": { min: "361px", max: "430px" },
+
+                // 640px and above
                 xm: "640px",
+                "lg-custom": "1024px",
             },
         },
     },
-    plugins: [
-      require('@tailwindcss/line-clamp'),
-    ],
+    plugins: [require("@tailwindcss/line-clamp")],
 };

@@ -415,12 +415,6 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       return res.status(400).json({ error: "Please Select Category" });
     }
 
-    if (!dateOfResolution) {
-      return res
-        .status(400)
-        .json({ error: "Please Select Date Of Resolution!" });
-    }
-
     if (!mongoose.Types.ObjectId.isValid(admin))
       return res.status(400).json({ error: "Invalid admin ID" });
     if (approverID && !mongoose.Types.ObjectId.isValid(approverID))

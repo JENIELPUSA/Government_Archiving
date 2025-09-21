@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useContext } from "rea
 import { Document, Page, pdfjs } from "react-pdf";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
-import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -13,8 +13,50 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [scale, setScale] = useState(1.0);
     const [isLoading, setIsLoading] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const abortControllerRef = useRef(null);
     const cachedPdfRef = useRef({ fileId: null, url: null, bytes: null });
+    const menuRef = useRef(null);
+
+    // Check screen size and set initial scale
+    useEffect(() => {
+        const checkScreenSize = () => {
+            const width = window.innerWidth;
+            // Check if screen is xs or max-xs (typically < 768px)
+            if (width < 768) {
+                setScale(0.6);
+                setIsMobile(true);
+            } else {
+                setScale(1.0);
+                setIsMobile(false);
+                setMobileMenuOpen(false); // Close mobile menu when switching to desktop
+            }
+        };
+
+        // Check on initial load
+        checkScreenSize();
+
+        // Add event listener for window resize
+        window.addEventListener('resize', checkScreenSize);
+
+        // Clean up
+        return () => window.removeEventListener('resize', checkScreenSize);
+    }, []);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (menuRef.current && !menuRef.current.contains(event.target)) {
+                setMobileMenuOpen(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     useEffect(() => {
         return () => {
@@ -39,7 +81,7 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
             if (cachedPdfRef.current.fileId === fileId && cachedPdfRef.current.url) {
                 setFileUrl(cachedPdfRef.current.url);
                 setIsLoading(false);
-                if (onLoadComplete) onLoadComplete(); // Call callback when loading is finished
+                if (onLoadComplete) onLoadComplete();
                 return;
             }
 
@@ -65,7 +107,6 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
             }
         } finally {
             setIsLoading(false);
-            // This is the correct place to handle the loading completion, as it runs regardless of success or failure.
             if (onLoadComplete) onLoadComplete();
         }
     }, [fileId, authToken, onLoadComplete]);
@@ -298,6 +339,76 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                     100% { transform: rotate(360deg); }
                 }
 
+                /* Mobile floating button styles */
+                .mobile-floating-button {
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    width: 60px;
+                    height: 60px;
+                    border-radius: 50%;
+                    background-color: #3b82f6;
+                    color: white;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+                    z-index: 1000;
+                    border: none;
+                    cursor: pointer;
+                }
+
+                .mobile-menu {
+                    position: fixed;
+                    bottom: 90px;
+                    right: 20px;
+                    background: white;
+                    border-radius: 12px;
+                    padding: 16px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+                    z-index: 1000;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    min-width: 200px;
+                }
+
+                .mobile-menu button {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+
+                .mobile-menu button:hover {
+                    background: #e2e8f0;
+                    transform: translateY(-2px);
+                }
+
+                .mobile-menu button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .mobile-page-nav {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-top: 8px;
+                }
+
+                .mobile-page-info {
+                    text-align: center;
+                    font-size: 14px;
+                    color: #64748b;
+                    margin: 0 12px;
+                }
+
                 @media print {
                     .print-hidden {
                         display: none !important;
@@ -315,7 +426,8 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
 
                 @media (max-width: 768px) {
                     .toolbar {
-                        gap: 8px;
+                        display: none;
+                    gap: 8px;
                         padding: 8px 12px;
                     }
                     
@@ -328,64 +440,151 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                         width: 40px;
                         font-size: 12px;
                     }
+                    
+                    /* Mobile-specific styles for PDF display */
+                    .pdf-page-container {
+                        transform: scale(0.6);
+                        transform-origin: top center;
+                        width: 166.67%;
+                        margin: -20px 0;
+                    }
+                    
+                    .react-pdf__Page {
+                        display: flex;
+                        justify-content: center;
+                    }
+                }
+                
+                /* For very small screens (max-xs) */
+                @media (max-width: 480px) {
+                    .mobile-floating-button {
+                        bottom: 15px;
+                        right: 15px;
+                        width: 50px;
+                        height: 50px;
+                    }
+                    
+                    .mobile-menu {
+                        bottom: 75px;
+                        right: 15px;
+                        min-width: 180px;
+                    }
                 }
                 `}
             </style>
 
             <div className="pdf-viewer-container">
-                <div className="toolbar print-hidden">
-                    <button
-                        onClick={handleZoomIn}
-                        title="Zoom In (Ctrl + +)"
-                    >
-                        <ZoomIn size={20} />
-                    </button>
-                    <button
-                        onClick={handleZoomOut}
-                        title="Zoom Out (Ctrl + -)"
-                    >
-                        <ZoomOut size={20} />
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        className="download-btn"
-                        title="Download PDF"
-                    >
-                        <Download size={20} />
-                    </button>
+                {/* Standard toolbar for desktop */}
+                {!isMobile && (
+                    <div className="toolbar print-hidden">
+                        <button
+                            onClick={handleZoomIn}
+                            title="Zoom In (Ctrl + +)"
+                        >
+                            <ZoomIn size={20} />
+                        </button>
+                        <button
+                            onClick={handleZoomOut}
+                            title="Zoom Out (Ctrl + -)"
+                        >
+                            <ZoomOut size={20} />
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            className="download-btn"
+                            title="Download PDF"
+                        >
+                            <Download size={20} />
+                        </button>
 
-                    {numPages && (
-                        <div className="page-navigation">
-                            <button
-                                onClick={goToPrevPage}
-                                disabled={currentPage <= 1}
-                                title="Previous Page (←)"
-                            >
-                                <ChevronLeft size={20} />
-                            </button>
-                            
-                            <input
-                                type="number"
-                                min="1"
-                                max={numPages}
-                                value={currentPage}
-                                onChange={(e) => goToPage(e.target.value)}
-                                className="page-input"
-                                title="Go to page"
-                            />
-                            
-                            <span className="page-info">of {numPages}</span>
-                            
-                            <button
-                                onClick={goToNextPage}
-                                disabled={currentPage >= numPages}
-                                title="Next Page (→)"
-                            >
-                                <ChevronRight size={20} />
-                            </button>
-                        </div>
-                    )}
-                </div>
+                        {numPages && (
+                            <div className="page-navigation">
+                                <button
+                                    onClick={goToPrevPage}
+                                    disabled={currentPage <= 1}
+                                    title="Previous Page (←)"
+                                >
+                                    <ChevronLeft size={20} />
+                                </button>
+                                
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max={numPages}
+                                    value={currentPage}
+                                    onChange={(e) => goToPage(e.target.value)}
+                                    className="page-input"
+                                    title="Go to page"
+                                />
+                                
+                                <span className="page-info">of {numPages}</span>
+                                
+                                <button
+                                    onClick={goToNextPage}
+                                    disabled={currentPage >= numPages}
+                                    title="Next Page (→)"
+                                >
+                                    <ChevronRight size={20} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Mobile floating button and menu */}
+                {isMobile && (
+                    <>
+                        <button 
+                            className="mobile-floating-button print-hidden"
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        >
+                            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                        </button>
+                        
+                        {mobileMenuOpen && (
+                            <div className="mobile-menu print-hidden" ref={menuRef}>
+                                <button onClick={handleZoomIn}>
+                                    <ZoomIn size={20} />
+                                    <span>Zoom In</span>
+                                </button>
+                                
+                                <button onClick={handleZoomOut}>
+                                    <ZoomOut size={20} />
+                                    <span>Zoom Out</span>
+                                </button>
+                                
+                                <button onClick={handleDownload} className="download-btn">
+                                    <Download size={20} />
+                                    <span>Download</span>
+                                </button>
+                                
+                                {numPages && (
+                                    <div className="mobile-page-nav">
+                                        <button 
+                                            onClick={goToPrevPage}
+                                            disabled={currentPage <= 1}
+                                            title="Previous Page"
+                                        >
+                                            <ChevronLeft size={20} />
+                                        </button>
+                                        
+                                        <div className="mobile-page-info">
+                                            {currentPage} of {numPages}
+                                        </div>
+                                        
+                                        <button 
+                                            onClick={goToNextPage}
+                                            disabled={currentPage >= numPages}
+                                            title="Next Page"
+                                        >
+                                            <ChevronRight size={20} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </>
+                )}
 
                 <div className="pdf-content">
                     {isLoading && (
@@ -406,7 +605,7 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                                 <div className="pdf-page-container print-pdf-container">
                                     <Page
                                         pageNumber={currentPage}
-                                        scale={scale}
+                                        scale={isMobile ? 1.0 : scale} // Use 1.0 scale on mobile since we're using CSS transform
                                         renderAnnotationLayer={false}
                                         renderTextLayer={false}
                                     />
