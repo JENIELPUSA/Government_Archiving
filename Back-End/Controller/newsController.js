@@ -55,7 +55,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
       form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
 
       const response = await axios.post(
-        "https://bp-sangguniangpanlalawigan.com/upload.php",
+        process.env.UPLOAD_URL,
         form,
         {
           headers: form.getHeaders(),
@@ -191,7 +191,7 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
 
       try {
         const uploadResponse = await axios.post(
-          "https://bp-sangguniangpanlalawigan.com/upload.php",
+          process.env.UPLOAD_URL,
           form,
           {
             headers: form.getHeaders(),
@@ -248,7 +248,7 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
       params.append("file", oldAvatarUrl);
 
       axios.post(
-          "https://tan-kudu-520349.hostingersite.com/delete.php",
+          process.env.REMOVE_URL,
           params.toString(),
           { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
         )
@@ -300,7 +300,7 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://bp-sangguniangpanlalawigan.com/delete.php",
+        process.env.REMOVE_URL,
         params.toString(),
         {
           headers: {

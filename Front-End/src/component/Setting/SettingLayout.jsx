@@ -42,10 +42,12 @@ const SettingsPage = () => {
                         showPassword={showPassword}
                         setShowPassword={setShowPassword}
                     />
-                    <ApproverSettings
-                        approvers={approver}
+                    {/*<ApproverSettings
+                      
+                      approvers={approver}
                         setApprover={setApprover}
                     />
+                    */}
                     <StorageSettings/>
                     <PictureUploadSettings />
                 </motion.div>

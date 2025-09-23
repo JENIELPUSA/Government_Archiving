@@ -221,10 +221,10 @@ const UploadForm = () => {
             valid = false;
         }
         // Require approver for Resolution/Ordinance
-        if (isResolutionOrOrdinance && (!approver || !approver._id)) {
-            setApproverError("Please Add Approver Account!");
-            valid = false;
-        }
+        //if (isResolutionOrOrdinance && (!approver || !approver._id)) {
+            //setApproverError("Please Add Approver Account!");
+           // valid = false;
+       // }
 
         if (!valid) return;
 

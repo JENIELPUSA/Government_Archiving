@@ -387,7 +387,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       approverID,
       oldFile,
       folderID,
-      status = "Pending",
+      status = "Approved",
     } = req.body;
 
     if (!title || !admin || !category) {
@@ -431,7 +431,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     let remotePath;
     try {
       const response = await axios.post(
-        "https://bp-sangguniangpanlalawigan.com/upload.php",
+        process.env.UPLOAD_URL, 
         form,
         { headers: form.getHeaders(), maxBodyLength: Infinity }
       );
@@ -464,11 +464,9 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       fileUrl: remotePath,
       oldFile,
       folderID,
-      folderPath: "/uploads",
+      folderPath:process.env.UPLOAD_FOLDER,
       fullText: fullTextType,
     };
-
-    // --- Category logic ---
     let categoryName = null;
     if (mongoose.Types.ObjectId.isValid(category)) {
       const categoryDoc = await Category.findById(category).lean();
@@ -1195,7 +1193,7 @@ exports.RemoveFiles = AsyncErrorHandler(async (req, res) => {
     if (file.fileUrl) {
       try {
         const response = await axios.post(
-          "https://bp-sangguniangpanlalawigan.com/delete.php",
+          process.env.VITE_REMOVE_URL,
           { file: file.fileUrl }
         );
 
@@ -2118,6 +2116,7 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     const escapedTitle = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     matchStage.title = { $regex: escapedTitle, $options: "i" };
   }
+  
 
   if (tags) {
     const tagArray = Array.isArray(tags)

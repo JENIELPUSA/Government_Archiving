@@ -14,8 +14,6 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const DocumentDetailsPanel = ({ document, onClose }) => {
   const { MOveArchived } = useContext(FilesDisplayContext);
-
-  console.log("PANEL CATRGORY", document);
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 

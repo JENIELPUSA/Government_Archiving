@@ -33,7 +33,7 @@ const ArchivingSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["Pending", "Review", "Approved", "Rejected", "Draft"],
-      default: "Pending",
+      default: "Approved",
     },
     tags: {
       type: [String],

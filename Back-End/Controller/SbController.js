@@ -171,8 +171,6 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
-  console.log("Received file:", req.file);
-  console.log("Received data:", req.body);
   const SbmemberID = req.params.id;
 
   const oldRecord = await SBmember.findById(SbmemberID);
@@ -200,7 +198,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       });
 
       const uploadResponse = await axios.post(
-        "https://bp-sangguniangpanlalawigan.com/upload.php",
+        process.env.UPLOAD_URL,
         form,
         {
           headers: form.getHeaders(),
@@ -279,7 +277,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://tan-kudu-520349.hostingersite.com/delete.php",
+        process.env.REMOVE_URL,
         params.toString(),
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       )
@@ -342,7 +340,7 @@ exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
 
     axios
       .post(
-        "https://bp-sangguniangpanlalawigan.com/delete.php",
+        process.env.REMOVE_URL,
         params.toString(),
         {
           headers: {

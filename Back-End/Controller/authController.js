@@ -107,7 +107,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
       try {
         const response = await axios.post(
-          "https://bp-sangguniangpanlalawigan.com/upload.php",
+          process.env.UPLOAD_URL,
           form,
           {
             maxBodyLength: Infinity,
