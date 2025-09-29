@@ -113,7 +113,7 @@ export default function AuthForm() {
                         style={{
                             backgroundImage: `linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%),
                                          linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%)`,
-                            backgroundSize: "20px 20px",
+                            backgroundSize: "20px 20px ",
                         }}
                     ></div>
 
@@ -162,23 +162,23 @@ export default function AuthForm() {
                         animate="visible"
                         transition={{ delay: 0.2 }}
                     >
-                        <div className="mb-6 flex justify-center">
+                        <div className="mb-6 xs:mb-2 flex justify-center">
                             <img
                                 src={logo}
                                 alt="App Logo"
-                                className="h-32 w-32 object-contain"
+                                className="h-32 w-32 xs:h-20 xs:w-20 object-contain"
                             />
                         </div>
                         <h2 className="text-center text-3xl font-extrabold leading-tight">
-                            <span className="block text-blue-400">Sangguniang Panlalawigan</span>
-                            <span className="block text-gray-800 dark:text-gray-100">Archiving System</span>
+                            <span className="block text-blue-400 xs:text-xl">Sangguniang Panlalawigan</span>
+                            <span className="block text-gray-800 dark:text-gray-100 xs:text-xl">Archiving System</span>
                         </h2>
 
-                        <p className="text-md mt-2 text-gray-600 dark:text-gray-400">Securely manage your documents</p>
+                        <p className="text-md mt-2 xs:mt-1 text-gray-600 dark:text-gray-400 xs:text-sm">Securely manage your documents</p>
                     </motion.div>
 
                     <form
-                        className="space-y-6"
+                        className="space-y-6 xs:space-y-3"
                         onSubmit={handleLoginSubmit}
                     >
                         <motion.div
@@ -189,13 +189,13 @@ export default function AuthForm() {
                         >
                             <label
                                 htmlFor="email"
-                                className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="mb-2 xs:mb-0 block text-sm font-medium text-gray-700 dark:text-gray-300 xs:text-[12px]"
                             >
                                 Email Address
                             </label>
                             <div className="relative">
                                 <Mail
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
+                                    className="xs:text-[12px] absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
                                     size={20}
                                 />
                                 <input
@@ -205,7 +205,7 @@ export default function AuthForm() {
                                     value={values.email}
                                     onChange={handleInput}
                                     disabled={isLoading}
-                                    className="w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
+                                    className="xs:text-[12px] w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
                                     placeholder="name@mail.com"
                                     required
                                 />
@@ -220,7 +220,7 @@ export default function AuthForm() {
                         >
                             <label
                                 htmlFor="password"
-                                className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                className="xs:text-[12px] mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                             >
                                 Password
                             </label>
@@ -236,7 +236,7 @@ export default function AuthForm() {
                                     value={values.password}
                                     onChange={handleInput}
                                     disabled={isLoading}
-                                    className="focus:ring-600 w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
+                                    className="xs:text-[12px] focus:ring-600 w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
                                     placeholder="••••••••"
                                     required
                                 />
@@ -259,14 +259,14 @@ export default function AuthForm() {
                                 />
                                 <label
                                     htmlFor="remember-me"
-                                    className="ml-2 block text-gray-900 dark:text-gray-300"
+                                    className="xs:text-[12px] ml-2 block text-gray-900 dark:text-gray-300"
                                 >
                                     Remember me
                                 </label>
                             </div>
                             <a
                                 onClick={() => setForgotPassword(true)}
-                                className="cursor-pointer font-medium text-blue-700 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-100"
+                                className="xs:text-[12px] cursor-pointer font-medium text-blue-700 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-100"
                             >
                                 Forgot password?
                             </a>
@@ -274,7 +274,7 @@ export default function AuthForm() {
 
                         <motion.button
                             type="submit"
-                            className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white shadow-lg transition-all duration-300 ${
+                            className={`xs:text-[12px] flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white shadow-lg transition-all duration-300 ${
                                 isLoading
                                     ? "cursor-not-allowed bg-blue-400"
                                     : "active:scale-98 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"

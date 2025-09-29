@@ -113,26 +113,6 @@ export const FolderDisplayProvider = ({ children }) => {
         }
     }, [authToken, fetchfolder, fetchSpecifiCategory, fetchFilterTags]);
 
-
-      useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true); 
-      try {
-        await Promise.all([
-          fetchfolder(),
-          fetchSpecifiCategory(),
-          fetchFilterTags()
-        ]);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setIsLoading(false); // tapos na loading
-      }
-    };
-
-    fetchData();
-  }, [authToken, fetchfolder, fetchSpecifiCategory, fetchFilterTags]);
-
     useEffect(() => {
         if (customError) {
             const timer = setTimeout(() => {

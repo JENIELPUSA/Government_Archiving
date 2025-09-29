@@ -3,27 +3,32 @@ import { motion } from "framer-motion";
 import SBMembers from "../PublicView/SBMember";
 import Home from "./Home/Home";
 import Documents from "./Document";
-import Navbar from "./Navbar";
+import Navbar from "./Navbar"; // This is your NavbarWithScroll
 import MyLogo from "../../assets/logo-login.png";
+import philippinelogo from "../../assets/philippines logo.png";
 import PDFview from "./PDFview";
 import NewsContent from "./NewandInformation/NewsContent";
 import NewandInformation from "./NewandInformation/NewsandInformation";
 import NewsandLatest from "./NewandInformation/NewsandLatest";
 import { FaFacebook, FaEnvelope } from "react-icons/fa";
+import BoardMemberLayout from "./BoardMemberLayout";
+import MayorLayout from "./MayorLayout";
+import CapitolSketch from "../../assets/capitolsketch.png";
+import localservices from "./localservices";
 
-const App = () => {
+const PublicView = () => {
     const [currentPage, setCurrentPage] = useState("home");
+    const [selectedOfficialRole, setSelectedOfficialRole] = useState("sb-members"); // For officials
+    const [selectedDocumentType, setSelectedDocumentType] = useState(null); // For legislative: "resolution", "ordinance", etc.
     const [searchKeyword, setSearchKeyword] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
     const [selectedNews, setSelectedNews] = useState(null);
-
     const aboutUsRef = useRef(null);
 
     const handleViewFile = (fileId, fileData, fileName) => {
         setSelectedFile({ fileId, fileData, fileName });
         setCurrentPage("pdf-view");
     };
-
     const handleViewNews = (news) => {
         setSelectedNews(news);
         setCurrentPage("newsLatest");
@@ -36,26 +41,16 @@ const App = () => {
         }, 100);
     };
 
-    // Animation variants
     const pageVariants = {
-        initial: {
-            opacity: 0,
-            y: 20
-        },
-        in: {
-            opacity: 1,
-            y: 0
-        },
-        out: {
-            opacity: 0,
-            y: -20
-        }
+        initial: { opacity: 0, y: 20 },
+        in: { opacity: 1, y: 0 },
+        out: { opacity: 0, y: -20 },
     };
 
     const pageTransition = {
         type: "tween",
         ease: "anticipate",
-        duration: 0.5
+        duration: 0.5,
     };
 
     const renderMainContent = () => {
@@ -73,19 +68,70 @@ const App = () => {
                         <Home aboutUsRef={aboutUsRef} />
                     </motion.div>
                 );
-            case "sb-members":
+
+            case "legislative":
                 return (
                     <motion.div
-                        key="sb-members"
+                        key={`legislative-${selectedDocumentType}`}
                         initial="initial"
                         animate="in"
                         exit="out"
                         variants={pageVariants}
                         transition={pageTransition}
                     >
-                        <SBMembers />
+                        <Documents
+                            searchKeyword={searchKeyword}
+                            onViewFile={handleViewFile}
+                            documentType={selectedDocumentType}
+                        />
                     </motion.div>
                 );
+
+            case "officials":
+                return selectedOfficialRole === "Board Member" ? (
+                    <motion.div
+                        key="Board-Member"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                    >
+                        <BoardMemberLayout
+                            Position={selectedOfficialRole}
+                            onBack={() => setCurrentPage("home")}
+                        />
+                    </motion.div>
+                ) : selectedOfficialRole === "Mayor" || selectedOfficialRole === "Vice-Mayor" ? (
+                    <motion.div
+                        key={selectedOfficialRole}
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                    >
+                        <MayorLayout
+                            Position={selectedOfficialRole}
+                            onBack={() => setCurrentPage("home")}
+                        />
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key={selectedOfficialRole}
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                    >
+                        <SBMembers
+                            Position={selectedOfficialRole}
+                            onBack={() => setCurrentPage("home")}
+                        />
+                    </motion.div>
+                );
+
             case "news-and-information":
                 return (
                     <motion.div
@@ -99,9 +145,11 @@ const App = () => {
                         <NewandInformation
                             onViewLatestNews={handleViewNews}
                             selectedNews={selectedNews}
+                            onBack={() => setCurrentPage("home")}
                         />
                     </motion.div>
                 );
+
             case "newsLatest":
                 return selectedNews ? (
                     <motion.div
@@ -130,22 +178,6 @@ const App = () => {
                     </motion.div>
                 );
 
-            case "documents":
-                return (
-                    <motion.div
-                        key="documents"
-                        initial="initial"
-                        animate="in"
-                        exit="out"
-                        variants={pageVariants}
-                        transition={pageTransition}
-                    >
-                        <Documents
-                            searchKeyword={searchKeyword}
-                            onViewFile={handleViewFile}
-                        />
-                    </motion.div>
-                );
             case "pdf-view":
                 return selectedFile ? (
                     <motion.div
@@ -160,7 +192,7 @@ const App = () => {
                             fileId={selectedFile.fileId}
                             file={selectedFile.fileData}
                             fileName={selectedFile.fileName}
-                            onClose={() => setCurrentPage("documents")}
+                            onClose={() => setCurrentPage(selectedDocumentType ? "legislative" : "officials")}
                         />
                     </motion.div>
                 ) : (
@@ -172,12 +204,23 @@ const App = () => {
                         variants={pageVariants}
                         transition={pageTransition}
                     >
-                        <Documents
-                            searchKeyword={searchKeyword}
-                            onViewFile={handleViewFile}
-                        />
+                        {selectedDocumentType ? (
+                            <Documents
+                                searchKeyword={searchKeyword}
+                                onViewFile={handleViewFile}
+                                documentType={selectedDocumentType}
+                                onBack={() => setCurrentPage("home")}
+                            />
+                        ) : (
+                            <Documents
+                                searchKeyword={searchKeyword}
+                                onViewFile={handleViewFile}
+                                onBack={() => setCurrentPage("home")}
+                            />
+                        )}
                     </motion.div>
                 );
+
             default:
                 return (
                     <motion.div
@@ -195,14 +238,14 @@ const App = () => {
     };
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
             className="flex min-h-screen w-full flex-col bg-blue-100"
         >
             {/* Flag Banner */}
-            <motion.div 
+            <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4 }}
@@ -211,7 +254,7 @@ const App = () => {
                 <div className="h-4 w-1/2 bg-blue-800"></div>
                 <div className="h-4 w-1/2 bg-red-700"></div>
             </motion.div>
-            <motion.div 
+            <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.1 }}
@@ -219,15 +262,15 @@ const App = () => {
             ></motion.div>
 
             {/* Header */}
-            <motion.div 
+            <motion.div
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="bg-white shadow-lg"
             >
-                <div className="container mx-auto flex items-center px-6 py-4 2xs:px-2 xs:px-2 xs:py-2 xm:px-6">
+                <div className="container mx-auto flex items-center px-6 py-4 2xs:px-2 xs:px-2 xm:px-6">
                     <div className="flex items-center space-x-4 xs:space-x-4">
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.3 }}
@@ -245,7 +288,7 @@ const App = () => {
                                 </svg>
                             ))}
                         </motion.div>
-                        <motion.div 
+                        <motion.div
                             initial={{ scale: 0 }}
                             animate={{ scale: 1 }}
                             transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.4 }}
@@ -259,16 +302,15 @@ const App = () => {
                                 />
                             </div>
                         </motion.div>
-                        <motion.div 
+                        <motion.div
                             initial={{ x: -20, opacity: 0 }}
                             animate={{ x: 0, opacity: 1 }}
                             transition={{ duration: 0.4, delay: 0.5 }}
                             className="ml-4"
                         >
                             <h1 className="text-2xl font-bold text-blue-800 2xs:text-lg 2xs:leading-5 xs:text-[15px] xs:leading-4 xs-max:text-[15px] xs-max:text-sm xs-max:leading-4 xm:text-2xl xm:leading-7">
-                                Sangguniang Panlalawigan Archiving System
+                                Office of the Sangguniang Panlalawigan
                             </h1>
-
                             <p className="font-semibold text-red-700 2xs:text-sm 2xs:leading-4 xs:text-[10px] xs:text-base xs:leading-4 xs-max:text-[10px] xs-max:text-lg xs-max:leading-5 xm:text-base xm:leading-5">
                                 Biliran Province
                             </p>
@@ -277,7 +319,6 @@ const App = () => {
                 </div>
             </motion.div>
 
-            {/* Navbar */}
             <Navbar
                 currentPage={currentPage}
                 setCurrentPage={(page) => {
@@ -286,11 +327,25 @@ const App = () => {
                 }}
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}
+                setOfficial={(role) => {
+                    // Check if role is from "legislative" or "officials"
+                    const legislativeTypes = ["resolution", "ordinance", "executive-order"];
+                    if (legislativeTypes.includes(role)) {
+                        setCurrentPage("legislative");
+                        setSelectedDocumentType(role);
+                        setSelectedOfficialRole(null); // clear officials
+                    } else {
+                        // It's an official role
+                        setCurrentPage("officials");
+                        setSelectedOfficialRole(role);
+                        setSelectedDocumentType(null); // clear document type
+                    }
+                }}
             />
 
             {/* Main Content */}
             <motion.div
-                key={currentPage}
+                key={`${currentPage}-${selectedOfficialRole}-${selectedDocumentType}`}
                 initial="initial"
                 animate="in"
                 variants={pageVariants}
@@ -301,7 +356,7 @@ const App = () => {
             </motion.div>
 
             {/* Footer */}
-            <motion.footer 
+            <motion.footer
                 initial={{ y: 50, opacity: 0 }}
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
@@ -310,8 +365,7 @@ const App = () => {
             >
                 <div className="container mx-auto px-6 2xs:px-2 xs:px-4 xm:px-6">
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
-                        {/* Logo & Info */}
-                        <motion.div 
+                        <motion.div
                             initial={{ x: -50, opacity: 0 }}
                             whileInView={{ x: 0, opacity: 1 }}
                             viewport={{ once: true }}
@@ -320,19 +374,17 @@ const App = () => {
                         >
                             <div className="mb-2 flex items-center justify-center space-x-4">
                                 <img
-                                    src={MyLogo}
+                                    src={philippinelogo}
                                     alt="Logo"
                                     className="h-20 w-20 xs:h-10 xs:w-10"
                                 />
                             </div>
                             <h3 className="mb-2 text-xl font-bold 2xs:text-lg xs:text-[15px] xs:leading-4 xm:text-xl">
-                                Sangguniang Panlalawigan Archiving System
+                                Republic Of The Philippines
                             </h3>
                             <p className="text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Biliran Province</p>
                             <p className="mt-2 text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Tel: (632) 8931-5001</p>
-
-                            {/* Social Icons */}
-                            <motion.div 
+                            <motion.div
                                 initial={{ scale: 0 }}
                                 whileInView={{ scale: 1 }}
                                 viewport={{ once: true }}
@@ -340,7 +392,7 @@ const App = () => {
                                 className="mt-4 flex space-x-6"
                             >
                                 <a
-                                    href="https://web.facebook.com/provincialgovernmentofbiliran"
+                                    href="https://web.facebook.com/provincialgovernmentofbiliran  "
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-white transition-colors hover:text-yellow-300"
@@ -356,8 +408,7 @@ const App = () => {
                             </motion.div>
                         </motion.div>
 
-                        {/* Quick Links */}
-                        <motion.div 
+                        <motion.div
                             initial={{ x: 50, opacity: 0 }}
                             whileInView={{ x: 0, opacity: 1 }}
                             viewport={{ once: true }}
@@ -384,7 +435,10 @@ const App = () => {
                                 </li>
                                 <li>
                                     <button
-                                        onClick={() => setCurrentPage("sb-members")}
+                                        onClick={() => {
+                                            setCurrentPage("officials");
+                                            setSelectedOfficialRole("sb-members");
+                                        }}
                                         className="transition-colors hover:text-yellow-300"
                                     >
                                         SP Members
@@ -399,6 +453,7 @@ const App = () => {
                                     </button>
                                 </li>
                             </ul>
+
                         </motion.div>
                     </div>
                 </div>
@@ -407,4 +462,4 @@ const App = () => {
     );
 };
 
-export default App;
+export default PublicView;

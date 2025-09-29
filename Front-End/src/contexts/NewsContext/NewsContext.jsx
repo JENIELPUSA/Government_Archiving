@@ -41,20 +41,20 @@ export const NewsDisplayProvider = ({ children }) => {
         }
     }, []);
 
-    useEffect(() => {
-        const fetchAllData = async () => {
-            setLoading(true);
-            try {
-                await DisplayNews(); // <-- await here
-            } catch (err) {
-                console.error("Error fetching SB data", err);
-            } finally {
-                setLoading(false);
-            }
-        };
+useEffect(() => {
+    const fetchAllData = async () => {
+        setLoading(true);
+        try {
+            await DisplayNews();
+        } catch (err) {
+            console.error("Error fetching news data", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        fetchAllData();
-    }, [DisplayNews]);
+    fetchAllData();
+}, [DisplayNews]);
 
     const AddNotification = async (values) => {
         try {

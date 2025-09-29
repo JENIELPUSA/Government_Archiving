@@ -57,10 +57,15 @@ export const FilesDisplayProvider = ({ children }) => {
         fetchAll();
     }, [authToken]);
 
-    useEffect(() => {
-        fetchpublicdata();
-        fetchlatestdata();
-        fetchPublicDisplay();
+    useEffect(async () => {
+        try {
+            setLoading(true); 
+            await Promise.all([fetchlatestdata(), fetchpublicdata(), fetchPublicDisplay()]);
+        } catch (err) {
+            console.error("Error fetching data:", err);
+        } finally {
+            setLoading(false); // stop loading
+        }
     }, []);
 
     useEffect(() => {

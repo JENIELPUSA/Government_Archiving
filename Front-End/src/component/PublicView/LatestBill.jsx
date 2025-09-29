@@ -50,7 +50,7 @@ const LatestBills = ({ onFileView, isLoading }) => {
     return (
         <section
             ref={billsRef}
-            className="container mx-auto  2xs:mt-4 lg:mt-0 "
+            className="container mx-auto lg:mt-0 2xs:mt-4"
         >
             <motion.div
                 initial="hidden"
@@ -61,9 +61,11 @@ const LatestBills = ({ onFileView, isLoading }) => {
                     variants={fadeInUp}
                     className="text-center"
                 >
-                    <h2 className="xs:mb-2 mb-4 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 p-4 text-center text-4xl font-bold text-white shadow-lg 2xs:text-2xl lg:text-3xl xs:text-lg ">
-                        Transparency
-                    </h2>
+                    <h1 className="mb-6 flex items-center text-2xl font-bold text-blue-800 md:text-3xl">
+                        <span className="flex-1 border-b border-gray-300"></span>
+                        <span className="px-4">Transparency</span>
+                        <span className="flex-1 border-b border-gray-300"></span>
+                    </h1>
                 </motion.div>
 
                 <div className="flex flex-col gap-2">
@@ -79,7 +81,9 @@ const LatestBills = ({ onFileView, isLoading }) => {
                                   animate={billsInView ? "visible" : "hidden"}
                               >
                                   {/* Title */}
-                                  <h3 className="mb-3 lg:text-lg 2xs:text-[10px] font-bold uppercase text-blue-700 xs:text-[10px] xs:leading-5">{bill.title}</h3>
+                                  <h3 className="mb-3 font-bold uppercase text-blue-700 lg:text-lg 2xs:text-[10px] xs:text-[10px] xs:leading-5">
+                                      {bill.title}
+                                  </h3>
 
                                   {/* Summary */}
                                   <p className="mb-4 text-sm leading-relaxed text-gray-600 xs:text-[9px] xs:leading-5">{bill.summary}</p>
@@ -87,7 +91,7 @@ const LatestBills = ({ onFileView, isLoading }) => {
                                   {/* Read more */}
                                   <button
                                       onClick={() => onFileView(bill._id, bill)}
-                                      className="lg:text-sm xs:text-[12px] 2xs:text-[10px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline lg:text-sm 2xs:text-[10px] xs:text-[12px]"
                                   >
                                       read more…
                                   </button>

@@ -122,13 +122,17 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
       {
         $addFields: {
           full_name: {
-            $concat: [
-              { $ifNull: ["$first_name", ""] },
-              " ",
-              { $ifNull: ["$middle_name", ""] },
-              " ",
-              { $ifNull: ["$last_name", ""] },
-            ],
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$first_name", ""] },
+                  " ",
+                  { $ifNull: ["$middle_name", ""] },
+                  " ",
+                  { $ifNull: ["$last_name", ""] },
+                ],
+              },
+            },
           },
         },
       },
@@ -141,6 +145,14 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
             },
           ]
         : []),
+      // --- Group by first, middle, last name to remove duplicates ---
+      {
+        $group: {
+          _id: { first_name: "$first_name", middle_name: "$middle_name", last_name: "$last_name" },
+          full_name: { $first: "$full_name" },
+          Position: { $first: "$Position" },
+        },
+      },
       {
         $sort: { full_name: 1 },
       },
@@ -148,7 +160,7 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
         $project: {
           _id: 1,
           full_name: 1,
-          Position: 1, // <-- idinagdag
+          Position: 1,
         },
       },
     ];
@@ -169,6 +181,7 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
     });
   }
 });
+
 
 exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   const SbmemberID = req.params.id;

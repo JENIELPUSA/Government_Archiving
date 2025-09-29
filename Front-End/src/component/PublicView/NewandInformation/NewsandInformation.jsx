@@ -1,91 +1,102 @@
-import React, { useContext, useState } from 'react';
-import { NewsDisplayContext } from '../../../contexts/NewsContext/NewsContext';
+import React, { useContext, useState } from "react";
+import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
+import BannerImage from "../BannerImage";
+import Breadcrumb from "../Breadcrumb";
 
-const NewsandInformation = ({ onViewLatestNews }) => {
-  const { pictures, loading } = useContext(NewsDisplayContext);
+const NewsandInformation = ({ onViewLatestNews, onBack }) => {
+    const { pictures, loading } = useContext(NewsDisplayContext);
+    const [currentPage, setCurrentPage] = useState(1);
+    const newsPerPage = 6;
+    const indexOfLastNews = currentPage * newsPerPage;
+    const indexOfFirstNews = indexOfLastNews - newsPerPage;
+    const currentNews = pictures.slice(indexOfFirstNews, indexOfLastNews);
+    const totalPages = Math.ceil(pictures.length / newsPerPage);
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const newsPerPage = 6;
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  const indexOfLastNews = currentPage * newsPerPage;
-  const indexOfFirstNews = indexOfLastNews - newsPerPage;
-  const currentNews = pictures.slice(indexOfFirstNews, indexOfLastNews);
-  const totalPages = Math.ceil(pictures.length / newsPerPage);
+    const truncateExcerpt = (text, maxLength) => (text.length > maxLength ? text.substring(0, maxLength) + "..." : text);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+    const pageNumbers = [];
+    for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+    }
 
-  const truncateExcerpt = (text, maxLength) =>
-    text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+    if (loading) {
+        return (
+            <div className="p-6">
+                {Array.from({ length: newsPerPage }).map((_, idx) => (
+                    <div
+                        key={idx}
+                        className="mb-4 h-48 animate-pulse rounded bg-gray-300"
+                    />
+                ))}
+            </div>
+        );
+    }
 
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
-
-  if (loading) {
     return (
-      <div className="p-6">
-        {Array.from({ length: newsPerPage }).map((_, idx) => (
-          <div key={idx} className="h-48 bg-gray-300 rounded mb-4 animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-8 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 xs:mb-1 xs:text-lg max-xs:text-2xl">News and Information</h1>
-
-      {currentNews.map((news) => (
-        <div key={news.id} className="border-b last:border-b-0 py-4 flex flex-col md:flex-row">
-          <div className="md:w-1/3 mb-4 xs:mb-2 md:mb-0 md:mr-4">
-            <img
-              src={news.avatar.url}
-              alt={news.title || "News image"}
-              className="w-full h-48 object-cover rounded"
+        <>
+            <BannerImage selection={"News & Information"} />
+            <Breadcrumb
+                position={"News & Information"}
+                onBack={onBack}
             />
-          </div>
-          <div className="md:w-2/3">
-            <h2 className="font-bold text-xl mb-2 xs:text-sm">{news.title}</h2>
-            <p className="text-gray-600 mb-2 xs:text-[12px]">{truncateExcerpt(news.excerpt, 150)}</p>
-            <button
-              onClick={() => onViewLatestNews(news)}
-              className="text-blue-600 hover:text-blue-800 font-medium xs:text-[12px]"
-            >
-              Read more
-            </button>
-          </div>
-        </div>
-      ))}
+            <div className="mx-auto max-w-5xl p-8">
+                <h1 className="max-xs:text-2xl mb-6 text-3xl font-bold xs:mb-1 xs:text-lg">News and Information</h1>
+                {currentNews.map((news) => (
+                    <div
+                        key={news.id}
+                        className="flex flex-col border-b py-4 last:border-b-0 md:flex-row"
+                    >
+                        <div className="mb-4 md:mb-0 md:mr-4 md:w-1/3 xs:mb-2">
+                            <img
+                                src={news.avatar.url}
+                                alt={news.title || "News image"}
+                                className="h-48 w-full rounded object-cover"
+                            />
+                        </div>
+                        <div className="md:w-2/3">
+                            <h2 className="mb-2 text-xl font-bold xs:text-sm">{news.title}</h2>
+                            <p className="mb-2 text-gray-600 xs:text-[12px]">{truncateExcerpt(news.excerpt, 150)}</p>
+                            <button
+                                onClick={() => onViewLatestNews(news)}
+                                className="font-medium text-blue-600 hover:text-blue-800 xs:text-[12px]"
+                            >
+                                Read more
+                            </button>
+                        </div>
+                    </div>
+                ))}
 
-      {/* Pagination */}
-      <div className="mt-4 flex justify-center space-x-2">
-        <button
-          onClick={() => paginate(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Prev
-        </button>
-        {pageNumbers.map((number) => (
-          <button
-            key={number}
-            onClick={() => paginate(number)}
-            className={`px-3 py-1 border rounded ${
-              currentPage === number ? "bg-blue-600 text-white" : "bg-white"
-            }`}
-          >
-            {number}
-          </button>
-        ))}
-        <button
-          onClick={() => paginate(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 border rounded disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  );
+                {/* Pagination */}
+                <div className="mt-4 flex justify-center space-x-2">
+                    <button
+                        onClick={() => paginate(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="rounded border px-3 py-1 disabled:opacity-50"
+                    >
+                        Prev
+                    </button>
+                    {pageNumbers.map((number) => (
+                        <button
+                            key={number}
+                            onClick={() => paginate(number)}
+                            className={`rounded border px-3 py-1 ${currentPage === number ? "bg-blue-600 text-white" : "bg-white"}`}
+                        >
+                            {number}
+                        </button>
+                    ))}
+                    <button
+                        onClick={() => paginate(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="rounded border px-3 py-1 disabled:opacity-50"
+                    >
+                        Next
+                    </button>
+                </div>
+            </div>
+        </>
+    );
 };
 
 export default NewsandInformation;

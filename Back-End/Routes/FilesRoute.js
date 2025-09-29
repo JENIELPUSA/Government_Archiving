@@ -61,9 +61,14 @@ router.route("/GetArchivedData").post(authController.protect,FilesController.Dis
 router.route("/DocumentPerYear").post(FilesController.DisplayDocumentPerYear);
 
 
+
 router
   .route("/PublicGetAuthorwithFiles")
   .post(FilesController.PublicGetAuthorwithFiles);
+
+router
+  .route("/PublicSummaryTerm")
+  .post(FilesController.PublicSummaryTerm);
 
 
 

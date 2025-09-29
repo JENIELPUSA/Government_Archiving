@@ -22,6 +22,6 @@ export default {
                 "lg-custom": "1024px",
             },
         },
-    },
-    plugins: [require("@tailwindcss/line-clamp")],
+    }
+
 };

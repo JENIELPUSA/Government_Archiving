@@ -8,6 +8,7 @@ export const SbMemberDisplayContext = createContext();
 
 export const SbMemberDisplayProvider = ({ children }) => {
     const { authToken } = useContext(AuthContext);
+    const [isSummaryTerm, setSummaryTerm] = useState();
 
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -100,59 +101,68 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 console.error("Error fetching archived data:", error);
             }
         },
-        [setGroupPublicAuthor, setTotalPages, setCurrentPage], // dependencies
+        [setGroupPublicAuthor, setTotalPages, setCurrentPage],
     );
 
-    const AddSbData = async (values) => {
+const AddSbData = async (values) => {
+    try {
+        const formData = new FormData();
+        const first_name = values.first_name?.trim() || "";
+        const middle_name = values.middle_name?.trim() || "";
+        const last_name = values.last_name?.trim() || "";
 
-        try {
-            const formData = new FormData();
-            formData.append("first_name", values.first_name || "");
-            formData.append("last_name", values.last_name || "");
-            formData.append("term", values.term || "");
-            formData.append("Position", values.Position || "");
-            formData.append("term_from", values.term_from || "");
-            formData.append("term_to", values.term_to || "");
-            formData.append("role", "sbmember");
+        formData.append("first_name", first_name);
+        formData.append("last_name", last_name);
+        formData.append("term", values.term || "");
+        formData.append("Position", values.Position || "");
+        formData.append("term_from", values.term_from || "");
+        formData.append("term_to", values.term_to || "");
+        formData.append("role", "sbmember");
 
-            if (values.middle_name) {
-                formData.append("middle_name", values.middle_name);
-            }
+        // Only append middle_name if it exists
+        if (middle_name) {
+            formData.append("middle_name", middle_name);
+        }
 
-            if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
-            if (values.Position) formData.append("Position", values.Position);
-            if (values.district) formData.append("district", values.district);
-            if (values.avatar) formData.append("avatar", values.avatar);
+        if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
+        if (values.Position) formData.append("Position", values.Position);
+        if (values.district) formData.append("district", values.district);
+        if (values.avatar) formData.append("avatar", values.avatar);
 
-            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
+        const res = await axios.post(
+            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`,
+            formData,
+            {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
                 },
-            });
+            }
+        );
 
-            if (res.data.status === "Success") {
-                const newAdmin = res.data.data;
-                setModalStatus("success");
-                setShowModal(true);
-                DisplayPerSb();
-                return { success: true, data: newAdmin };
-            } else {
-                setModalStatus("failed");
-                setShowModal(true);
-                return { success: false, error: "Unexpected response from server." };
-            }
-        } catch (error) {
-            if (error.response?.data) {
-                const message = error.response.data.message || error.response.data.error || "Something went wrong.";
-                setCustomError(message);
-            } else if (error.request) {
-                setCustomError("No response from the server.");
-            } else {
-                setCustomError(error.message || "Unexpected error occurred.");
-            }
+        if (res.data.status === "Success") {
+            const newAdmin = res.data.data;
+            setModalStatus("success");
+            setShowModal(true);
+            DisplayPerSb();
+            return { success: true, data: newAdmin };
+        } else {
+            setModalStatus("failed");
+            setShowModal(true);
+            return { success: false, error: "Unexpected response from server." };
         }
-    };
+    } catch (error) {
+        if (error.response?.data) {
+            const message = error.response.data.message || error.response.data.error || "Something went wrong.";
+            setCustomError(message);
+        } else if (error.request) {
+            setCustomError("No response from the server.");
+        } else {
+            setCustomError(error.message || "Unexpected error occurred.");
+        }
+    }
+};
+
 
     const DeleteSB = async (officerID) => {
         try {
@@ -226,6 +236,31 @@ export const SbMemberDisplayProvider = ({ children }) => {
         }
     };
 
+    const DisplaySummaryTerm = useCallback(
+        async (queryParams = {}) => {
+            try {
+                const res = await axiosInstance.post(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/PublicSummaryTerm`,
+                    {},
+                    {
+                        withCredentials: true,
+                        params: queryParams,
+                        headers: {
+                            "Cache-Control": "no-cache",
+                        },
+                    },
+                );
+                const { totalPages, currentPage } = res.data;
+                setSummaryTerm(res.data.data);
+
+         
+            } catch (error) {
+                console.error("Error fetching archived data:", error);
+            }
+        },
+        [setSummaryTerm, setTotalPages, setCurrentPage], // dependencies
+    );
+
     useEffect(() => {
         const fetchAllData = async () => {
             setLoading(true);
@@ -262,6 +297,8 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 setShowModal,
                 setModalStatus,
                 FetchDropdown,
+                DisplaySummaryTerm,
+                isSummaryTerm,
             }}
         >
             {children}

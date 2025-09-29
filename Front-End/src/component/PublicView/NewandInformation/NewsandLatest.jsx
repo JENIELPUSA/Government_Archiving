@@ -1,39 +1,39 @@
 import React, { useState, useEffect, useContext } from "react";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 
-// Improved Skeleton Loading Component
+// Improved Skeleton with consistent height
 const SkeletonCard = () => (
-    <div className="mb-4 flex animate-pulse items-start rounded-lg bg-white p-6 shadow-md">
-        {/* Image skeleton */}
-        <div className="mr-4 h-24 w-24 flex-shrink-0 rounded-lg bg-gray-200"></div>
-        {/* Content skeleton */}
-        <div className="flex-1">
-            <div className="mb-2 h-7 w-3/4 rounded bg-gray-200"></div>
-            <div className="mb-1 h-4 rounded bg-gray-200"></div>
-            <div className="mb-1 h-4 w-5/6 rounded bg-gray-200"></div>
+    <div className="mb-6 flex animate-pulse items-start rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+        <div className="mr-4 h-20 w-20 flex-shrink-0 rounded-lg bg-gray-200"></div>
+        <div className="flex-1 space-y-3">
+            <div className="h-5 w-3/4 rounded bg-gray-200"></div>
+            <div className="h-4 rounded bg-gray-200"></div>
+            <div className="h-4 w-5/6 rounded bg-gray-200"></div>
             <div className="h-4 w-2/3 rounded bg-gray-200"></div>
-            <div className="mt-4 h-5 w-24 rounded bg-gray-200"></div>
+            <div className="mt-2 h-4 w-20 rounded bg-gray-200"></div>
         </div>
     </div>
 );
 
 const NewsCard = ({ title, excerpt, linkText, imageUrl, onClick }) => (
-    <div className="mb-4 xs:mb-2 flex items-start rounded-lg bg-white p-6 shadow-md">
+    <div className="mb-6 flex items-start rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow duration-200 hover:shadow-md">
         {imageUrl && (
-            <div className="mr-4 h-24 w-24 flex-shrink-0">
+            <div className="mr-4 h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
                 <img
                     src={imageUrl}
-                    alt={title || "News image"}
-                    className="h-full w-full rounded-lg object-cover"
+                    alt={title || "News thumbnail"}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
                 />
             </div>
         )}
         <div className="flex-1">
-            <h2 className="text-xl font-bold leading-tight text-blue-700 md:text-2xl xs:text-[15px]">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-gray-700 xs:text-[10px]">{excerpt}</p>
+            <h2 className="line-clamp-2 text-lg font-bold leading-tight text-blue-700">{title}</h2>
+            <p className="mt-2 line-clamp-3 text-sm text-gray-600">{excerpt}</p>
             <button
                 onClick={onClick}
-                className="mt-4 inline-block text-blue-500 hover:underline xs:text-[10px]"
+                aria-label={`Read more about ${title}`}
+                className="mt-3 inline-block rounded text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
                 {linkText}
             </button>
@@ -41,52 +41,83 @@ const NewsCard = ({ title, excerpt, linkText, imageUrl, onClick }) => (
     </div>
 );
 
+const FBPageEmbed = () => {
+    const pageUrl = "https://www.facebook.com/provincialgovernmentofbiliran";
+    const src = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
+        pageUrl,
+    )}&tabs=timeline&width=340&height=700&small_header=true&adapt_container_width=true&hide_cover=true&show_facepile=false`;
+
+    return (
+        <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+            <iframe
+                title="Facebook Page Timeline"
+                src={src}
+                width="100%"
+                height="700"
+                style={{ border: "none", minHeight: "700px" }}
+                scrolling="no"
+                frameBorder="0"
+                allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                className="w-full"
+                loading="lazy"
+            />
+        </div>
+    );
+};
+
 const NewsandLatest = ({ onNewsView }) => {
     const { pictures, loading } = useContext(NewsDisplayContext);
     const [displayedNews, setDisplayedNews] = useState([]);
 
     useEffect(() => {
-        if (Array.isArray(pictures) && pictures.length > 0) {
+        if (!loading && Array.isArray(pictures)) {
             setDisplayedNews(pictures.slice(0, 4));
         }
-    }, [pictures]);
+    }, [pictures, loading]);
 
     return (
-        <div className="mt-4 flex min-h-screen items-start justify-center">
-            <div className="w-full">
-                <h1 className=" 2xs:text-2xl mb-4 xs:mb-2 rounded-lg bg-gradient-to-r from-blue-500 to-blue-700 p-6 text-center font-bold text-white shadow-lg lg:text-3xl xs:text-sm">
-                    News and Information
-                </h1>
+        <div className="mx-auto w-full max-w-7xl py-4">
+            <h1 className="mb-6 flex items-center text-2xl font-bold text-blue-800 md:text-3xl">
+                <span className="flex-1 border-b border-gray-300"></span>
+                <span className="px-4">News and Information</span>
+                <span className="flex-1 border-b border-gray-300"></span>
+            </h1>
 
-                {loading ? (
-                    <>
-                        <SkeletonCard />
-                        <SkeletonCard />
-                        <SkeletonCard />
-                    </>
-                ) : (
-                    displayedNews.map((news, index) => (
-                        <NewsCard
-                            key={index}
-                            className="2xs:p-6 xs:p-8 2xs:text-[10px] rounded-lg bg-white p-4 shadow-md transition-all hover:shadow-lg lg:p-10"
-                            title={news.title || "No Title"}
-                            excerpt={
-                                news.excerpt && news.excerpt.length > 200
-                                    ? news.excerpt.slice(0, 200) + "..."
-                                    : news.excerpt || "No excerpt available"
-                            }
-                            imageUrl={news.avatar?.url}
-                            linkText="Read More..."
-                            onClick={() => {
-                                if (typeof onNewsView === "function") {
-                                    onNewsView(news);
-                                } else {
-                                    console.error("onNewsView prop is not a function.");
+            <div className="grid grid-cols-1 gap-2 lg:grid-cols-5">
+                {/* News Section - 3/5 */}
+                <div className="lg:col-span-3">
+                    {loading ? (
+                        <>
+                            <SkeletonCard />
+                            <SkeletonCard />
+                            <SkeletonCard />
+                        </>
+                    ) : displayedNews.length > 0 ? (
+                        displayedNews.map((news) => (
+                            <NewsCard
+                                key={news.id || news.title}
+                                title={news.title || "No Title"}
+                                excerpt={
+                                    news.excerpt && news.excerpt.length > 180
+                                        ? news.excerpt.slice(0, 180) + "..."
+                                        : news.excerpt || "No excerpt available"
                                 }
-                            }}
-                        />
-                    ))
-                )}
+                                imageUrl={news.avatar?.url}
+                                linkText="Read More"
+                                onClick={() => onNewsView?.(news)}
+                            />
+                        ))
+                    ) : (
+                        <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50">
+                            <p className="text-gray-500">No news available at the moment.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Facebook Section - 2/5 */}
+                <aside className="lg:col-span-2">
+                    <FBPageEmbed />
+                </aside>
             </div>
         </div>
     );

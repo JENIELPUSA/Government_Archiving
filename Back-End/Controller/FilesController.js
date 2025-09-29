@@ -2332,6 +2332,13 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
   const limit = parseInt(req.query.limit) || 9;
 
   const { year, title, tags, category, oldFile, sort } = req.query;
+
+  const hasQuery = !!(year || title || tags || category || oldFile !== undefined);
+  if (!hasQuery) {
+    // Return empty response — no files until user searches/filters
+    return res.status(200).json([]);
+  }
+
   const matchStage = { status: "Approved", ArchivedStatus: "Active" };
 
   if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
@@ -2690,7 +2697,6 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   );
 
-  // --- Search filter ---
   if (search) {
     aggregationPipeline.push({
       $match: {
@@ -2700,13 +2706,10 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           { last_name: { $regex: search, $options: "i" } },
           { fullName: { $regex: search, $options: "i" } },
           { "files.title": { $regex: search, $options: "i" } },
-          { Position: { $regex: search, $options: "i" } },
         ],
       },
     });
   }
-
-  // --- Group results ---
   aggregationPipeline.push(
     {
       $group: {
@@ -2778,3 +2781,108 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
+
+
+exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
+  const { first_name, middle_name, last_name } = req.query;
+
+  if (!first_name && !middle_name && !last_name) {
+    return res.status(200).json({
+      status: "success",
+      data: [], 
+    });
+  }
+
+  const authors = await SBmember.aggregate([
+    // --- Filter by name ---
+    {
+      $match: { first_name, middle_name, last_name },
+    },
+    // --- Lookup files with category info ---
+    {
+      $lookup: {
+        from: "files",
+        let: { authorId: "$_id" },
+        pipeline: [
+          { $match: { $expr: { $eq: ["$author", "$$authorId"] }, status: "Approved" } },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "category",
+              foreignField: "_id",
+              as: "categoryInfo",
+            },
+          },
+          { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+          // --- Filter only Ordinance or Resolution ---
+          {
+            $match: {
+              "categoryInfo.category": { $in: ["Ordinance", "Resolution"] },
+            },
+          },
+        ],
+        as: "files",
+      },
+    },
+    // --- Map term info ---
+    {
+      $addFields: {
+        termInfo: [
+          {
+            Position: "$Position",
+            term: "$term",
+            from: { $year: "$term_from" },
+            to: { $year: "$term_to" },
+            titles: { $map: { input: "$files", as: "f", in: "$$f.title" } },
+            summaries: { $map: { input: "$files", as: "f", in: "$$f.summary" } },
+            ordinanceCount: {
+              $size: {
+                $filter: { input: "$files", as: "f", cond: { $eq: ["$$f.categoryInfo.category", "Ordinance"] } },
+              },
+            },
+            resolutionCount: {
+              $size: {
+                $filter: { input: "$files", as: "f", cond: { $eq: ["$$f.categoryInfo.category", "Resolution"] } },
+              },
+            },
+          },
+        ],
+      },
+    },
+    // --- Group by fullname ---
+    {
+      $group: {
+        _id: { first_name: "$first_name", middle_name: "$middle_name", last_name: "$last_name" },
+        fullname: { $first: { $concat: ["$first_name", " ", "$middle_name", " ", "$last_name"] } },
+        terms: { $push: "$termInfo" },
+      },
+    },
+    // --- Flatten nested terms array ---
+    {
+      $project: {
+        fullname: 1,
+        terms: { $reduce: { input: "$terms", initialValue: [], in: { $concatArrays: ["$$value", "$$this"] } } },
+      },
+    },
+    { $sort: { fullname: 1 } },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: authors,
+  });
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+

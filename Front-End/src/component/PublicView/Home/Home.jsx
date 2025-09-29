@@ -14,7 +14,8 @@ import BagongPilipinas from "../../../../src/assets/bagongpilipinas.png";
 import Hotline from "../NewandInformation/Hotline";
 import LatestBills from "../LatestBill";
 import NewsContent from "../NewandInformation/NewsContent";
-import Recentpost from "../NewandInformation/Recentpost"
+import Recentpost from "../NewandInformation/Recentpost";
+import LocalServicesGovernment from "../localservices";
 
 // Scroll to Top button component
 const ScrollToTop = () => {
@@ -31,7 +32,6 @@ const ScrollToTop = () => {
     const unsubscribe = scrollY.on("change", (latest) => {
       setVisible(latest > 0.2);
     });
-
     return () => unsubscribe();
   }, [scrollY]);
 
@@ -54,15 +54,10 @@ const ScrollToTop = () => {
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
     >
-      <ArrowUp
-        size={16}
-        className="xm:size-5"
-      />
+      <ArrowUp size={16} className="xm:size-5" />
       <motion.div
         className="absolute inset-0 -z-10 rounded-full bg-blue-800"
-        style={{
-          scale: scrollY,
-        }}
+        style={{ scale: scrollY }}
       />
     </motion.button>
   );
@@ -108,12 +103,9 @@ const fadeIn = {
 const Home = ({ aboutUsRef }) => {
   const [selectedNews, setSelectedNews] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const { isLatestBill } = useContext(FilesDisplayContext);
-  const { pictures,loading,setLoading } = useContext(NewsDisplayContext);
+  const { pictures, loading } = useContext(NewsDisplayContext);
 
-  // New: Create a ref for the News and Latest section
   const newsAndLatestRef = useRef(null);
-
   const heroRef = useRef(null);
   const { scrollYProgress: heroScrollY } = useScroll({
     target: heroRef,
@@ -130,12 +122,10 @@ const Home = ({ aboutUsRef }) => {
   const [spCarouselIndex, setSPCarouselIndex] = useState(0);
   const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
   const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false);
-  // Ref for scroll-triggered animations
+
   const featuredRef = useRef(null);
-  const billsRef = useRef(null);
   const servicesRef = useRef(null);
 
-  // Check if elements are in view
   const featuredInView = useInView(featuredRef, { once: true, margin: "-20% 0px" });
   const servicesInView = useInView(servicesRef, { once: true, margin: "-10% 0px" });
 
@@ -147,20 +137,23 @@ const Home = ({ aboutUsRef }) => {
     setSelectedNews(news);
   };
 
-  // New: Function to go back from NewsContent and scroll to the NewsandLatest section
   const handleBackFromNews = () => {
     setSelectedNews(null);
     if (newsAndLatestRef.current) {
-      newsAndLatestRef.current.scrollIntoView({ behavior: 'smooth' });
+      newsAndLatestRef.current.scrollIntoView({ behavior: "smooth" });
     }
   };
 
   const nextSlide = () => {
-    setCurrentIndex((prevIndex) => (newsItems.length === 0 ? 0 : (prevIndex + 1) % newsItems.length));
+    setCurrentIndex((prevIndex) =>
+      newsItems.length === 0 ? 0 : (prevIndex + 1) % newsItems.length
+    );
   };
 
   const prevSlide = () => {
-    setCurrentIndex((prevIndex) => (newsItems.length === 0 ? 0 : (prevIndex - 1 + newsItems.length) % newsItems.length));
+    setCurrentIndex((prevIndex) =>
+      newsItems.length === 0 ? 0 : (prevIndex - 1 + newsItems.length) % newsItems.length
+    );
   };
 
   const nextSPSlide = () => {
@@ -173,41 +166,26 @@ const Home = ({ aboutUsRef }) => {
 
   useEffect(() => {
     if (isHoveringCarousel || newsItems.length === 0) return;
-
-    const interval = setInterval(() => {
-      nextSlide();
-    }, 5000);
-
+    const interval = setInterval(nextSlide, 5000);
     return () => clearInterval(interval);
   }, [isHoveringCarousel, newsItems.length]);
 
   useEffect(() => {
     if (isHoveringSPCarousel) return;
-
-    const interval = setInterval(() => {
-      nextSPSlide();
-    }, 6000);
-
+    const interval = setInterval(nextSPSlide, 6000);
     return () => clearInterval(interval);
   }, [isHoveringSPCarousel]);
 
   if (selectedFile) {
-    return (
-      <PDFview
-        fileId={selectedFile.fileId}
-        fileData={selectedFile.fileData}
-      />
-    );
+    return <PDFview fileId={selectedFile.fileId} fileData={selectedFile.fileData} />;
   }
 
   if (selectedNews) {
-    // Update: Pass the handleBackFromNews function to the onBack prop
     return <NewsContent news={selectedNews} onBack={handleBackFromNews} />;
   }
 
   const currentSPSlide = documentsummary[spCarouselIndex];
 
-  // Data for Government Services section
   const governmentServices = [
     {
       icon: FileText,
@@ -237,26 +215,19 @@ const Home = ({ aboutUsRef }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans text-slate-800 antialiased">
-      {/* Loading Overlay */}
       <AnimatePresence>
         {loading && (
           <motion.div
             initial={{ opacity: 1 }}
-            exit={{
-              opacity: 0,
-              transition: { duration: 0.5 },
-            }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500"
+            exit={{ opacity: 0, transition: { duration: 0.5 } }}
+            className="fixed inset-0 z-[999] flex items-center justify-center bg-blue-500"
           >
             <motion.div
               initial={{ scale: 1 }}
               exit={{
                 scale: 2,
                 opacity: 0,
-                transition: {
-                  duration: 1,
-                  ease: "easeOut",
-                },
+                transition: { duration: 1, ease: "easeOut" },
               }}
             >
               <motion.img
@@ -265,24 +236,19 @@ const Home = ({ aboutUsRef }) => {
                 className="h-28 w-28 opacity-95 drop-shadow-2xl xs:h-32 xs:w-32 xs-max:h-36 xs-max:w-36 xm:h-40 xm:w-40"
                 initial={{ rotateY: 0 }}
                 animate={{ rotateY: 360 }}
-                transition={{
-                  duration: 2,
-                  ease: "linear",
-                  repeat: Infinity,
-                }}
+                transition={{ duration: 2, ease: "linear", repeat: Infinity }}
               />
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Scroll to top button */}
       <ScrollToTop />
 
-      {/* Hero Section with Parallax */}
+      {/* Hero Section - Uses dynamic viewport height */}
       <motion.section
         ref={heroRef}
-        className="relative flex h-screen items-center justify-center overflow-hidden"
+        className="relative flex h-dvh items-center justify-center overflow-hidden"
         style={{
           backgroundImage: `linear-gradient(135deg, rgba(30, 64, 175, 0.85), rgba(55, 48, 163, 0.8)), url(${backgroundImage})`,
           backgroundSize: "cover",
@@ -290,10 +256,7 @@ const Home = ({ aboutUsRef }) => {
           backgroundAttachment: "fixed",
         }}
       >
-        <motion.div
-          style={{ y, opacity }}
-          className="absolute inset-0"
-        />
+        <motion.div style={{ y, opacity }} className="absolute inset-0" />
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -306,14 +269,12 @@ const Home = ({ aboutUsRef }) => {
             className="mx-auto mb-4 h-24 w-24 opacity-95 drop-shadow-2xl xs:mb-4 xs:h-28 xs:w-28 xs-max:mb-5 xs-max:h-32 xs-max:w-32 xm:mb-6 xm:h-40 xm:w-40"
             initial={loading ? { opacity: 0, scale: 2 } : { opacity: 1, scale: 1 }}
             animate={loading ? { opacity: 0, scale: 2 } : { opacity: 1, scale: 1 }}
-            transition={{
-              duration: 1,
-              delay: 0.5,
-              ease: "easeOut",
-            }}
+            transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
           />
-          <h1 className="mb-3 text-xl font-bold drop-shadow-lg xs:text-2xl xs-max:text-2xl xm:text-3xl sm:text-4xl md:text-5xl">Provincial Government</h1>
-          <p className="mx-auto max-w-2xl text-sm text-blue-100 drop-shadow-md xs:text-base xs-max:text-base xm:text-lg sm:text-xl">
+          <h1 className="mb-3 text-xl font-bold drop-shadow-lg sm:text-4xl md:text-5xl xs:text-2xl xs-max:text-2xl xm:text-3xl">
+            Provincial Government
+          </h1>
+          <p className="mx-auto max-w-2xl text-sm text-blue-100 drop-shadow-md sm:text-xl xs:text-base xs-max:text-base xm:text-lg">
             Serving the community with integrity and dedication
           </p>
         </motion.div>
@@ -327,117 +288,96 @@ const Home = ({ aboutUsRef }) => {
         viewport={{ once: true, amount: 0.1 }}
         variants={fadeIn}
       >
-        <div className="px-4 py-8 text-center xs:px-5 xs:py-9 xs-max:px-5 xs-max:py-10 xm:px-6 xm:py-12 sm:px-8 sm:py-16">
-          <motion.div
-            className="mx-auto max-w-6xl"
-            variants={fadeInUp}
-          >
+        <div className="px-4 py-8 text-center sm:px-8 sm:py-16 xs:px-5 xs:py-9 xs-max:px-5 xs-max:py-10 xm:px-6 xm:py-12">
+          <motion.div className="mx-auto max-w-6xl" variants={fadeInUp}>
             <h2 className="mb-4 font-serif text-base italic leading-relaxed xs:text-lg xs-max:text-lg xm:text-xl lg-custom:text-4xl">
-              "Together as one province, we commit to serve with integrity and unity, building a future where every community thrives in
-              progress and peace."
+              "Together as one province, we commit to serve with integrity and unity, building a future where every
+              community thrives in progress and peace."
             </h2>
           </motion.div>
         </div>
       </motion.div>
 
-{/* Announcements and Hotlines Section */}
-<section
-  ref={featuredRef}
-  className="container mx-auto mt-4 px-3 xs:px-2 xs-max:px-2 sm:px-6"
-  id="news"
->
-  <motion.div
-    initial="hidden"
-    whileInView="visible"
-    viewport={{ once: true, amount: 0.1 }}
-    variants={staggerContainer}
-    className="grid grid-cols-1 gap-4 xs:gap-4 xs-max:gap-5 xm:gap-5 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 lg:px-16 2xs:px-2"
-  >
-    {/* News and Latest - 2/3 width on desktop, full width on mobile */}
-    <motion.div
-      variants={fadeInUp}
-      className="md:col-span-2 order-1 xs:order-1 xs-max:order-1"
-    >
-      <LatestBills
-        onFileView={handleViewFile}
-        loading={loading}
-      />
-      <NewsandLatest
-        ref={newsAndLatestRef}
-        onNewsView={handleViewNews}
-        loading={loading}
-      />
-    </motion.div>
-
-    {/* Logos Box & Hotline - 1/3 width on desktop, full width on mobile */}
-    <motion.div
-      variants={fadeInUp}
-      className="flex flex-col space-y-4 md:col-span-1 order-2 xs:order-2 xs-max:order-2 md:order-none"
-    >
-      {/* Logo 1 */}
-      <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
-        <img
-          src={BagongPilipinas}
-          alt="Bagong Pilipinas"
-          className="h-20 object-contain xs:h-24 xs-max:h-28 xm:h-32 sm:h-36"
-        />
-      </div>
-
-      {/* Logo 2 */}
-      <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
-        <img
-          src={Transparency}
-          alt="Transparency"
-          className="h-20 object-contain xs:h-24 xs-max:h-28 xm:h-32 sm:h-36"
-        />
-      </div>
-
-      {/* Hotline */}
-      <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
-        <Hotline />
-      </div>
-
-      {/* Recent Post */}
-      <div className="items-center">
-        <Recentpost />
-      </div>
-    </motion.div>
-  </motion.div>
-</section>
-
-
-      {/* About Us Section */}
+      {/* Announcements and Hotlines */}
       <section
-        ref={aboutUsRef}
-        id="about-us"
-        className="min-h-screen bg-white"
+        ref={featuredRef}
+        className="container mx-auto mt-4 px-3 sm:px-6 xs:px-2 xs-max:px-2"
+        id="news"
       >
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={staggerContainer}
+          className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 lg:grid-cols-3 lg:px-16 2xs:px-2 xs:gap-4 xs-max:gap-5 xm:gap-5"
+        >
+          <motion.div variants={fadeInUp} className="order-1 md:col-span-2 xs:order-1 xs-max:order-1">
+            <LatestBills onFileView={handleViewFile} loading={loading} />
+            <NewsandLatest
+              ref={newsAndLatestRef}
+              onNewsView={handleViewNews}
+              loading={loading}
+            />
+          </motion.div>
+
+          <motion.div
+            variants={fadeInUp}
+            className="order-2 flex flex-col space-y-4 md:order-none md:col-span-1 xs:order-2 xs-max:order-2"
+          >
+            <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+              <img
+                src={BagongPilipinas}
+                alt="Bagong Pilipinas"
+                className="h-20 object-contain sm:h-36 xs:h-24 xs-max:h-28 xm:h-32"
+              />
+            </div>
+            <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+              <img
+                src={Transparency}
+                alt="Transparency"
+                className="h-20 object-contain sm:h-36 xs:h-24 xs-max:h-28 xm:h-32"
+              />
+            </div>
+            <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+              <Hotline />
+            </div>
+            <div className="items-center">
+              <Recentpost />
+            </div>
+          </motion.div>
+        </motion.div>
+      </section>
+
+      {/* About Us */}
+      <section ref={aboutUsRef} id="about-us" className="min-h-screen bg-white">
         <AboutUsPage />
       </section>
 
-      {/* Government Services Section */}
+      {/* Government Services */}
       <section
         ref={servicesRef}
-        className="bg-white py-8 xs:py-9 xs-max:py-10 xm:py-12 sm:py-16 lg:px-16 2xs:px-2"
+        className="bg-blue-100 py-8 lg:px-16 2xs:px-2 xs:py-9 xs-max:py-10 xm:py-12"
         id="services"
       >
-        <div className="container mx-auto px-3 xs:px-4 xs-max:px-4 xm:px-5 sm:px-6">
+        <div className="container mx-auto px-3 xs:px-4 xs-max:px-4 xm:px-5">
           <motion.div
             initial="hidden"
             animate={servicesInView ? "visible" : "hidden"}
             variants={fadeInUp}
-            className="mb-6 text-center xs:mb-7 xs-max:mb-8 xm:mb-10 sm:mb-12"
+            className="mb-6 text-center xs:mb-7 xs-max:mb-8 xm:mb-10"
           >
-            <h2 className="text-lg font-bold text-slate-900 xs:text-xl xs-max:text-xl xm:text-2xl sm:text-3xl">Government Services</h2>
-            <p className="mt-2 text-sm text-slate-600 xs:mt-2 xs-max:mt-3 xm:mt-3 xm:text-base">Access our services and resources</p>
+            <h2 className="text-lg font-bold text-slate-900 sm:text-3xl xs:text-xl xs-max:text-xl xm:text-2xl">
+              Government Services
+            </h2>
+            <p className="mt-2 text-sm text-slate-600 xs:mt-2 xs-max:mt-3 xm:mt-3 xm:text-base">
+              Access our services and resources
+            </p>
           </motion.div>
-
-          <div className="grid grid-cols-1 gap-3 xs:gap-3 xs-max:gap-4 xm:grid-cols-4 xm:gap-4 sm:gap-5 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-4 xs:gap-3 xs-max:gap-4 xm:grid-cols-4 xm:gap-4">
             {governmentServices.map((service, index) => (
               <motion.div
                 key={index}
                 variants={fadeInUp}
-                custom={index}
                 initial="hidden"
                 animate={servicesInView ? "visible" : "hidden"}
                 whileHover={{ y: -8 }}
@@ -448,17 +388,22 @@ const Home = ({ aboutUsRef }) => {
                 >
                   <service.icon className="h-5 w-5 xs:h-5 xs:w-5 xs-max:h-6 xs-max:w-6 xm:h-6 xm:w-6" />
                 </div>
-                <h3 className="mb-1 text-base font-semibold text-slate-900 xs:text-base xs-max:text-lg xm:text-lg">{service.title}</h3>
-                <p className="text-xs text-slate-600 xs:text-xs xs-max:text-sm xm:text-sm">{service.desc}</p>
+                <h3 className="mb-1 text-base font-semibold text-slate-900 xs:text-base xs-max:text-lg xm:text-lg">
+                  {service.title}
+                </h3>
+                <p className="text-xs text-slate-600 xs:text-xs xs-max:text-sm xm:text-sm">
+                  {service.desc}
+                </p>
               </motion.div>
             ))}
           </div>
         </div>
       </section>
+
+      <LocalServicesGovernment />
     </div>
   );
 };
 
-// Update: Add forwardRef to the Home component so it can receive a ref from its parent
 const HomeWithRef = React.forwardRef(Home);
 export default HomeWithRef;
