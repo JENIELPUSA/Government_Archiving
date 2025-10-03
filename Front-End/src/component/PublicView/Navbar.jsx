@@ -16,29 +16,36 @@ const NavbarWithScroll = ({
   const lastScrollYRef = useRef(0);
 
   const pages = [
-    { id: "home", label: "Home" },
-    {
-      id: "officials",
-      label: "Officials",
-      subItems: [
-        { id: "Mayor", label: "Mayor" },
-        { id: "Vice-Mayor", label: "Vice-Mayor" },
-        { id: "sb-members", label: "SP Members" },
-        { id: "Board Member", label: "Board Members" },
-      ],
-    },
-    {
-      id: "legislative",
-      label: "Legislative",
-      subItems: [
-        { id: "resolution", label: "Resolution" },
-        { id: "ordinance", label: "Ordinance" },
-        { id: "executive-order", label: "Executive Order" },
-      ],
-    },
-    { id: "news-and-information", label: "News & Information" },
-    { id: "about-us", label: "About Us" },
-  ];
+  { id: "home", label: "Home" },
+  {
+    id: "officials",
+    label: "Officials",
+    subItems: [
+      { id: "Mayor", label: "Mayor" },
+      { id: "Vice-Mayor", label: "Vice-Mayor" },
+      { id: "sb-members", label: "SP Members" },
+      { id: "Board Member", label: "Board Members" },
+    ],
+  },
+  {
+    id: "legislative",
+    label: "Legislative",
+    subItems: [
+      { id: "resolution", label: "Resolution" },
+      { id: "ordinance", label: "Ordinance" },
+      { id: "executive-order", label: "Executive Order" },
+    ],
+  },
+  { id: "news-and-information", label: "News & Information" },
+  {
+    id: "tourism",
+    label: "Tourism",
+    href: "https://www.tripadvisor.com.ph/Attractions-g612370-Activities-Biliran_Island_Visayas.html",
+  },
+  { id: "about-us", label: "About Us" },
+  
+];
+
 
   const isSubpageOf = (pageId, parentId) => {
     const parent = pages.find((p) => p.id === parentId);
@@ -73,21 +80,27 @@ const NavbarWithScroll = ({
   // -----------------------------
   // Force-refresh on same page or dropdown click
   // -----------------------------
-  const handlePageClick = (pageId, parentId = null) => {
-    if (parentId && ["officials", "legislative"].includes(parentId)) {
-      if (typeof setOfficial === "function") {
-        // Force refresh for sub-items
-        setOfficial(""); // clear first
-        setTimeout(() => setOfficial(pageId), 0); // set back
-      }
-    } else {
-      // Force refresh for top-level pages
-      setCurrentPage(""); // clear first
-      setTimeout(() => setCurrentPage(pageId), 0); // set back
-      if (!parentId) setOpenSubmenu(null);
+const handlePageClick = (pageId, parentId = null, href = null) => {
+  if (href) {
+    window.location.href = href; // diretso sa URL sa parehong tab
+    return; // huwag nang i-set ang currentPage
+  }
+
+  // SPA logic
+  if (parentId && ["officials", "legislative"].includes(parentId)) {
+    if (typeof setOfficial === "function") {
+      setOfficial("");
+      setTimeout(() => setOfficial(pageId), 0);
     }
-    setMobileMenuOpen(false);
-  };
+  } else {
+    setCurrentPage("");
+    setTimeout(() => setCurrentPage(pageId), 0);
+    if (!parentId) setOpenSubmenu(null);
+  }
+
+  setMobileMenuOpen(false);
+};
+
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -104,7 +117,7 @@ const NavbarWithScroll = ({
     <>
       {/* Desktop Navbar */}
       <nav
-        className={`fixed left-1/2 top-6 z-[900] hidden w-full max-w-6xl -translate-x-1/2 transform rounded-2xl border border-white/20 px-6 py-3 shadow-2xl transition-all duration-500 ease-out md:flex ${
+        className={`fixed left-1/2 top-6 z-[50] hidden w-full max-w-6xl -translate-x-1/2 transform rounded-2xl border border-white/20 px-6 py-3 shadow-2xl transition-all duration-500 ease-out md:flex ${
           showScrollNavbar
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-20 opacity-0"

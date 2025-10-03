@@ -39,7 +39,7 @@ const FoldersView = ({
             <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-8 shadow-lg dark:border-gray-700 dark:bg-gray-800">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Old Files Management</h1>
+                        <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">Files Management</h1>
                         <p className="text-lg text-gray-600 dark:text-gray-400">Create and organize your folders efficiently</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-4">

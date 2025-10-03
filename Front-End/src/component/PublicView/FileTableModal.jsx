@@ -69,7 +69,7 @@ const FileTableModal = ({ files, category, onClose }) => {
 
     return (
         <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 p-4"
+            className="fixed inset-0 z-[900] flex items-center justify-center bg-black bg-opacity-60 p-4"
             variants={modalBackdropVariants}
             initial="hidden"
             animate="visible"

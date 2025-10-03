@@ -147,12 +147,12 @@ const NewsContent = ({ news, onBack }) => {
                                                 className="h-12 object-contain md:h-16 xs:h-8"
                                             />
                                         </div>
-                                        <h1 className="px-2 text-center text-xl font-bold md:text-3xl xs:text-sm">{news.title}</h1>
+                                        <h1 className="px-2 text-center text-xl font-bold md:text-3xl xs:text-sm 2xs:text-sm xs-max:text-sm">{news.title}</h1>
                                     </div>
                                 </div>
 
                                 {/* Content Section */}
-                                <div className="space-y-6 text-justify text-lg leading-relaxed xs:space-y-2 xs:text-[12px]">
+                                <div className="space-y-6 text-justify text-lg leading-relaxed xs:space-y-2 xs:text-[12px] xs-max:text-[12px] xs-max:space-y-2 2xs:text-[12px] 2xs:space-y-2">
                                     {news.excerpt
                                         ?.split("\n")
                                         .filter((part) => part.trim() !== "")

@@ -154,7 +154,7 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
 
             const a = document.createElement("a");
             a.href = url;
-            a.download = `${fileData.title || "document"}.pdf`;
+            a.download = `${fileData?.title || "document"}.pdf`;
             document.body.appendChild(a);
             a.click();
 

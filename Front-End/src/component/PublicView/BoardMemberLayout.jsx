@@ -9,11 +9,8 @@ import Breadcrumb from "./Breadcrumb";
 const TrackedMayorLayout = (props) => {
   useEffect(() => {
     console.log("MayorLayout mounted", props);
-    // Add any mount-side effects here (e.g., analytics, focus, etc.)
-
     return () => {
       console.log("MayorLayout unmounted", props);
-      // Add cleanup logic here if needed
     };
   }, []);
 
@@ -32,7 +29,7 @@ const BoardMemberLayout = ({ Position, onBack }) => {
 
   const [activePosition, setActivePosition] = useState(Position || "Board Member");
   const [localLoading, setLocalLoading] = useState(false);
-  const [selectedMember, setSelectedMember] = useState(null); // 👈 Now stores full member object
+  const [selectedMember, setSelectedMember] = useState(null);
 
   const isLoading = contextLoading || localLoading;
 
@@ -40,7 +37,7 @@ const BoardMemberLayout = ({ Position, onBack }) => {
     if (Position) {
       setActivePosition(Position);
       setCurrentPage(1);
-      setSelectedMember(null); // reset when position changes
+      setSelectedMember(null);
     }
   }, [Position, setCurrentPage]);
 
@@ -74,7 +71,7 @@ const BoardMemberLayout = ({ Position, onBack }) => {
 
   const handlePositionSelect = (pos) => {
     setActivePosition(pos);
-    setSelectedMember(null); // close profile when switching
+    setSelectedMember(null);
     if (pos !== "Mayor" && pos !== "Vice Mayor") {
       setCurrentPage(1);
     }
@@ -117,7 +114,8 @@ const BoardMemberLayout = ({ Position, onBack }) => {
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="animate-pulse rounded-lg bg-white p-4 shadow-sm">
-                    <div className="mb-4 h-64 w-full rounded-md bg-gray-200"></div>
+                    {/* Reduced height on mobile for skeleton too */}
+                    <div className="mb-4 h-64 w-full rounded-md bg-gray-200 max-sm:h-40"></div>
                     <div className="mb-2 h-4 rounded bg-gray-200"></div>
                     <div className="mb-1 h-3 rounded bg-gray-200"></div>
                     <div className="h-3 w-3/4 rounded bg-gray-200"></div>
@@ -137,17 +135,17 @@ const BoardMemberLayout = ({ Position, onBack }) => {
                         <img
                           src={member.memberInfo.avatar.url}
                           alt={member.fullName || "Board Member"}
-                          className="mb-4 h-64 w-full rounded-md object-cover cursor-pointer"
+                          className="mb-4 h-64 w-full rounded-md object-cover cursor-pointer max-sm:h-40"
                           onError={(e) => {
                             e.target.style.display = "none";
                           }}
                           onClick={() => {
-                            setSelectedMember(member); // 👈 Store full object
+                            setSelectedMember(member);
                           }}
                         />
                       ) : (
                         <div
-                          className="mb-4 flex h-64 w-full cursor-pointer items-center justify-center rounded-md bg-gray-100"
+                          className="mb-4 flex h-64 w-full cursor-pointer items-center justify-center rounded-md bg-gray-100 max-sm:h-40"
                           onClick={() => {
                             setSelectedMember(member); 
                           }}

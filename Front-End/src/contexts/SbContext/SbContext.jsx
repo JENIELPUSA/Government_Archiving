@@ -14,6 +14,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [customError, setCustomError] = useState("");
+    const [isGroupSpecificAuthor, setGroupSpecificAuthor] = useState("");
 
     const [isSBMember, setSBMember] = useState([]);
     const [isDropdown, setDropdown] = useState([]);
@@ -104,65 +105,86 @@ export const SbMemberDisplayProvider = ({ children }) => {
         [setGroupPublicAuthor, setTotalPages, setCurrentPage],
     );
 
-const AddSbData = async (values) => {
-    try {
-        const formData = new FormData();
-        const first_name = values.first_name?.trim() || "";
-        const middle_name = values.middle_name?.trim() || "";
-        const last_name = values.last_name?.trim() || "";
+    const DisplaySpecificPublicAuthor = useCallback(
+        async (queryParams = {}) => {
+            try {
+                const res = await axiosInstance.post(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/PublicSpecificFilterAuthor`,
+                    {},
+                    {
+                        withCredentials: true,
+                        params: queryParams,
+                        headers: {
+                            "Cache-Control": "no-cache",
+                        },
+                    },
+                );
+                const { totalPages, currentPage } = res.data;
+                setGroupSpecificAuthor(res.data.data);
 
-        formData.append("first_name", first_name);
-        formData.append("last_name", last_name);
-        formData.append("term", values.term || "");
-        formData.append("Position", values.Position || "");
-        formData.append("term_from", values.term_from || "");
-        formData.append("term_to", values.term_to || "");
-        formData.append("role", "sbmember");
+                setTotalPages(totalPages);
+                setCurrentPage(currentPage);
+            } catch (error) {
+                console.error("Error fetching archived data:", error);
+            }
+        },
+        [setGroupPublicAuthor, setTotalPages, setCurrentPage],
+    );
 
-        // Only append middle_name if it exists
-        if (middle_name) {
-            formData.append("middle_name", middle_name);
-        }
+    const AddSbData = async (values) => {
+        try {
+            const formData = new FormData();
+            const first_name = values.first_name?.trim() || "";
+            const middle_name = values.middle_name?.trim() || "";
+            const last_name = values.last_name?.trim() || "";
 
-        if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
-        if (values.Position) formData.append("Position", values.Position);
-        if (values.district) formData.append("district", values.district);
-        if (values.avatar) formData.append("avatar", values.avatar);
+            formData.append("first_name", first_name);
+            formData.append("last_name", last_name);
+            formData.append("term", values.term || "");
+            formData.append("Position", values.Position || "");
+            formData.append("term_from", values.term_from || "");
+            formData.append("term_to", values.term_to || "");
+            formData.append("role", "sbmember");
 
-        const res = await axios.post(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`,
-            formData,
-            {
+            // Only append middle_name if it exists
+            if (middle_name) {
+                formData.append("middle_name", middle_name);
+            }
+
+            if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
+            if (values.Position) formData.append("Position", values.Position);
+            if (values.district) formData.append("district", values.district);
+            if (values.avatar) formData.append("avatar", values.avatar);
+
+            const res = await axios.post(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`, formData, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                     "Content-Type": "multipart/form-data",
                 },
+            });
+
+            if (res.data.status === "Success") {
+                const newAdmin = res.data.data;
+                setModalStatus("success");
+                setShowModal(true);
+                DisplayPerSb();
+                return { success: true, data: newAdmin };
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+                return { success: false, error: "Unexpected response from server." };
             }
-        );
-
-        if (res.data.status === "Success") {
-            const newAdmin = res.data.data;
-            setModalStatus("success");
-            setShowModal(true);
-            DisplayPerSb();
-            return { success: true, data: newAdmin };
-        } else {
-            setModalStatus("failed");
-            setShowModal(true);
-            return { success: false, error: "Unexpected response from server." };
+        } catch (error) {
+            if (error.response?.data) {
+                const message = error.response.data.message || error.response.data.error || "Something went wrong.";
+                setCustomError(message);
+            } else if (error.request) {
+                setCustomError("No response from the server.");
+            } else {
+                setCustomError(error.message || "Unexpected error occurred.");
+            }
         }
-    } catch (error) {
-        if (error.response?.data) {
-            const message = error.response.data.message || error.response.data.error || "Something went wrong.";
-            setCustomError(message);
-        } else if (error.request) {
-            setCustomError("No response from the server.");
-        } else {
-            setCustomError(error.message || "Unexpected error occurred.");
-        }
-    }
-};
-
+    };
 
     const DeleteSB = async (officerID) => {
         try {
@@ -235,9 +257,10 @@ const AddSbData = async (values) => {
             return { success: false, error: message };
         }
     };
-
     const DisplaySummaryTerm = useCallback(
         async (queryParams = {}) => {
+            setSummaryTerm([]);
+
             try {
                 const res = await axiosInstance.post(
                     `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/PublicSummaryTerm`,
@@ -250,15 +273,17 @@ const AddSbData = async (values) => {
                         },
                     },
                 );
-                const { totalPages, currentPage } = res.data;
-                setSummaryTerm(res.data.data);
 
-         
+                const { totalPages, currentPage } = res.data;
+                setTotalPages(totalPages);
+                setCurrentPage(currentPage);
+                setSummaryTerm(res.data.data || []);
             } catch (error) {
-                console.error("Error fetching archived data:", error);
+                console.error("Error fetching summary term:", error);
+                setSummaryTerm([]);
             }
         },
-        [setSummaryTerm, setTotalPages, setCurrentPage], // dependencies
+        [setSummaryTerm, setTotalPages, setCurrentPage],
     );
 
     useEffect(() => {
@@ -299,6 +324,8 @@ const AddSbData = async (values) => {
                 FetchDropdown,
                 DisplaySummaryTerm,
                 isSummaryTerm,
+                isGroupSpecificAuthor,
+                DisplaySpecificPublicAuthor,
             }}
         >
             {children}

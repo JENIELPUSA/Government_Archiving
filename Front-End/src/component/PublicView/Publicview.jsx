@@ -13,8 +13,7 @@ import NewsandLatest from "./NewandInformation/NewsandLatest";
 import { FaFacebook, FaEnvelope } from "react-icons/fa";
 import BoardMemberLayout from "./BoardMemberLayout";
 import MayorLayout from "./MayorLayout";
-import CapitolSketch from "../../assets/capitolsketch.png";
-import localservices from "./localservices";
+import TouristComponent from "./Tourist/TouristComponent";
 
 const PublicView = () => {
     const [currentPage, setCurrentPage] = useState("home");
@@ -149,7 +148,23 @@ const PublicView = () => {
                         />
                     </motion.div>
                 );
-
+            case "tourism":
+                return (
+                    <motion.div
+                        key="tourism"
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                    >
+                        <TouristComponent
+                            onViewLatestNews={handleViewNews}
+                            selectedNews={selectedNews}
+                            onBack={() => setCurrentPage("home")}
+                        />
+                    </motion.div>
+                );
             case "newsLatest":
                 return selectedNews ? (
                     <motion.div
@@ -308,10 +323,10 @@ const PublicView = () => {
                             transition={{ duration: 0.4, delay: 0.5 }}
                             className="ml-4"
                         >
-                            <h1 className="text-2xl font-bold text-blue-800 2xs:text-lg 2xs:leading-5 xs:text-[15px] xs:leading-4 xs-max:text-[15px] xs-max:text-sm xs-max:leading-4 xm:text-2xl xm:leading-7">
+                            <h1 className="text-2xl font-bold text-blue-800 2xs:text-lg 2xs:leading-5 xs:text-[15px] xs:leading-4 xs-max:text-[15px] xs-max:leading-4 xm:text-2xl xm:leading-7">
                                 Office of the Sangguniang Panlalawigan
                             </h1>
-                            <p className="font-semibold text-red-700 2xs:text-sm 2xs:leading-4 xs:text-[10px] xs:text-base xs:leading-4 xs-max:text-[10px] xs-max:text-lg xs-max:leading-5 xm:text-base xm:leading-5">
+                            <p className="font-semibold text-red-700 2xs:text-sm 2xs:leading-4 xs:text-[10px] xs:text-base xs:leading-4 xs-max:text-[9px] xs-max:text-lg xs-max:leading-5 xm:text-base xm:leading-5">
                                 Biliran Province
                             </p>
                         </motion.div>
@@ -350,7 +365,7 @@ const PublicView = () => {
                 animate="in"
                 variants={pageVariants}
                 transition={pageTransition}
-                className="flex-1"
+                className="flex-1 w-full"
             >
                 {renderMainContent()}
             </motion.div>
@@ -361,10 +376,11 @@ const PublicView = () => {
                 whileInView={{ y: 0, opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
-                className="mt-4 bg-blue-800 py-8 text-white"
+                className="bg-blue-800 py-8 text-white"
             >
                 <div className="container mx-auto px-6 2xs:px-2 xs:px-4 xm:px-6">
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
+                        {/* Republic of the Philippines Info */}
                         <motion.div
                             initial={{ x: -50, opacity: 0 }}
                             whileInView={{ x: 0, opacity: 1 }}
@@ -379,9 +395,7 @@ const PublicView = () => {
                                     className="h-20 w-20 xs:h-10 xs:w-10"
                                 />
                             </div>
-                            <h3 className="mb-2 text-xl font-bold 2xs:text-lg xs:text-[15px] xs:leading-4 xm:text-xl">
-                                Republic Of The Philippines
-                            </h3>
+                            <h3 className="mb-2 text-xl font-bold 2xs:text-lg xs:text-[15px] xs:leading-4 xm:text-xl">Republic Of The Philippines</h3>
                             <p className="text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Biliran Province</p>
                             <p className="mt-2 text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Tel: (632) 8931-5001</p>
                             <motion.div
@@ -392,7 +406,7 @@ const PublicView = () => {
                                 className="mt-4 flex space-x-6"
                             >
                                 <a
-                                    href="https://web.facebook.com/provincialgovernmentofbiliran  "
+                                    href="https://web.facebook.com/provincialgovernmentofbiliran"
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="text-white transition-colors hover:text-yellow-300"
@@ -408,12 +422,13 @@ const PublicView = () => {
                             </motion.div>
                         </motion.div>
 
+                        {/* Quick Links */}
                         <motion.div
                             initial={{ x: 50, opacity: 0 }}
                             whileInView={{ x: 0, opacity: 1 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.5, delay: 0.2 }}
-                            className="2xs:hidden xs:hidden xs-max:block xm:block"
+                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
                         >
                             <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Quick Links</h4>
                             <ul className="space-y-2">
@@ -453,7 +468,107 @@ const PublicView = () => {
                                     </button>
                                 </li>
                             </ul>
+                        </motion.div>
 
+                        {/* Government Link */}
+                        <motion.div
+                            initial={{ x: 50, opacity: 0 }}
+                            whileInView={{ x: 0, opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
+                        >
+                            <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Government Link</h4>
+                            <ul className="space-y-2">
+                                <li>
+                                    <a
+                                        href="https://web.facebook.com/provincialgovernmentofbiliran"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        Office of the President
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.ovp.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        Office of the Vice President
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://legacy.senate.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        Senate of the Philippines
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.congress.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        House of the Philippines
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        href="https://sb.judiciary.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        Sandiganbayan
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a
+                                        href="https://sc.judiciary.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        Supreme Court
+                                    </a>
+                                </li>
+                                <li>
+                                    <a
+                                        href="https://www.gov.ph"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-colors hover:text-yellow-300"
+                                    >
+                                        GOV.PH
+                                    </a>
+                                </li>
+                            </ul>
+                        </motion.div>
+
+                        {/* Optional: Fourth column (e.g., Contact Info or empty) */}
+                        <motion.div
+                            initial={{ x: 50, opacity: 0 }}
+                            whileInView={{ x: 0, opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.5, delay: 0.4 }}
+                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
+                        >
+                            <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Contact Us</h4>
+                            <p className="text-sm 2xs:text-xs xs:text-[12px] xm:text-sm">
+                                Capitol Compound, National Highway,
+                                <br />
+                                Brgy. Calumpang, Naval, Biliran
+                            </p>
                         </motion.div>
                     </div>
                 </div>

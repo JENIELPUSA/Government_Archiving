@@ -213,15 +213,15 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
             <BannerImage selection={documentType} />
             <Breadcrumb position={documentType} onBack={onBack}/>
 
-            <motion.div className="container mx-auto mt-8 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
-                <motion.h1 className="mb-6 text-3xl font-bold text-blue-800">DOCUMENTS</motion.h1>
+            <motion.div className="container mx-auto mt-8 xs:mt-2 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
+                <motion.h1 className="mb-6 text-3xl font-bold text-blue-800 xs:text-lg">DOCUMENTS</motion.h1>
 
                 {/* Filters */}
                 <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
-                        <label className="mb-2 block text-sm font-medium text-blue-800">Filter by Year:</label>
+                        <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Year:</label>
                         <select
-                            className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner"
+                            className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner xs:text-[12px]"
                             value={selectedYear}
                             onChange={(e) => {
                                 const year = e.target.value;
@@ -243,7 +243,7 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
 
                     {showCategoryFilter && (
                         <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
-                            <label className="mb-2 block text-sm font-medium text-blue-800">Filter by Category:</label>
+                            <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Category:</label>
                             <select
                                 className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner"
                                 value={""}
@@ -287,14 +287,17 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                                         className="rounded-xl border border-gray-200 shadow-sm"
                                     >
                                         <motion.div
-                                            className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 text-white transition-all duration-200 hover:from-blue-800 hover:to-blue-900"
+                                            className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 xs:p-2 text-white transition-all duration-200 hover:from-blue-800 hover:to-blue-900"
                                             onClick={() => toggleYear(year)}
                                         >
                                             <h2 className="flex items-center gap-3 text-xl font-bold">
-                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900">
+                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900 xs:text-[12px] xs-max:text-[15px]">
                                                     {year === "Unknown" ? "?" : year.substring(2)}
                                                 </span>
-                                                {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
+                                                <div className="xs:text-[15px] xs-max:text-[15px]">
+                                                     {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
+                                                </div>
+                                               
                                             </h2>
                                             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                         </motion.div>
@@ -308,22 +311,22 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                                                     exit="closed"
                                                     variants={yearSectionVariants}
                                                 >
-                                                    <div className="space-y-4 p-6">
+                                                    <div className="space-y-4 p-6 xs:p-2">
                                                         {yearFiles.map((item) => (
                                                             <div
                                                                 key={item._id}
                                                                 className="rounded-lg border border-gray-200 p-5 transition-all duration-200 hover:bg-blue-50"
                                                             >
-                                                                <h3 className="mb-2 text-lg font-bold text-gray-800">{item?.title}</h3>
-                                                                <p className="mb-3 line-clamp-2 text-gray-600">{item?.summary}</p>
-                                                                <div className="mb-3 flex flex-wrap gap-4 text-sm text-gray-700">
+                                                                <h3 className="mb-2 text-lg font-bold text-gray-800 xs:text-[12px] xs-max:text-[12px] xs:leading-4 2xs:leading-4 xs-max:leading-4">{item?.title}</h3>
+                                                                <p className="mb-3 line-clamp-2 text-gray-600 xs:text-[12px] xs-max:text-[15px]">{item?.summary}</p>
+                                                                <div className="mb-3 flex flex-wrap gap-4 text-sm text-gray-700 xs:text-[12px] xs-max:text-[12px]">
                                                                     <span>Author: {item?.author || "N/A"}</span>
                                                                     <span>Category: {item?.category || "Uncategorized"}</span>
                                                                     <span>Created: {formatDate(item?.createdAt)}</span>
                                                                 </div>
                                                                 <button
                                                                     onClick={() => onViewFile(item._id, item)}
-                                                                    className="rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-800"
+                                                                    className="rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-800 xs:text-[12px] xs-max:text-[12px]"
                                                                 >
                                                                     View Document
                                                                 </button>
@@ -335,17 +338,17 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                                                                 <button
                                                                     onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
                                                                     disabled={currentPage === 1}
-                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
                                                                 >
                                                                     Previous
                                                                 </button>
-                                                                <span className="font-medium text-gray-700">
+                                                                <span className="font-medium text-gray-700 xs-max:text-[12px] xs:text-[12px]">
                                                                     Page {currentPage} of {totalPages}
                                                                 </span>
                                                                 <button
                                                                     onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
                                                                     disabled={currentPage === totalPages}
-                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
                                                                 >
                                                                     Next
                                                                 </button>

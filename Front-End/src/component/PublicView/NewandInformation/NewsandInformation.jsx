@@ -42,7 +42,7 @@ const NewsandInformation = ({ onViewLatestNews, onBack }) => {
                 onBack={onBack}
             />
             <div className="mx-auto max-w-5xl p-8">
-                <h1 className="max-xs:text-2xl mb-6 text-3xl font-bold xs:mb-1 xs:text-lg">News and Information</h1>
+                <h1 className="max-xs:text-2xl mb-6 text-3xl font-bold  2xs:mb-1 2xs:text-lg xs-max:mb-1 xs-max:text-lg">News and Information</h1>
                 {currentNews.map((news) => (
                     <div
                         key={news.id}
@@ -56,11 +56,11 @@ const NewsandInformation = ({ onViewLatestNews, onBack }) => {
                             />
                         </div>
                         <div className="md:w-2/3">
-                            <h2 className="mb-2 text-xl font-bold xs:text-sm">{news.title}</h2>
-                            <p className="mb-2 text-gray-600 xs:text-[12px]">{truncateExcerpt(news.excerpt, 150)}</p>
+                            <h2 className="mb-2 text-xl font-bold xs:text-sm 2xs:text-sm xs-max:text-sm">{news.title}</h2>
+                            <p className="mb-2 text-gray-600 xs:text-[12px] 2xs:text-[12px] xs-max:text-[12px]">{truncateExcerpt(news.excerpt, 150)}</p>
                             <button
                                 onClick={() => onViewLatestNews(news)}
-                                className="font-medium text-blue-600 hover:text-blue-800 xs:text-[12px]"
+                                className="font-medium text-blue-600 hover:text-blue-800 xs:text-[12px] 2xs:text-[12px] xs-max:text-[12px]"
                             >
                                 Read more
                             </button>
@@ -73,7 +73,7 @@ const NewsandInformation = ({ onViewLatestNews, onBack }) => {
                     <button
                         onClick={() => paginate(currentPage - 1)}
                         disabled={currentPage === 1}
-                        className="rounded border px-3 py-1 disabled:opacity-50"
+                        className="rounded border px-3 py-1 disabled:opacity-50 xs:text-[12px] 2xs:text-[12px] xs-max:text-[12px]"
                     >
                         Prev
                     </button>
@@ -81,7 +81,7 @@ const NewsandInformation = ({ onViewLatestNews, onBack }) => {
                         <button
                             key={number}
                             onClick={() => paginate(number)}
-                            className={`rounded border px-3 py-1 ${currentPage === number ? "bg-blue-600 text-white" : "bg-white"}`}
+                            className={`xs:text-[12px] 2xs:text-[12px] xs-max:text-[12px] rounded border px-3 py-1 ${currentPage === number ? "bg-blue-600 text-white" : "bg-white" }`}
                         >
                             {number}
                         </button>
@@ -89,7 +89,7 @@ const NewsandInformation = ({ onViewLatestNews, onBack }) => {
                     <button
                         onClick={() => paginate(currentPage + 1)}
                         disabled={currentPage === totalPages}
-                        className="rounded border px-3 py-1 disabled:opacity-50"
+                        className="rounded border px-3 py-1 disabled:opacity-50 xs:text-[12px] 2xs:text-[12px] xs-max:text-[12px]"
                     >
                         Next
                     </button>

@@ -1,7 +1,7 @@
 import React, { useContext, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
-import { FileText } from "lucide-react";
+
 
 // Skeletons
 const BillCardSkeleton = () => (
@@ -50,7 +50,7 @@ const LatestBills = ({ onFileView, isLoading }) => {
     return (
         <section
             ref={billsRef}
-            className="container mx-auto lg:mt-0 2xs:mt-4"
+            className="container mx-auto lg:mt-0 2xs:mt-0"
         >
             <motion.div
                 initial="hidden"
@@ -61,9 +61,9 @@ const LatestBills = ({ onFileView, isLoading }) => {
                     variants={fadeInUp}
                     className="text-center"
                 >
-                    <h1 className="mb-6 flex items-center text-2xl font-bold text-blue-800 md:text-3xl">
+                    <h1 className="mb-6 xs:mb-2 xs-max:mb-2 2xs:mb-2 flex items-center text-2xl font-bold text-blue-800 md:text-3xl">
                         <span className="flex-1 border-b border-gray-300"></span>
-                        <span className="px-4">Transparency</span>
+                        <span className="px-4 xs:text-[17px] xs-max:text-[17px] 2xs:text-[17px]">Transparency</span>
                         <span className="flex-1 border-b border-gray-300"></span>
                     </h1>
                 </motion.div>
@@ -81,17 +81,17 @@ const LatestBills = ({ onFileView, isLoading }) => {
                                   animate={billsInView ? "visible" : "hidden"}
                               >
                                   {/* Title */}
-                                  <h3 className="mb-3 font-bold uppercase text-blue-700 lg:text-lg 2xs:text-[10px] xs:text-[10px] xs:leading-5">
+                                  <h3 className="mb-3 font-bold uppercase text-blue-700 lg:text-lg 2xs:text-[10px] xs:text-[10px] xs:leading-5 xs-max:text-[10px] xs-max:leading-5">
                                       {bill.title}
                                   </h3>
 
                                   {/* Summary */}
-                                  <p className="mb-4 text-sm leading-relaxed text-gray-600 xs:text-[9px] xs:leading-5">{bill.summary}</p>
+                                  <p className="mb-4 text-sm leading-relaxed text-gray-600 xs:text-[9px] xs:leading-5 xs-max:text-[9px] xs-max:leading-5">{bill.summary}</p>
 
                                   {/* Read more */}
                                   <button
                                       onClick={() => onFileView(bill._id, bill)}
-                                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline lg:text-sm 2xs:text-[10px] xs:text-[12px]"
+                                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline lg:text-sm 2xs:text-[10px] xs:text-[12px] xs-max:text-[12px]"
                                   >
                                       read more…
                                   </button>

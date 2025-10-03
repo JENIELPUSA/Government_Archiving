@@ -23,7 +23,7 @@ const normalizePosition = (str) => {
   return str.toLowerCase().replace(/[^a-z0-9]/g, ""); 
 };
 
-const SBmember = ({ Position,onBack }) => {
+const SBmember = ({ Position, onBack }) => {
   const {
     isGroupPublicAuthor,
     DisplayPublicAuthor,
@@ -317,7 +317,7 @@ const SBmember = ({ Position,onBack }) => {
       <div className="w-full">
         <BannerImage selection={"SP Members"} />
       </div>
-      <Breadcrumb position={"SP Members"} onBack={onBack}/>
+      <Breadcrumb position={"SP Members"} onBack={onBack} />
       <div className="mx-auto max-w-7xl rounded-xl bg-white p-6 shadow-sm md:p-8 mt-6 md:mt-8">
         <header ref={headerRef} className="mb-8">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -487,7 +487,7 @@ const SBmember = ({ Position,onBack }) => {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <SkeletonCard key={i} />
             ))}
@@ -516,7 +516,7 @@ const SBmember = ({ Position,onBack }) => {
           <>
             <div
               ref={memberGridRef}
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4"
+              className="grid grid-cols-2 gap-4 lg:grid-cols-4"
             >
               {isGroupPublicAuthor?.map((member, index) => (
                 <div

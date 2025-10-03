@@ -49,7 +49,7 @@ const Sidebar = () => {
                     {headerLogos.map((logo, i) => (
                         <div
                             key={i}
-                            className="xs:h-10 xs:w-10 h-20 w-20 rounded-full bg-white shadow-lg ring-2 ring-white"
+                            className="xs:h-10 xs:w-10 xs-max:h-10 xs-max:w-10 h-20 w-20 rounded-full bg-white shadow-lg ring-2 ring-white"
                         >
                             <img
                                 src={logo}
@@ -61,8 +61,8 @@ const Sidebar = () => {
                 </div>
 
                 {/* Title */}
-                <h2 className="mb-1 text-2xl font-bold xs:text-sm">Biliran Hotlines</h2>
-                <p className="text-sm text-blue-100 xs:text-[10px]">
+                <h2 className="mb-1 text-2xl font-bold xs:text-sm xs-max:text-sm">Biliran Hotlines</h2>
+                <p className="text-sm text-blue-100 xs:text-[10px] xs-max:text-[10px]">
                     Emergency and Essential Services
                 </p>
             </div>
@@ -70,10 +70,10 @@ const Sidebar = () => {
             {/* Hotline List */}
             <div className="p-4">
                 <div className="mb-4">
-                    <h3 className="mb-2 text-lg font-semibold text-gray-700 xs:text-sm">
+                    <h3 className="mb-2 text-lg font-semibold text-gray-700 xs:text-sm xs-max:text-sm">
                         Emergency Contacts
                     </h3>
-                    <p className="text-sm text-gray-500 xs:text-[10px]">
+                    <p className="text-sm text-gray-500 xs:text-[10px] xs-max:text-[10px]">
                         Tap to call available numbers directly
                     </p>
                 </div>
@@ -85,14 +85,14 @@ const Sidebar = () => {
                             onClick={() => handleCall(hotline.number)}
                             className="flex cursor-pointer items-center gap-4 rounded-lg border border-gray-100 bg-gray-50 p-4 transition-all duration-200 hover:bg-blue-50"
                         >
-                            <div className="flex h-12 w-12 xs:h-8 xs:w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl">
+                            <div className="flex h-12 w-12 xs:h-8 xs:w-8 xs-max:h-8 xs-max:w-8 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl">
                                 {hotline.icon}
                             </div>
                             <div className="flex-grow">
-                                <p className="xs:text-[12px] text-sm font-semibold text-gray-800">
+                                <p className="xs:text-[12px] xs-max:text-[12px]  text-sm font-semibold text-gray-800">
                                     {hotline.number}
                                 </p>
-                                <p className="xs:text-[10px] mt-1 text-xs text-gray-600">
+                                <p className="xs:text-[10px] xs-max:text-[10px] mt-1 text-xs text-gray-600">
                                     {hotline.name}
                                 </p>
                             </div>

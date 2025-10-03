@@ -70,6 +70,10 @@ router
   .route("/PublicSummaryTerm")
   .post(FilesController.PublicSummaryTerm);
 
+router
+  .route("/PublicSpecificFilterAuthor")
+  .post(FilesController.PublicSpecificFilterAuthor);
+
 
 
 module.exports = router;

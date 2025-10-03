@@ -113,7 +113,7 @@ export default function PDFview({ fileId, fileData }) {
 
                     {/* Footer under PDF */}
                     <div className="mt-6 text-center">
-                        <p className="text-sm text-gray-400">Document viewer • Use keyboard shortcuts or mouse controls for navigation</p>
+                        <p className="text-sm text-gray-400 xs-max:text-[12px] xs:text-[12px]">Document viewer • Use keyboard shortcuts or mouse controls for navigation</p>
                     </div>
                 </div>
             </div>
