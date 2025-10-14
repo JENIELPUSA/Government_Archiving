@@ -16,8 +16,18 @@ import LatestBills from "../LatestBill";
 import NewsContent from "../NewandInformation/NewsContent";
 import Recentpost from "../NewandInformation/Recentpost";
 import LocalServicesGovernment from "../localservices";
+import Baground2 from "../../../../src/assets/ros2221.jpg";
+import Baground3 from "../../../../src/assets/ros12.jpg";
+import Baground4 from "../../../../src/assets/ros2233.jpg";
+import Baground5 from "../../../../src/assets/ros41.jpg";
+import Baground7 from "../../../../src/assets/ros100.jpg";
+import Baground8 from "../../../../src/assets/ros777.jpg";
+import Baground9 from "../../../../src/assets/ros888.jpg";
+import Baground10 from "../../../../src/assets/ros555.jpg";
 
-// Scroll to Top button component
+import CardSwap, { Card } from "../CardSwap";
+
+// Scroll to Top button
 const ScrollToTop = () => {
     const { scrollYProgress } = useScroll();
     const scrollY = useSpring(scrollYProgress, {
@@ -75,8 +85,6 @@ const fadeInUp = {
         transition: {
             duration: 0.8,
             ease: [0.16, 1, 0.3, 1],
-            when: "beforeChildren",
-            staggerChildren: 0.1,
         },
     },
 };
@@ -88,17 +96,6 @@ const staggerContainer = {
         transition: {
             staggerChildren: 0.15,
             when: "beforeChildren",
-        },
-    },
-};
-
-const fadeIn = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            duration: 0.8,
-            ease: [0.16, 1, 0.3, 1],
         },
     },
 };
@@ -125,12 +122,6 @@ const Home = ({ aboutUsRef }) => {
     const [spCarouselIndex, setSPCarouselIndex] = useState(0);
     const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
     const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false);
-
-    const featuredRef = useRef(null);
-    const servicesRef = useRef(null);
-
-    const featuredInView = useInView(featuredRef, { once: true, margin: "-20% 0px" });
-    const servicesInView = useInView(servicesRef, { once: true, margin: "-10% 0px" });
 
     const handleViewFile = (fileId, fileData) => {
         setSelectedFile({ fileId, fileData });
@@ -188,36 +179,18 @@ const Home = ({ aboutUsRef }) => {
             />
         );
     }
+    const heroBackgrounds = [Baground2, Baground3, Baground4, Baground5];
+    const [heroIndex, setHeroIndex] = useState(0);
 
-    const governmentServices = [
-        {
-            icon: FileText,
-            title: "Documents",
-            desc: "Official forms and publications",
-            color: "from-blue-500 to-blue-600",
-        },
-        {
-            icon: Calendar,
-            title: "Events",
-            desc: "Government events and meetings",
-            color: "from-green-500 to-green-600",
-        },
-        {
-            icon: User,
-            title: "Officials",
-            desc: "Government representatives",
-            color: "from-purple-500 to-purple-600",
-        },
-        {
-            icon: Tag,
-            title: "Services",
-            desc: "Public services and programs",
-            color: "from-orange-500 to-orange-600",
-        },
-    ];
+    useEffect(() => {
+        const heroInterval = setInterval(() => {
+            setHeroIndex((prev) => (prev + 1) % heroBackgrounds.length);
+        }, 15000);
+        return () => clearInterval(heroInterval);
+    }, []);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 font-sans text-slate-800 antialiased">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-50 font-sans text-slate-800 antialiased">
             <AnimatePresence>
                 {loading && (
                     <motion.div
@@ -227,11 +200,7 @@ const Home = ({ aboutUsRef }) => {
                     >
                         <motion.div
                             initial={{ scale: 1 }}
-                            exit={{
-                                scale: 2,
-                                opacity: 0,
-                                transition: { duration: 1, ease: "easeOut" },
-                            }}
+                            exit={{ scale: 2, opacity: 0, transition: { duration: 1, ease: "easeOut" } }}
                         >
                             <motion.img
                                 src={logo}
@@ -248,21 +217,32 @@ const Home = ({ aboutUsRef }) => {
 
             <ScrollToTop />
 
-            {/* Hero Section - Uses dynamic viewport height */}
+            {/* Hero Section */}
             <motion.section
                 ref={heroRef}
                 className="relative flex h-dvh items-center justify-center overflow-hidden"
-                style={{
-                    backgroundImage: `linear-gradient(135deg, rgba(30, 64, 175, 0.85), rgba(55, 48, 163, 0.8)), url(${backgroundImage})`,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    backgroundAttachment: "fixed",
-                }}
             >
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={heroIndex}
+                        className="absolute inset-0"
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                        style={{
+                            backgroundImage: `linear-gradient(135deg, rgba(30, 64, 175, 0.85), rgba(55, 48, 163, 0.8)), url(${heroBackgrounds[heroIndex]})`,
+                            backgroundSize: "cover",
+                            backgroundPosition: "center",
+                        }}
+                    />
+                </AnimatePresence>
+
                 <motion.div
                     style={{ y, opacity }}
                     className="absolute inset-0"
                 />
+
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -277,10 +257,10 @@ const Home = ({ aboutUsRef }) => {
                         animate={loading ? { opacity: 0, scale: 2 } : { opacity: 1, scale: 1 }}
                         transition={{ duration: 1, delay: 0.5, ease: "easeOut" }}
                     />
-                    <h1 className="mb-3 text-xl font-bold drop-shadow-lg sm:text-4xl md:text-5xl xs:text-2xl xs-max:text-2xl xm:text-3xl">
+                    <h1 className="mb-3 text-xl font-bold drop-shadow-lg md:text-5xl xs:text-2xl xs-max:text-2xl xm:text-3xl">
                         Provincial Government
                     </h1>
-                    <p className="mx-auto max-w-2xl text-sm text-blue-100 drop-shadow-md sm:text-xl xs:text-base xs-max:text-base xm:text-lg">
+                    <p className="mx-auto max-w-2xl text-sm text-blue-100 drop-shadow-md xs:text-base xs-max:text-base xm:text-lg">
                         Serving the community with integrity and dedication
                     </p>
                 </motion.div>
@@ -288,134 +268,178 @@ const Home = ({ aboutUsRef }) => {
 
             {/* Quote Section */}
             <motion.div
-                className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 text-white"
+                className="relative bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 px-[40px] text-white sm:px-[20px] md:px-[120px] xs:px-[20px]"
                 initial="hidden"
                 whileInView="visible"
-                viewport={{ once: true, amount: 0.1 }}
-                variants={fadeIn}
+                viewport={{ once: true, margin: "-100px" }}
+                variants={fadeInUp}
             >
-                <div className="px-4 py-8 text-center sm:px-8 sm:py-16 xs:px-5 xs:py-9 xs-max:px-5 xs-max:py-10 xm:px-6 xm:py-12">
+                <div class="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 sm:min-h-[500px] sm:flex-row sm:justify-between sm:py-20 lg:min-h-[600px] lg:py-16 xs:min-h-[250px]">
                     <motion.div
-                        className="mx-auto max-w-6xl"
+                        className="flex-1 text-center sm:text-left"
                         variants={fadeInUp}
                     >
-                        <h2 className="mb-4 font-serif text-base italic leading-relaxed xs:text-lg xs-max:text-lg xm:text-xl lg-custom:text-4xl">
-                            "Together as one province, we commit to serve with integrity and unity, building a future where every community thrives in
-                            progress and peace."
-                        </h2>
+                        <h1 className="custom-3xs:mt-[200px] mt-10 font-serif italic leading-snug sm:leading-relaxed md:leading-relaxed lg:mt-0">
+                            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xs:text-lg">
+                                "Together as one province, we commit to serve with integrity and unity, building a future where every community
+                                thrives in progress and peace."
+                            </span>
+                        </h1>
                     </motion.div>
+
+                    <motion.div
+                        className="hidden flex-1 justify-center sm:flex sm:justify-start"
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                    >
+                        <CardSwap
+                            cardDistance={60}
+                            verticalDistance={70}
+                            delay={5000}
+                            pauseOnHover={false}
+                        >
+                            <Card style={{ backgroundImage: `url(${Baground7})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                            <Card style={{ backgroundImage: `url(${Baground8})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                            <Card style={{ backgroundImage: `url(${Baground9})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                            <Card style={{ backgroundImage: `url(${Baground10})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                        </CardSwap>
+                    </motion.div>
+                    {/* Wave Divider */}
+                    <div className="absolute bottom-0 left-0 right-0">
+                        <svg
+                            viewBox="0 0 1440 120"
+                            className="h-auto w-full"
+                        >
+                            <path
+                                fill="#f8fafc"
+                                d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
+                            ></path>
+                        </svg>
+                    </div>
                 </div>
             </motion.div>
 
             {/* Announcements and Hotlines */}
             <section
-                ref={featuredRef}
-                className="container mx-auto mt-4 px-3 sm:px-6 xs:px-2 xs-max:px-2"
                 id="news"
+                className="container mx-auto mt-4 px-2 sm:px-4 md:px-6 lg:px-[150px]"
             >
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.1 }}
-                    variants={staggerContainer}
-                    className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-3 lg:px-16 2xs:px-2 xs:gap-0 xs-max:gap-5 xm:gap-5"
-                >
-                    <motion.div
-                        variants={fadeInUp}
-                        className="order-1 md:col-span-2 xs:order-1 xs-max:order-1"
-                    >
-                        <LatestBills
-                            onFileView={handleViewFile}
-                            loading={loading}
-                        />
-                        <NewsandLatest
-                            ref={newsAndLatestRef}
-                            onNewsView={handleViewNews}
-                            loading={loading}
-                        />
-                    </motion.div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-3">
+                    {/* Left Column: Bills & News */}
+                    <div className="order-1 md:col-span-2">
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                        >
+                            <LatestBills
+                                onFileView={handleViewFile}
+                                loading={loading}
+                            />
+                        </motion.div>
 
-                    <motion.div
-                        variants={fadeInUp}
-                        className="xs:mb-4 2xs:mb-4 xs-max:mb-4 order-2 flex flex-col space-y-4 md:order-none md:col-span-1 2xs:space-y-2 xs:order-2 xs:space-y-2 xs-max:order-2 xs-max:space-y-2"
-                    >
-                        <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+                        <motion.div
+                            ref={newsAndLatestRef}
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                        >
+                            <NewsandLatest
+                                onNewsView={handleViewNews}
+                                loading={loading}
+                            />
+                        </motion.div>
+                    </div>
+
+                    {/* Right Column: Cards */}
+                    <div className="order-2 flex flex-col space-y-4 sm:space-y-3 md:order-none md:col-span-1">
+                        {/* Bagong Pilipinas Card */}
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
+                        >
                             <img
                                 src={BagongPilipinas}
                                 alt="Bagong Pilipinas"
-                                className="h-20 object-contain sm:h-36 xs:h-24 xs-max:h-28 xm:h-32"
+                                className="h-20 object-contain sm:h-24 md:h-32 lg:h-36"
                             />
-                        </div>
-                        <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+                        </motion.div>
+
+                        {/* Transparency Card */}
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
+                        >
                             <img
                                 src={Transparency}
                                 alt="Transparency"
-                                className="h-20 object-contain sm:h-36 xs:h-24 xs-max:h-28 xm:h-32"
+                                className="h-20 object-contain sm:h-24 md:h-32 lg:h-36"
                             />
-                        </div>
-                        <div className="flex items-center justify-center rounded-xl bg-white p-3 shadow-md xs:p-3 xs-max:p-4 xm:p-4">
+                        </motion.div>
+
+                        {/* Hotline Card */}
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
+                        >
                             <Hotline />
-                        </div>
-                        <div className="flex items-center justify-center rounded-xl bg-white p-3 sm:p-3 md:p-4">
+                        </motion.div>
+
+                        {/* Recent Post Card */}
+                        <motion.div
+                            initial="hidden"
+                            whileInView="visible"
+                            viewport={{ once: true, margin: "-100px" }}
+                            variants={fadeInUp}
+                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
+                        >
                             <Recentpost />
-                        </div>
-                    </motion.div>
-                </motion.div>
-            </section>
-
-            {/* About Us */}
-            <section
-                ref={aboutUsRef}
-                id="about-us"
-            >
-                <AboutUsPage />
-            </section>
-
-            {/* Government Services */}
-            <section
-                ref={servicesRef}
-                className="bg-blue-100 py-8 lg:px-16 2xs:px-2 xs:py-9 xs-max:py-10 xm:py-12"
-                id="services"
-            >
-                <div className="container mx-auto px-3 xs:px-4 xs-max:px-4 xm:px-5">
-                    <motion.div
-                        initial="hidden"
-                        animate={servicesInView ? "visible" : "hidden"}
-                        variants={fadeInUp}
-                        className="mb-6 text-center xs:mb-7 xs-max:mb-8 xm:mb-10"
-                    >
-                        <h2 className="text-lg font-bold text-slate-900 sm:text-3xl xs:text-xl xs-max:text-xl xm:text-2xl">Government Services</h2>
-                        <p className="mt-2 text-sm text-slate-600 xs:mt-2 xs-max:mt-3 xm:mt-3 xm:text-base">Access our services and resources</p>
-                    </motion.div>
-                    <div className="grid grid-cols-1 gap-3 sm:gap-5 lg:grid-cols-4 xs:gap-3 xs-max:gap-4 xm:grid-cols-4 xm:gap-4">
-                        {governmentServices.map((service, index) => (
-                            <motion.div
-                                key={index}
-                                variants={fadeInUp}
-                                initial="hidden"
-                                animate={servicesInView ? "visible" : "hidden"}
-                                whileHover={{ y: -8 }}
-                                className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-gray-50 p-4 text-center shadow-md transition-all duration-300 hover:border-blue-200 hover:shadow-lg xs:p-4 xs-max:p-4 xm:p-5"
-                            >
-                                <div
-                                    className={`mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r ${service.color} text-white shadow-lg xs:mb-3 xs:h-10 xs:w-10 xs-max:mb-4 xs-max:h-12 xs-max:w-12 xm:mb-4 xm:h-12 xm:w-12`}
-                                >
-                                    <service.icon className="h-5 w-5 xs:h-5 xs:w-5 xs-max:h-6 xs-max:w-6 xm:h-6 xm:w-6" />
-                                </div>
-                                <h3 className="mb-1 text-base font-semibold text-slate-900 xs:text-base xs-max:text-lg xm:text-lg">
-                                    {service.title}
-                                </h3>
-                                <p className="text-xs text-slate-600 xs:text-xs xs-max:text-sm xm:text-sm">{service.desc}</p>
-                            </motion.div>
-                        ))}
+                        </motion.div>
                     </div>
                 </div>
             </section>
 
-            <LocalServicesGovernment />
+            {/* About Us */}
+            <motion.section
+                ref={aboutUsRef}
+                id="about-us"
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+                variants={fadeInUp}
+            >
+                <AboutUsPage />
+            </motion.section>
+
+            {/* Local Services */}
+            <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: "-100px" }}
+                variants={fadeInUp}
+            >
+                <LocalServicesGovernment />
+            </motion.div>
         </div>
     );
 };
 
-const HomeWithRef = React.forwardRef(Home);
+const HomeWithRef = React.forwardRef((props, ref) => (
+    <Home
+        {...props}
+        aboutUsRef={ref}
+    />
+));
 export default HomeWithRef;

@@ -63,7 +63,11 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
     if (updateData.category && typeof updateData.category === "object") {
       updateData.category = updateData.category._id;
     }
-    if (!updateData.category || typeof updateData.category === "string" && updateData.category.trim() === "") {
+    if (
+      !updateData.category ||
+      (typeof updateData.category === "string" &&
+        updateData.category.trim() === "")
+    ) {
       delete updateData.category;
     }
     if (updateData.author === null) {
@@ -145,7 +149,6 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
     res.status(500).json({ status: "error", message: err.message });
   }
 });
-
 
 exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -568,15 +571,15 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
-  // Convert page & limit to numbers
   const page = parseInt(req.query.page) || 1;
-  const limitNumber = parseInt(req.query.limit) || 5; // default 5 per page
+  const limitNumber = parseInt(req.query.limit) || 5;
   const skip = (page - 1) * limitNumber;
 
   const { title, tags, status, category, dateFrom, dateTo } = req.query;
 
-  // Build match stage
-  const matchStage = { ArchivedStatus: "Active" };
+  const matchStage = {
+    ArchivedStatus: { $nin: ["For Restore", "Deleted"] },
+  };
 
   if (title) {
     matchStage.title = { $regex: title, $options: "i" };
@@ -605,9 +608,9 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  // Get all active tags
+  // Get all active tags excluding "For Restore" and "Deleted"
   const activeTagDocs = await Files.aggregate([
-    { $match: { ArchivedStatus: "Active" } },
+    { $match: { ArchivedStatus: { $nin: ["For Restore", "Deleted"] } } },
     { $project: { tags: 1 } },
   ]);
 
@@ -725,7 +728,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   const totalCount = result[0].totalCount[0]?.count || 0;
   const totalPages = Math.ceil(totalCount / limitNumber);
 
-  // Today documents
+  // Today documents count (exclude For Restore & Deleted)
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date();
@@ -733,7 +736,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
   const totalDocumentsToday = await Files.countDocuments({
     createdAt: { $gte: startOfDay, $lte: endOfDay },
-    ArchivedStatus: { $ne: "For Restore" },
+    ArchivedStatus: { $nin: ["For Restore", "Deleted"] },
   });
 
   // Latest approved bills of the week
@@ -747,7 +750,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   endOfWeek.setHours(23, 59, 59, 999);
 
   const latestBill = await Files.find({
-    ArchivedStatus: "Active",
+    ArchivedStatus: { $nin: ["For Restore", "Deleted"] },
     status: "Approved",
     dateOfResolution: { $gte: startOfWeek, $lte: endOfWeek },
   })
@@ -2109,6 +2112,7 @@ exports.PublicDisplayController = AsyncErrorHandler(async (req, res, next) => {
 exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
   const defaultLimit = parseInt(req.query.limit) || 9;
   let pagePerCategory = {};
+
   try {
     pagePerCategory = req.query.page ? JSON.parse(req.query.page) : {};
   } catch (err) {
@@ -2128,8 +2132,19 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
   } = req.query;
 
   const matchStage = {};
-  if (ArchivedStatus) matchStage.ArchivedStatus = ArchivedStatus;
-  if (status) matchStage.status = status;
+
+  // Kapag Approved, kunin lahat ng Active at Archived
+  if (status === "Approved") {
+    matchStage.status = "Approved";
+    matchStage.$or = [
+      { ArchivedStatus: "Active" },
+      { ArchivedStatus: "Archived" },
+    ];
+  } else {
+    if (ArchivedStatus) matchStage.ArchivedStatus = ArchivedStatus;
+    if (status) matchStage.status = status;
+  }
+
   if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
 
   if (title) {
@@ -2156,9 +2171,11 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     }
   }
 
-  // --- Kunin lahat ng files at unwind lookups ---
+  // --- Main aggregation ---
   let files = await Files.aggregate([
     { $match: matchStage },
+
+    // --- LOOKUPS ---
     {
       $lookup: {
         from: "admins",
@@ -2199,11 +2216,21 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
         as: "archiverInfo",
       },
     },
+
+    // --- UNWIND ---
     { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$adminInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
     { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
+
+    // Filter: Only Resolution & Ordinance
+    {
+      $match: {
+        "categoryInfo.category": { $in: ["Resolution", "Ordinance"] },
+      },
+    },
+
     { $sort: { createdAt: -1 } },
   ]).allowDiskUse(true);
 
@@ -2229,7 +2256,7 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
     filesByCategory[catId].push(file);
   });
 
-  // --- Kunin ActiveTags per category ---
+  // --- Active tags per category ---
   const activeTagsPerCategory = {};
   for (const [catId, catFiles] of Object.entries(filesByCategory)) {
     activeTagsPerCategory[catId] = Array.from(
@@ -2276,10 +2303,11 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
         officer_first_name: f.officerInfo?.first_name,
         officer_last_name: f.officerInfo?.last_name,
       })),
-      activeTags: activeTagsPerCategory[catId], // <-- lahat ng tags per category
+      activeTags: activeTagsPerCategory[catId],
     };
   });
 
+  // --- Counts per type ---
   const totalCounts = await Files.aggregate([
     {
       $facet: {
@@ -2292,11 +2320,39 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
           { $count: "count" },
         ],
         archived: [
-          { $match: { ArchivedStatus: "Archived" } },
+          {
+            $lookup: {
+              from: "categories",
+              localField: "category",
+              foreignField: "_id",
+              as: "categoryInfo",
+            },
+          },
+          {
+            $unwind: {
+              path: "$categoryInfo",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $match: {
+              ArchivedStatus: "Archived",
+              "categoryInfo.category": { $nin: ["Resolution", "Ordinance"] },
+            },
+          },
           { $count: "count" },
         ],
+
         public: [
-          { $match: { ArchivedStatus: "Active", status: "Approved" } },
+          {
+            $match: {
+              status: "Approved",
+              $or: [
+                { ArchivedStatus: "Archived" },
+                { ArchivedStatus: "Active" },
+              ],
+            },
+          },
           { $count: "count" },
         ],
       },
@@ -2333,7 +2389,13 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 
   const { year, title, tags, category, oldFile, sort } = req.query;
 
-  const hasQuery = !!(year || title || tags || category || oldFile !== undefined);
+  const hasQuery = !!(
+    year ||
+    title ||
+    tags ||
+    category ||
+    oldFile !== undefined
+  );
   if (!hasQuery) {
     // Return empty response — no files until user searches/filters
     return res.status(200).json([]);
@@ -2789,12 +2851,12 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
   if (!req.query || (!first_name && !middle_name && !last_name)) {
     return res.status(200).json({
       status: "success",
-      data: [], 
+      data: [],
     });
   }
 
   const authors = await SBmember.aggregate([
-    // --- Filter by name --- 
+    // --- Filter by name ---
     {
       $match: { first_name, middle_name, last_name },
     },
@@ -2804,7 +2866,12 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
         from: "files",
         let: { authorId: "$_id" },
         pipeline: [
-          { $match: { $expr: { $eq: ["$author", "$$authorId"] }, status: "Approved" } },
+          {
+            $match: {
+              $expr: { $eq: ["$author", "$$authorId"] },
+              status: "Approved",
+            },
+          },
           {
             $lookup: {
               from: "categories",
@@ -2813,7 +2880,12 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
               as: "categoryInfo",
             },
           },
-          { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+          {
+            $unwind: {
+              path: "$categoryInfo",
+              preserveNullAndEmptyArrays: true,
+            },
+          },
           // --- Filter only Ordinance or Resolution ---
           {
             $match: {
@@ -2834,15 +2906,25 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
             from: { $year: "$term_from" },
             to: { $year: "$term_to" },
             titles: { $map: { input: "$files", as: "f", in: "$$f.title" } },
-            summaries: { $map: { input: "$files", as: "f", in: "$$f.summary" } },
+            summaries: {
+              $map: { input: "$files", as: "f", in: "$$f.summary" },
+            },
             ordinanceCount: {
               $size: {
-                $filter: { input: "$files", as: "f", cond: { $eq: ["$$f.categoryInfo.category", "Ordinance"] } },
+                $filter: {
+                  input: "$files",
+                  as: "f",
+                  cond: { $eq: ["$$f.categoryInfo.category", "Ordinance"] },
+                },
               },
             },
             resolutionCount: {
               $size: {
-                $filter: { input: "$files", as: "f", cond: { $eq: ["$$f.categoryInfo.category", "Resolution"] } },
+                $filter: {
+                  input: "$files",
+                  as: "f",
+                  cond: { $eq: ["$$f.categoryInfo.category", "Resolution"] },
+                },
               },
             },
           },
@@ -2852,8 +2934,16 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
     // --- Group by fullname ---
     {
       $group: {
-        _id: { first_name: "$first_name", middle_name: "$middle_name", last_name: "$last_name" },
-        fullname: { $first: { $concat: ["$first_name", " ", "$middle_name", " ", "$last_name"] } },
+        _id: {
+          first_name: "$first_name",
+          middle_name: "$middle_name",
+          last_name: "$last_name",
+        },
+        fullname: {
+          $first: {
+            $concat: ["$first_name", " ", "$middle_name", " ", "$last_name"],
+          },
+        },
         terms: { $push: "$termInfo" },
       },
     },
@@ -2861,7 +2951,13 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
     {
       $project: {
         fullname: 1,
-        terms: { $reduce: { input: "$terms", initialValue: [], in: { $concatArrays: ["$$value", "$$this"] } } },
+        terms: {
+          $reduce: {
+            input: "$terms",
+            initialValue: [],
+            in: { $concatArrays: ["$$value", "$$this"] },
+          },
+        },
       },
     },
     { $sort: { fullname: 1 } },
@@ -2873,168 +2969,172 @@ exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
   });
 });
 
-exports.PublicSpecificFilterAuthor = AsyncErrorHandler(async (req, res, next) => {
-  const { search, detailInfo, Position, page, limit } = req.query;
+exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
+  async (req, res, next) => {
+    const { search, detailInfo, Position, page, limit } = req.query;
 
-  // --- Kung wala search at Position, wag muna mag display ---
-  if (!search && !Position) {
-    return res.status(200).json({
-      status: "success",
-      currentPage: 1,
-      totalPages: 0,
-      data: [],
-    });
-  }
+    // --- Kung wala search at Position, wag muna mag display ---
+    if (!search && !Position) {
+      return res.status(200).json({
+        status: "success",
+        currentPage: 1,
+        totalPages: 0,
+        data: [],
+      });
+    }
 
-  // --- Default values para sa pagination ---
-  const pageNumber = parseInt(page) || 1;
-  const limitNumber = parseInt(limit) || 20;
-  const skipNumber = (pageNumber - 1) * limitNumber;
+    // --- Default values para sa pagination ---
+    const pageNumber = parseInt(page) || 1;
+    const limitNumber = parseInt(limit) || 20;
+    const skipNumber = (pageNumber - 1) * limitNumber;
 
-  const aggregationPipeline = [];
-  const matchStage = {};
+    const aggregationPipeline = [];
+    const matchStage = {};
 
-  // --- Filters ---
-  if (detailInfo) matchStage.detailInfo = detailInfo;
-  if (Position) matchStage.Position = Position;
+    // --- Filters ---
+    if (detailInfo) matchStage.detailInfo = detailInfo;
+    if (Position) matchStage.Position = Position;
 
-  if (Object.keys(matchStage).length > 0) {
-    aggregationPipeline.push({ $match: matchStage });
-  }
+    if (Object.keys(matchStage).length > 0) {
+      aggregationPipeline.push({ $match: matchStage });
+    }
 
-  // --- Lookup files ---
-  aggregationPipeline.push(
-    {
-      $lookup: {
-        from: "files",
-        let: { authorId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$author", "$$authorId"] },
-                  { $eq: ["$status", "Approved"] },
-                  { $or: [
-                    { $eq: ["$ArchivedStatus", "Archived"] },
-                    { $eq: ["$ArchivedStatus", "Active"] }
-                  ]},
-                ],
+    // --- Lookup files ---
+    aggregationPipeline.push(
+      {
+        $lookup: {
+          from: "files",
+          let: { authorId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$author", "$$authorId"] },
+                    { $eq: ["$status", "Approved"] },
+                    {
+                      $or: [
+                        { $eq: ["$ArchivedStatus", "Archived"] },
+                        { $eq: ["$ArchivedStatus", "Active"] },
+                      ],
+                    },
+                  ],
+                },
               },
             },
-          },
-        ],
-        as: "files",
+          ],
+          as: "files",
+        },
       },
-    },
-    { $unwind: { path: "$files", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "files.category",
-        foreignField: "_id",
-        as: "categoryInfo",
+      { $unwind: { path: "$files", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "files.category",
+          foreignField: "_id",
+          as: "categoryInfo",
+        },
       },
-    },
-    { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        fullName: { $concat: ["$first_name", " ", { $ifNull: ["$middle_name", ""] }, " ", "$last_name"] },
-        "files.categoryName": "$categoryInfo.category",
-      },
-    }
-  );
-
-  // --- Search filter ---
-  if (search) {
-    aggregationPipeline.push({
-      $match: {
-        $or: [
-          { first_name: { $regex: search, $options: "i" } },
-          { middle_name: { $regex: search, $options: "i" } },
-          { last_name: { $regex: search, $options: "i" } },
-          { fullName: { $regex: search, $options: "i" } },
-          { "files.title": { $regex: search, $options: "i" } },
-        ],
-      },
-    });
-  }
-
-  // --- Grouping ---
-  aggregationPipeline.push(
-    {
-      $group: {
-        _id: "$_id",
-        fullName: { $first: "$fullName" },
-        detailInfo: { $first: "$detailInfo" },
-        Position: { $first: "$Position" },
-        memberInfo: { $first: "$$ROOT" },
-        files: {
-          $push: {
-            $cond: [
-              { $ne: ["$files._id", null] },
-              {
-                _id: "$files._id",
-                title: "$files.title",
-                summary: "$files.summary",
-                category: "$categoryInfo.category",
-                createdAt: "$files.createdAt",
-                status: "$files.status",
-                filePath: "$files.filePath",
-                resolutionNo: "$files.ResolutionNo",
-                dateOfResolution: "$files.dateOfResolution",
-                resolutionNumber: "$files.resolutionNumber",
-              },
-              "$$REMOVE",
+      { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          fullName: {
+            $concat: [
+              "$first_name",
+              " ",
+              { $ifNull: ["$middle_name", ""] },
+              " ",
+              "$last_name",
             ],
           },
+          "files.categoryName": "$categoryInfo.category",
         },
-        count: { $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] } },
-        resolutionCount: { $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0] } },
-        ordinanceCount: { $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0] } },
+      }
+    );
+
+    // --- Search filter ---
+    if (search) {
+      aggregationPipeline.push({
+        $match: {
+          $or: [
+            { first_name: { $regex: search, $options: "i" } },
+            { middle_name: { $regex: search, $options: "i" } },
+            { last_name: { $regex: search, $options: "i" } },
+            { fullName: { $regex: search, $options: "i" } },
+            { "files.title": { $regex: search, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    // --- Grouping ---
+    aggregationPipeline.push(
+      {
+        $group: {
+          _id: "$_id",
+          fullName: { $first: "$fullName" },
+          detailInfo: { $first: "$detailInfo" },
+          Position: { $first: "$Position" },
+          memberInfo: { $first: "$$ROOT" },
+          files: {
+            $push: {
+              $cond: [
+                { $ne: ["$files._id", null] },
+                {
+                  _id: "$files._id",
+                  title: "$files.title",
+                  summary: "$files.summary",
+                  category: "$categoryInfo.category",
+                  createdAt: "$files.createdAt",
+                  status: "$files.status",
+                  filePath: "$files.filePath",
+                  resolutionNo: "$files.ResolutionNo",
+                  dateOfResolution: "$files.dateOfResolution",
+                  resolutionNumber: "$files.resolutionNumber",
+                },
+                "$$REMOVE",
+              ],
+            },
+          },
+          count: {
+            $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] },
+          },
+          resolutionCount: {
+            $sum: {
+              $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+            },
+          },
+          ordinanceCount: {
+            $sum: {
+              $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+            },
+          },
+        },
       },
-    },
-    { $sort: { fullName: 1 } }
-  );
+      { $sort: { fullName: 1 } }
+    );
 
-  // --- Facet for pagination ---
-  aggregationPipeline.push({
-    $facet: {
-      metadata: [{ $count: "total" }],
-      data: [
-        { $skip: skipNumber },
-        { $limit: limitNumber },
-      ],
-    },
-  });
+    // --- Facet for pagination ---
+    aggregationPipeline.push({
+      $facet: {
+        metadata: [{ $count: "total" }],
+        data: [{ $skip: skipNumber }, { $limit: limitNumber }],
+      },
+    });
 
-  // --- Execute aggregation ---
-  const result = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+    // --- Execute aggregation ---
+    const result = await SBmember.aggregate(aggregationPipeline).allowDiskUse(
+      true
+    );
 
-  const totalCount = result[0].metadata[0]?.total || 0;
-  const totalPages = Math.ceil(totalCount / limitNumber);
+    const totalCount = result[0].metadata[0]?.total || 0;
+    const totalPages = Math.ceil(totalCount / limitNumber);
 
-  res.status(200).json({
-    status: "success",
-    currentPage: pageNumber,
-    totalPages,
-    data: result[0].data,
-  });
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    res.status(200).json({
+      status: "success",
+      currentPage: pageNumber,
+      totalPages,
+      data: result[0].data,
+    });
+  }
+);

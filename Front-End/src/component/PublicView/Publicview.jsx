@@ -365,29 +365,17 @@ const PublicView = () => {
                 animate="in"
                 variants={pageVariants}
                 transition={pageTransition}
-                className="flex-1 w-full"
+                className="w-full flex-1"
             >
                 {renderMainContent()}
             </motion.div>
 
             {/* Footer */}
-            <motion.footer
-                initial={{ y: 50, opacity: 0 }}
-                whileInView={{ y: 0, opacity: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="bg-blue-800 py-8 text-white"
-            >
+            <footer className="bg-blue-800 py-8 text-white">
                 <div className="container mx-auto px-6 2xs:px-2 xs:px-4 xm:px-6">
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
                         {/* Republic of the Philippines Info */}
-                        <motion.div
-                            initial={{ x: -50, opacity: 0 }}
-                            whileInView={{ x: 0, opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: 0.1 }}
-                            className="flex flex-col items-center text-center"
-                        >
+                        <div className="flex flex-col items-center text-center">
                             <div className="mb-2 flex items-center justify-center space-x-4">
                                 <img
                                     src={philippinelogo}
@@ -398,13 +386,7 @@ const PublicView = () => {
                             <h3 className="mb-2 text-xl font-bold 2xs:text-lg xs:text-[15px] xs:leading-4 xm:text-xl">Republic Of The Philippines</h3>
                             <p className="text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Biliran Province</p>
                             <p className="mt-2 text-sm 2xs:text-xs xs:text-[12px] xs:leading-4 xm:text-sm">Tel: (632) 8931-5001</p>
-                            <motion.div
-                                initial={{ scale: 0 }}
-                                whileInView={{ scale: 1 }}
-                                viewport={{ once: true }}
-                                transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
-                                className="mt-4 flex space-x-6"
-                            >
+                            <div className="mt-4 flex space-x-6">
                                 <a
                                     href="https://web.facebook.com/provincialgovernmentofbiliran"
                                     target="_blank"
@@ -419,17 +401,11 @@ const PublicView = () => {
                                 >
                                     <FaEnvelope className="text-[20px] text-white xs:text-[15px] xs-max:text-[18px] xm:text-[24px]" />
                                 </a>
-                            </motion.div>
-                        </motion.div>
+                            </div>
+                        </div>
 
                         {/* Quick Links */}
-                        <motion.div
-                            initial={{ x: 50, opacity: 0 }}
-                            whileInView={{ x: 0, opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
-                        >
+                        <div className="2xs:hidden xs:hidden xs-max:hidden xm:block">
                             <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Quick Links</h4>
                             <ul className="space-y-2">
                                 <li>
@@ -468,21 +444,15 @@ const PublicView = () => {
                                     </button>
                                 </li>
                             </ul>
-                        </motion.div>
+                        </div>
 
                         {/* Government Link */}
-                        <motion.div
-                            initial={{ x: 50, opacity: 0 }}
-                            whileInView={{ x: 0, opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: 0.3 }}
-                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
-                        >
+                        <div className="2xs:hidden xs:hidden xs-max:hidden xm:block">
                             <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Government Link</h4>
                             <ul className="space-y-2">
                                 <li>
                                     <a
-                                        href="https://web.facebook.com/provincialgovernmentofbiliran"
+                                        href="#"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="block transition-colors hover:text-yellow-300"
@@ -520,7 +490,6 @@ const PublicView = () => {
                                         House of the Philippines
                                     </a>
                                 </li>
-
                                 <li>
                                     <a
                                         href="https://sb.judiciary.gov.ph"
@@ -531,7 +500,6 @@ const PublicView = () => {
                                         Sandiganbayan
                                     </a>
                                 </li>
-
                                 <li>
                                     <a
                                         href="https://sc.judiciary.gov.ph"
@@ -553,26 +521,20 @@ const PublicView = () => {
                                     </a>
                                 </li>
                             </ul>
-                        </motion.div>
+                        </div>
 
-                        {/* Optional: Fourth column (e.g., Contact Info or empty) */}
-                        <motion.div
-                            initial={{ x: 50, opacity: 0 }}
-                            whileInView={{ x: 0, opacity: 1 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.5, delay: 0.4 }}
-                            className="2xs:hidden xs:hidden xs-max:hidden xm:block"
-                        >
+                        {/* Contact Us */}
+                        <div className="2xs:hidden xs:hidden xs-max:hidden xm:block">
                             <h4 className="mb-4 font-bold 2xs:text-sm xs:text-base xm:text-base">Contact Us</h4>
                             <p className="text-sm 2xs:text-xs xs:text-[12px] xm:text-sm">
                                 Capitol Compound, National Highway,
                                 <br />
                                 Brgy. Calumpang, Naval, Biliran
                             </p>
-                        </motion.div>
+                        </div>
                     </div>
                 </div>
-            </motion.footer>
+            </footer>
         </motion.div>
     );
 };

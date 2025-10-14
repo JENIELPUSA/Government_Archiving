@@ -164,7 +164,10 @@ const ArchiveLayout = () => {
         "Pending Deletion": { ArchivedStatus: "Deleted" },
         "Restoration Queue": { ArchivedStatus: "For Restore" },
         "Archived Files": { ArchivedStatus: "Archived" },
-        "Public Documents": { ArchivedStatus: "Active", status: "Approved" },
+        "Public Documents": {
+            status: "Approved",
+            $or: [{ ArchivedStatus: "Archived" }, { ArchivedStatus: "Active" }],
+        },
     };
 
     // Debounce search query to prevent excessive API calls
@@ -219,18 +222,21 @@ const ArchiveLayout = () => {
                 const year = doc.createdAt ? new Date(doc.createdAt).getFullYear().toString() : "Unknown";
                 const categoryName = doc.category || "Uncategorized";
 
-                let targetFolder = "Archived Files"; // default
+                let targetFolder = "Archived Files";
 
                 if (doc.ArchivedStatus === "Deleted") {
                     targetFolder = "Pending Deletion";
                 } else if (doc.ArchivedStatus === "For Restore") {
                     targetFolder = "Restoration Queue";
-                } else if (doc.ArchivedStatus === "Archived") {
-                    targetFolder = "Archived Files";
-                } else if (doc.status === "Approved") {
+                } else if (
+                    doc.status === "Approved" &&
+                    (doc.category === "Resolution" || doc.category === "Ordinance") &&
+                    (doc.ArchivedStatus === "Archived" || doc.ArchivedStatus === "Active")
+                ) {
                     targetFolder = "Public Documents";
+                } else if (doc.ArchivedStatus === "Archived" && doc.category !== "Resolution" && doc.category !== "Ordinance") {
+                    targetFolder = "Archived Files";
                 }
-
                 if (!organized[targetFolder].years[year]) {
                     organized[targetFolder].years[year] = { count: 0, categories: {} };
                 }

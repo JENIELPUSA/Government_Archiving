@@ -213,7 +213,7 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
             <BannerImage selection={documentType} />
             <Breadcrumb position={documentType} onBack={onBack}/>
 
-            <motion.div className="container mx-auto mt-8 xs:mt-2 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
+            <motion.div className="mb-6 xs:mb-2 xs-max:mb-2 container mx-auto mt-8 xs:mt-2 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
                 <motion.h1 className="mb-6 text-3xl font-bold text-blue-800 xs:text-lg">DOCUMENTS</motion.h1>
 
                 {/* Filters */}

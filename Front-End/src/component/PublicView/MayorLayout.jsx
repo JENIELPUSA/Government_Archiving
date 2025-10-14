@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
-import { Facebook, Globe, Clock, Mail, ArrowLeft } from "lucide-react";
+import {Clock, Mail, User } from "lucide-react";
 import { SbMemberDisplayContext } from "../../contexts/SbContext/SbContext";
 import Breadcrumb from "./Breadcrumb";
 import BannerImage from "./BannerImage";
@@ -22,37 +22,43 @@ const formatDate = (date) => {
 };
 
 const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
-  useEffect(() => {
-    console.log("OfficialProfileLayout mounted", { fullName, Position });
-    return () => {
-      console.log("OfficialProfileLayout unmounted", { fullName, Position });
-    };
-  }, [fullName, Position]);
-
   const {
     DisplaySpecificPublicAuthor,
     loading: contextLoading,
     isGroupSpecificAuthor,
     DisplaySummaryTerm,
     isSummaryTerm,
+    isGroupPublicAuthor,
   } = useContext(SbMemberDisplayContext);
+
   const [official, setOfficial] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // 🔹 Enhanced Avatar shuffle states
+  const [currentImage, setCurrentImage] = useState("/placeholder-avatar.png");
+  const [shuffling, setShuffling] = useState(true);
+  const [showShuffleBadge, setShowShuffleBadge] = useState(false);
+  const [imageKey, setImageKey] = useState(0); // For forcing re-render with animations
+
   const isLoading = contextLoading || localLoading;
   const lastProfileKey = useRef(null);
   const hasFetched = useRef(false);
 
+  // 🔹 Fetch official
   useEffect(() => {
-    const profileKey = `${fullName || ''}-${Position || ''}`;
+    const profileKey = `${fullName || ""}-${Position || ""}`;
 
     if (profileKey !== lastProfileKey.current) {
       setOfficial(null);
       setLocalLoading(true);
       hasFetched.current = false;
       lastProfileKey.current = profileKey;
+      // Reset avatar state when switching profiles
+      setCurrentImage("/placeholder-avatar.png");
+      setShuffling(true);
+      setShowShuffleBadge(false);
     }
 
     if (hasFetched.current) return;
@@ -73,6 +79,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
 
   const lastFetchedProfile = useRef({ first: "", middle: "", last: "" });
 
+  // 🔹 Update official when loaded
   useEffect(() => {
     if (isGroupSpecificAuthor?.length > 0) {
       const officialData = isGroupSpecificAuthor[0];
@@ -92,7 +99,11 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
         return;
       }
 
-      lastFetchedProfile.current = { first: first_name, middle: middle_name, last: last_name };
+      lastFetchedProfile.current = {
+        first: first_name,
+        middle: middle_name,
+        last: last_name,
+      };
 
       if (first_name || last_name) {
         DisplaySummaryTerm({
@@ -109,6 +120,91 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
     }
   }, [isGroupSpecificAuthor, DisplaySummaryTerm]);
 
+  // 🔹 Enhanced Slot machine effect with multiple cool features
+  useEffect(() => {
+    // If no specific author yet, keep placeholder
+    if (!isGroupSpecificAuthor?.length) {
+      setCurrentImage("/placeholder-avatar.png");
+      setShuffling(false);
+      setShowShuffleBadge(false);
+      return;
+    }
+
+    // If no public authors to shuffle from, show final image immediately
+    if (!isGroupPublicAuthor?.length || isGroupPublicAuthor.length < 2) {
+      const finalImg =
+        isGroupSpecificAuthor[0]?.memberInfo?.avatar?.url ||
+        isGroupSpecificAuthor[0]?.avatar?.url ||
+        "/placeholder-avatar.png";
+      setCurrentImage(finalImg);
+      setShuffling(false);
+      setShowShuffleBadge(false);
+      setImageKey(prev => prev + 1); // Trigger pop-in animation
+      return;
+    }
+
+    // Start enhanced shuffling
+    setShuffling(true);
+    setShowShuffleBadge(true);
+    
+    let shuffleCount = 0;
+    const maxShuffles = 15; // Total number of shuffles
+    
+    const shuffleInterval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * isGroupPublicAuthor.length);
+      const randomImg =
+        isGroupPublicAuthor[randomIndex]?.memberInfo?.avatar?.url ||
+        isGroupPublicAuthor[randomIndex]?.avatar?.url ||
+        "/placeholder-avatar.png";
+      setCurrentImage(randomImg);
+      shuffleCount++;
+      
+      // Speed up shuffle towards the end for dramatic effect
+      if (shuffleCount > maxShuffles * 0.7) {
+        clearInterval(shuffleInterval);
+        const fastInterval = setInterval(() => {
+          const fastRandomIndex = Math.floor(Math.random() * isGroupPublicAuthor.length);
+          const fastRandomImg =
+            isGroupPublicAuthor[fastRandomIndex]?.memberInfo?.avatar?.url ||
+            isGroupPublicAuthor[fastRandomIndex]?.avatar?.url ||
+            "/placeholder-avatar.png";
+          setCurrentImage(fastRandomImg);
+          shuffleCount++;
+        }, 100);
+        
+        setTimeout(() => {
+          clearInterval(fastInterval);
+          revealFinalImage();
+        }, 800);
+      }
+    }, 200);
+
+    const revealFinalImage = () => {
+      const finalImg =
+        isGroupSpecificAuthor[0]?.memberInfo?.avatar?.url ||
+        isGroupSpecificAuthor[0]?.avatar?.url ||
+        "/placeholder-avatar.png";
+      setCurrentImage(finalImg);
+      setShuffling(false);
+      setImageKey(prev => prev + 1); // Trigger final animation
+      
+      // Hide badge after a delay
+      setTimeout(() => {
+        setShowShuffleBadge(false);
+      }, 1000);
+    };
+
+    const timeout = setTimeout(() => {
+      clearInterval(shuffleInterval);
+      revealFinalImage();
+    }, 3000);
+
+    return () => {
+      clearInterval(shuffleInterval);
+      clearTimeout(timeout);
+    };
+  }, [isGroupPublicAuthor, isGroupSpecificAuthor]);
+
   const { ordinancesByYear, resolutionsByYear } = useMemo(() => {
     if (!official || !isSummaryTerm || isSummaryTerm.length === 0) {
       return { ordinancesByYear: {}, resolutionsByYear: {} };
@@ -120,7 +216,8 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
     isSummaryTerm[0].terms.forEach((termItem) => {
       if (termItem.titles && Array.isArray(termItem.titles)) {
         termItem.titles.forEach((titleObj) => {
-          const title = typeof titleObj === "string" ? titleObj : titleObj.title;
+          const title =
+            typeof titleObj === "string" ? titleObj : titleObj.title;
           const date = typeof titleObj === "string" ? null : titleObj.date;
           const year = extractYear(date) || "Unknown";
           if (!ordMap[year]) ordMap[year] = [];
@@ -130,8 +227,10 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
 
       if (termItem.summaries && Array.isArray(termItem.summaries)) {
         termItem.summaries.forEach((summaryObj) => {
-          const title = typeof summaryObj === "string" ? summaryObj : summaryObj.title;
-          const date = typeof summaryObj === "string" ? null : summaryObj.date;
+          const title =
+            typeof summaryObj === "string" ? summaryObj : summaryObj.title;
+          const date =
+            typeof summaryObj === "string" ? null : summaryObj.date;
           const year = extractYear(date) || "Unknown";
           if (!resMap[year]) resMap[year] = [];
           resMap[year].push(title);
@@ -140,17 +239,60 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
     });
 
     return { ordinancesByYear: ordMap, resolutionsByYear: resMap };
-  }, [official]);
+  }, [official, isSummaryTerm]);
 
   const profileData = useMemo(() => {
     return official?.memberInfo || official || {};
   }, [official]);
 
+  // CSS for animations (you can also put this in your CSS file)
+  const animationStyles = `
+    @keyframes pop-in {
+      0% { transform: scale(0.8); opacity: 0; }
+      80% { transform: scale(1.05); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    @keyframes shuffle-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    @keyframes badge-pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    @keyframes glitch {
+      0% { transform: translate(0); filter: hue-rotate(0deg); }
+      10% { transform: translate(-2px, 2px); }
+      20% { transform: translate(2px, -2px); }
+      30% { transform: translate(-2px, -2px); filter: hue-rotate(90deg); }
+      40% { transform: translate(2px, 2px); }
+      50% { transform: translate(-2px, 2px); filter: hue-rotate(180deg); }
+      60% { transform: translate(2px, -2px); }
+      70% { transform: translate(-2px, -2px); filter: hue-rotate(270deg); }
+      80% { transform: translate(2px, 2px); }
+      90% { transform: translate(-2px, 2px); }
+      100% { transform: translate(0); filter: hue-rotate(360deg); }
+    }
+    .animate-pop-in {
+      animation: pop-in 0.6s ease-out;
+    }
+    .animate-shuffle-pulse {
+      animation: shuffle-pulse 0.2s ease-in-out infinite;
+    }
+    .animate-badge-pulse {
+      animation: badge-pulse 1s ease-in-out infinite;
+    }
+    .animate-glitch {
+      animation: glitch 0.3s ease-in-out;
+    }
+  `;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <BannerImage selection={Position} />
-
         <div className="border-b bg-white">
           <div className="mx-auto max-w-6xl px-4 py-3">
             <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200"></div>
@@ -163,12 +305,12 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
             <div className="h-6 w-1/2 animate-pulse rounded bg-gray-200"></div>
           </div>
 
-          <div className="flex flex-col gap-6 md:gap-8 md:flex-row">
+          <div className="flex flex-col gap-6 md:flex-row md:gap-8">
             <div className="flex-1 space-y-6">
-              <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
+              <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
                 <div className="flex flex-col gap-6 md:flex-row">
-                  <div className="h-48 w-48 sm:h-64 sm:w-64 animate-pulse rounded-lg bg-gray-200 mx-auto md:mx-0"></div>
-                  <div className="flex-1 space-y-4 mt-4 md:mt-0">
+                  <div className="mx-auto h-48 w-48 animate-pulse rounded-lg bg-gray-200 sm:h-64 sm:w-64 md:mx-0"></div>
+                  <div className="mt-4 flex-1 space-y-4 md:mt-0">
                     <div className="space-y-2">
                       <div className="h-4 w-full animate-pulse rounded bg-gray-200"></div>
                       <div className="h-4 w-5/6 animate-pulse rounded bg-gray-200"></div>
@@ -184,7 +326,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                 </div>
               </div>
 
-              <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
+              <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
                 <div className="mb-4 h-6 w-1/4 animate-pulse rounded bg-gray-200"></div>
                 <div className="space-y-2">
                   <div className="h-3 w-full animate-pulse rounded bg-gray-200"></div>
@@ -192,7 +334,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                 </div>
               </div>
 
-              <div className="mt-6 rounded-xl bg-white p-4 sm:p-6 shadow-sm">
+              <div className="mt-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
                 <div className="mb-3 h-6 w-1/3 animate-pulse rounded bg-gray-200"></div>
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
@@ -221,7 +363,6 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
               </div>
             </div>
 
-            {/* Sidebar Skeleton - Hidden on mobile */}
             <div className="hidden lg:block lg:w-64">
               <div className="sticky top-24 rounded-xl bg-white p-4 shadow-sm">
                 <div className="space-y-4 border-t border-gray-200 pt-4">
@@ -250,16 +391,11 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
   if (!official) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center px-4">
+        <div className="px-4 text-center">
           <h2 className="text-xl font-bold text-gray-800">No Official Found</h2>
-          <p className="mt-2 text-gray-600">No {Position} is currently listed in the system.</p>
-          <button
-            onClick={() => window.history.back()}
-            className="mx-auto mt-4 flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Go Back
-          </button>
+          <p className="mt-2 text-gray-600">
+            No {Position} is currently listed in the system.
+          </p>
         </div>
       </div>
     );
@@ -267,55 +403,88 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Inject animation styles */}
+      <style>{animationStyles}</style>
+      
       <BannerImage selection={Position} />
       <Breadcrumb position={Position} onBack={onBack} />
-      
+
       <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
         <div className="mb-5">
-          <h1 className="mb-2 text-left text-2xl sm:text-3xl md:text-4xl font-bold text-blue-600">
+          <h1 className="mb-2 text-left text-2xl font-bold text-blue-600 sm:text-3xl md:text-4xl">
             HON. {official.fullName || "Name not available"}
           </h1>
-          <p className="text-left text-lg sm:text-xl md:text-2xl font-medium text-gray-700">
+          <p className="text-left text-lg font-medium text-gray-700 sm:text-xl md:text-2xl">
             {profileData.Position || Position}
           </p>
         </div>
 
-        <div className="flex flex-col gap-6 md:gap-8 md:flex-row">
+        <div className="flex flex-col gap-6 md:flex-row md:gap-8">
           {/* Profile Content */}
           <div className="flex-1">
-            <div className="mb-6 rounded-xl bg-white p-4 sm:p-6 shadow-sm">
+            <div className="mb-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
               <div className="flex flex-col gap-6 md:flex-row">
-                <div className="flex-shrink-0">
-                  <img
-                    src={profileData.avatar?.url || official.avatar?.url || "/placeholder-avatar.png"}
-                    alt={official.fullName || "Official"}
-                    className="h-48 w-48 sm:h-64 sm:w-64 md:h-[340px] md:w-64 rounded-lg border border-gray-200 object-cover mx-auto md:mx-0"
-                    onError={(e) => {
-                      e.target.src = "/placeholder-avatar.png";
-                    }}
-                  />
+                <div className="flex-shrink-0 relative">
+                  {/* Enhanced Avatar Container */}
+                  <div className="relative">
+                    <img
+                      key={imageKey}
+                      src={currentImage}
+                      alt={official.fullName || "Official"}
+                      className={`mx-auto h-48 w-48 rounded-lg border-2 border-gray-200 object-cover sm:h-64 sm:w-64 md:mx-0 md:h-[340px] md:w-64 ${
+                        shuffling 
+                          ? 'animate-shuffle-pulse border-blue-300' 
+                          : 'animate-pop-in border-gray-300'
+                      } ${
+                        !shuffling && imageKey > 0 ? 'shadow-lg' : ''
+                      }`}
+                      onError={(e) => {
+                        e.target.src = "/placeholder-avatar.png";
+                      }}
+                    />
+                    
+                    {showShuffleBadge && (
+                      <div className="absolute -top-2 -right-2 z-10">
+                        <div className="animate-badge-pulse rounded-full bg-gradient-to-r from-blue-500 to-purple-600 px-3 py-1 text-xs font-bold text-white shadow-lg xs:text-[8px]">
+                          🔄 Searching...
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!shuffling && imageKey > 0 && (
+                      <div className="absolute inset-0 animate-glitch opacity-0">
+                        <img
+                          src={currentImage}
+                          alt="glitch effect"
+                          className="h-full w-full rounded-lg object-cover"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
                 </div>
 
-                <div className="flex-1 mt-4 md:mt-0">
+                <div className="mt-4 flex-1 md:mt-0">
                   <div className="mb-4">
-                    <p className="leading-relaxed text-gray-700 text-sm sm:text-base">
+                    <p className="text-sm leading-relaxed text-gray-700 sm:text-base">
                       {official.bio
                         ? official.bio
                         : official.detailInfo
-                          ? official.detailInfo.split("\n")[0] ||
-                            official.detailInfo.substring(0, 200) + (official.detailInfo.length > 200 ? "..." : "")
-                          : "Biography not available."}
+                        ? official.detailInfo.split("\n")[0] ||
+                          official.detailInfo.substring(0, 200) +
+                            (official.detailInfo.length > 200 ? "..." : "")
+                        : "Biography not available."}
                     </p>
                   </div>
 
                   <div className="rounded-lg bg-blue-50 p-3 sm:p-4">
-                    <h3 className="mb-2 text-sm sm:text-base font-semibold text-gray-900">
+                    <h3 className="mb-2 text-sm font-semibold text-gray-900 sm:text-base">
                       Office of the {profileData.Position || Position}
                     </h3>
                     <div className="space-y-1.5 text-xs sm:text-sm">
                       {profileData.district && (
                         <div className="flex items-start gap-2">
-                          <span className="mt-0.5">📅</span>
+                          <User className="mt-0.5 h-4 w-4 text-gray-600" />
                           <span className="text-gray-700">{profileData.district}</span>
                         </div>
                       )}
@@ -329,7 +498,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                       )}
                       {profileData.term && (
                         <div className="flex items-start gap-2">
-                          <Clock className="mt-0.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                          <Clock className="mt-0.5 h-3.5 w-3.5 text-blue-600 sm:h-4 sm:w-4" />
                           <span className="text-gray-700">
                             {profileData.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
                           </span>
@@ -337,7 +506,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                       )}
                       {profileData.email && (
                         <div className="flex items-start gap-2">
-                          <Mail className="mt-0.5 h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-600" />
+                          <Mail className="mt-0.5 h-3.5 w-3.5 text-blue-600 sm:h-4 sm:w-4" />
                           <span className="text-gray-700">{profileData.email}</span>
                         </div>
                       )}
@@ -347,31 +516,34 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
               </div>
             </div>
 
-            <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
-              <h2 className="mb-4 pb-2 text-xl sm:text-2xl font-bold text-gray-900 border-b">Biography</h2>
-              <div className="space-y-3 text-sm sm:text-base leading-relaxed text-gray-700">
-                {(official.detailInfo || "Biography not available.").split("\n").map((para, i) => (
-                  <p key={i}>{para.trim() || "\u00A0"}</p>
-                ))}
+            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+              <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-900 sm:text-2xl">Biography</h2>
+              <div className="space-y-3 text-sm leading-relaxed text-gray-700 sm:text-base">
+                {(official.detailInfo || "Biography not available.")
+                  .split("\n")
+                  .slice(1)
+                  .map((para, i) => (
+                    <p key={i}>{para.trim() || "\u00A0"}</p>
+                  ))}
               </div>
             </div>
 
-            <div className="mt-6 rounded-xl bg-white p-4 sm:p-6 shadow-sm">
-              <h2 className="mb-3 pb-2 text-xl sm:text-2xl font-bold text-gray-900 border-b">Term Summary</h2>
-              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="mt-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
+              <h2 className="mb-3 border-b pb-2 text-xl font-bold text-gray-900 sm:text-2xl">Term Summary</h2>
+              <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">
                         Position
                       </th>
-                      <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">
                         Term
                       </th>
-                      <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">
                         Ordinances
                       </th>
-                      <th scope="col" className="px-3 py-2 sm:px-6 sm:py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700">
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">
                         Resolutions
                       </th>
                     </tr>
@@ -380,10 +552,10 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                     {isSummaryTerm && isSummaryTerm.length > 0 ? (
                       isSummaryTerm[0].terms.map((termItem, index) => (
                         <tr key={index}>
-                          <td className="whitespace-nowrap px-3 py-3 sm:px-6 sm:py-4 text-sm font-medium text-gray-900">
+                          <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-gray-900 sm:px-6 sm:py-4">
                             {termItem.Position || "—"}
                           </td>
-                          <td className="px-3 py-3 sm:px-6 sm:py-4 text-sm text-gray-700">
+                          <td className="px-3 py-3 text-sm text-gray-700 sm:px-6 sm:py-4">
                             <div>
                               {termItem.term && (
                                 <span>
@@ -391,13 +563,13 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                                 </span>
                               )}
                               {termItem.from && termItem.to && (
-                                <span className="ml-1 text-gray-500 text-xs sm:text-sm">
+                                <span className="ml-1 text-xs text-gray-500 sm:text-sm">
                                   ({termItem.from}–{termItem.to})
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-3 sm:px-6 sm:py-4 text-sm">
+                          <td className="px-3 py-3 text-sm sm:px-6 sm:py-4">
                             {termItem.ordinanceCount > 0 ? (
                               <button
                                 onClick={() => {
@@ -409,15 +581,15 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                                   });
                                   setIsModalOpen(true);
                                 }}
-                                className="cursor-pointer font-medium text-blue-600 hover:underline text-xs sm:text-sm"
+                                className="cursor-pointer text-xs font-medium text-blue-600 hover:underline sm:text-sm"
                               >
                                 {termItem.ordinanceCount}
                               </button>
                             ) : (
-                              <span className="text-gray-500 text-xs sm:text-sm">0</span>
+                              <span className="text-xs text-gray-500 sm:text-sm">0</span>
                             )}
                           </td>
-                          <td className="px-3 py-3 sm:px-6 sm:py-4 text-sm">
+                          <td className="px-3 py-3 text-sm sm:px-6 sm:py-4">
                             {termItem.resolutionCount > 0 ? (
                               <button
                                 onClick={() => {
@@ -429,19 +601,19 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                                   });
                                   setIsModalOpen(true);
                                 }}
-                                className="cursor-pointer font-medium text-green-600 hover:underline text-xs sm:text-sm"
+                                className="cursor-pointer text-xs font-medium text-green-600 hover:underline sm:text-sm"
                               >
                                 {termItem.resolutionCount}
                               </button>
                             ) : (
-                              <span className="text-gray-500 text-xs sm:text-sm">0</span>
+                              <span className="text-xs text-gray-500 sm:text-sm">0</span>
                             )}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="4" className="px-3 py-3 sm:px-6 sm:py-4 text-center text-sm text-gray-500">
+                        <td colSpan="4" className="px-3 py-3 text-center text-sm text-gray-500 sm:px-6 sm:py-4">
                           No term data available.
                         </td>
                       </tr>
@@ -470,7 +642,9 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                           <p className="text-[9px] font-medium text-blue-700">{year}</p>
                           <ul className="mt-1 space-y-1 text-[9px] text-gray-600">
                             {titles.map((title, i) => (
-                              <li key={i} className="truncate">{title}</li>
+                              <li key={i} className="truncate">
+                                {title}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -494,7 +668,9 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
                           <p className="text-[9px] font-medium text-green-700">{year}</p>
                           <ul className="mt-1 space-y-1 text-[9px] text-gray-600">
                             {titles.map((title, i) => (
-                              <li key={i} className="truncate">{title}</li>
+                              <li key={i} className="truncate">
+                                {title}
+                              </li>
                             ))}
                           </ul>
                         </div>
@@ -520,10 +696,10 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="border-b bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+              <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
                 {modalData.type === "ordinance" ? "Ordinance Titles" : "Resolution Summaries"}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-600">
+              <p className="text-xs text-gray-600 sm:text-sm">
                 {modalData.position} •{" "}
                 {modalData.term ? modalData.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) : "Unknown Term"}
               </p>
@@ -531,20 +707,20 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
 
             <div className="max-h-[60vh] overflow-y-auto p-4 sm:p-6">
               {modalData.items.length > 0 ? (
-                <ul className="list-disc space-y-1.5 pl-4 sm:pl-5 text-xs sm:text-sm text-gray-700">
+                <ul className="list-disc space-y-1.5 pl-4 text-xs text-gray-700 sm:pl-5 sm:text-sm">
                   {modalData.items.map((item, i) => (
                     <li key={i}>{typeof item === "string" ? item : item.title || item}</li>
                   ))}
                 </ul>
               ) : (
-                <p className="italic text-xs sm:text-sm text-gray-500">No data available.</p>
+                <p className="text-xs italic text-gray-500 sm:text-sm">No data available.</p>
               )}
             </div>
 
-            <div className="border-t bg-gray-50 px-4 py-2 sm:px-6 sm:py-3 text-right">
+            <div className="border-t bg-gray-50 px-4 py-2 text-right sm:px-6 sm:py-3">
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm font-medium text-white hover:bg-blue-700"
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
               >
                 Close
               </button>

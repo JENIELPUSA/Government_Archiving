@@ -49,11 +49,11 @@ const FBPageEmbed = () => {
     }, []);
 
     if (!show) return null;
-
-    const pageUrl = "https://www.facebook.com/provincialgovernmentofbiliran";
+    const pageUrl = "https://web.facebook.com/spbiliran2019";
     const src = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
         pageUrl,
     )}&tabs=timeline&width=340&height=700&small_header=true&adapt_container_width=true&hide_cover=true&show_facepile=false`;
+
 
     return (
         <iframe
