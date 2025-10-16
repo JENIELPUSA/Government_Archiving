@@ -40,6 +40,7 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isPublic, setPublic] = useState({});
     const [isPublictotalpage, setPublictotalpage] = useState({});
     const [isPubliccurrentpage, setPubliccurrentpage] = useState({});
+    const [isMonthlyFile, setMonthlyFile] = useState(0);
     useEffect(() => {
         if (!authToken) return;
 
@@ -57,15 +58,19 @@ export const FilesDisplayProvider = ({ children }) => {
         fetchAll();
     }, [authToken]);
 
-    useEffect(async () => {
-        try {
-            setLoading(true); 
-            await Promise.all([fetchlatestdata(), fetchpublicdata(), fetchPublicDisplay()]);
-        } catch (err) {
-            console.error("Error fetching data:", err);
-        } finally {
-            setLoading(false); // stop loading
-        }
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                await Promise.all([fetchlatestdata(), fetchpublicdata(), fetchPublicDisplay()]);
+            } catch (err) {
+                console.error("Error fetching data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
     }, []);
 
     useEffect(() => {
@@ -178,6 +183,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 setCurrentPage(currentPage);
                 setTodayDocuments(totalDocumentsToday);
                 setActiveTags(activeTags);
+                setMonthlyFile(res.data.monthlyFileSummary);
             } catch (error) {
                 console.error("Error fetching data:", error);
             }
@@ -529,6 +535,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 CountAll,
                 isTags,
                 isLoading,
+                isMonthlyFile,
             }}
         >
             {children}

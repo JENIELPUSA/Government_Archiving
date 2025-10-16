@@ -758,6 +758,35 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     .limit(3)
     .select("title dateOfResolution status fileUrl fileName");
 
+  // Monthly total file size summary (January–December)
+  const monthlySummaryRaw = await Files.aggregate([
+    {
+      $match: {
+        ArchivedStatus: { $nin: ["Deleted", "For Restore"] },
+      },
+    },
+    {
+      $group: {
+        _id: { $month: "$createdAt" },
+        totalFileSize: { $sum: "$fileSize" },
+      },
+    },
+  ]);
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const monthlyFileSummary = months.map((month, index) => {
+    const found = monthlySummaryRaw.find((m) => m._id === index + 1);
+    return {
+      month,
+      totalFileSize: found ? found.totalFileSize : 0,
+    };
+  });
+
+  // Final response
   res.status(200).json({
     status: "success",
     currentPage: page,
@@ -768,8 +797,10 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     results: files.length,
     data: files,
     activeTags: allActiveTags,
+    monthlyFileSummary,
   });
 });
+
 
 exports.getLatestBillsThisWeek = async (req, res) => {
   try {

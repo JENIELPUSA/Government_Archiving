@@ -38,10 +38,10 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
         checkScreenSize();
 
         // Add event listener for window resize
-        window.addEventListener('resize', checkScreenSize);
+        window.addEventListener("resize", checkScreenSize);
 
         // Clean up
-        return () => window.removeEventListener('resize', checkScreenSize);
+        return () => window.removeEventListener("resize", checkScreenSize);
     }, []);
 
     // Close menu when clicking outside
@@ -135,12 +135,15 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
         setCurrentPage((prev) => Math.min(prev + 1, numPages || 1));
     }, [numPages]);
 
-    const goToPage = useCallback((pageNum) => {
-        const page = parseInt(pageNum);
-        if (page >= 1 && page <= (numPages || 1)) {
-            setCurrentPage(page);
-        }
-    }, [numPages]);
+    const goToPage = useCallback(
+        (pageNum) => {
+            const page = parseInt(pageNum);
+            if (page >= 1 && page <= (numPages || 1)) {
+                setCurrentPage(page);
+            }
+        },
+        [numPages],
+    );
 
     const handleDownload = useCallback(async () => {
         if (!cachedPdfRef.current.bytes) {
@@ -171,15 +174,15 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
     // Keyboard navigation
     useEffect(() => {
         const handleKeyPress = (e) => {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+            if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
                 goToPrevPage();
-            } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+            } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
                 goToNextPage();
             }
         };
 
-        document.addEventListener('keydown', handleKeyPress);
-        return () => document.removeEventListener('keydown', handleKeyPress);
+        document.addEventListener("keydown", handleKeyPress);
+        return () => document.removeEventListener("keydown", handleKeyPress);
     }, [goToPrevPage, goToNextPage]);
 
     return (
@@ -226,19 +229,19 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                 }
 
                 .toolbar {
-                    position: sticky;
-                    top: 15px;
-                    display: flex;
-                    gap: 12px;
-                    padding: 12px 16px;
-                    background: white;
-                    border-radius: 10px;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-                    z-index: 100;
-                    margin-bottom: 20px;
-                    flex-wrap: wrap;
-                    align-items: center;
-                }
+    position: sticky;
+    top: 15px;
+    display: flex;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+}
 
                 .toolbar button {
                     background-color: #f8fafc;
@@ -506,7 +509,7 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                                 >
                                     <ChevronLeft size={20} />
                                 </button>
-                                
+
                                 <input
                                     type="number"
                                     min="1"
@@ -516,9 +519,9 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                                     className="page-input"
                                     title="Go to page"
                                 />
-                                
+
                                 <span className="page-info">of {numPages}</span>
-                                
+
                                 <button
                                     onClick={goToNextPage}
                                     disabled={currentPage >= numPages}
@@ -534,45 +537,51 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                 {/* Mobile floating button and menu */}
                 {isMobile && (
                     <>
-                        <button 
+                        <button
                             className="mobile-floating-button print-hidden"
                             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         >
                             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
-                        
+
                         {mobileMenuOpen && (
-                            <div className="mobile-menu print-hidden" ref={menuRef}>
+                            <div
+                                className="mobile-menu print-hidden"
+                                ref={menuRef}
+                            >
                                 <button onClick={handleZoomIn}>
                                     <ZoomIn size={20} />
                                     <span>Zoom In</span>
                                 </button>
-                                
+
                                 <button onClick={handleZoomOut}>
                                     <ZoomOut size={20} />
                                     <span>Zoom Out</span>
                                 </button>
-                                
-                                <button onClick={handleDownload} className="download-btn">
+
+                                <button
+                                    onClick={handleDownload}
+                                    className="download-btn"
+                                >
                                     <Download size={20} />
                                     <span>Download</span>
                                 </button>
-                                
+
                                 {numPages && (
                                     <div className="mobile-page-nav">
-                                        <button 
+                                        <button
                                             onClick={goToPrevPage}
                                             disabled={currentPage <= 1}
                                             title="Previous Page"
                                         >
                                             <ChevronLeft size={20} />
                                         </button>
-                                        
+
                                         <div className="mobile-page-info">
                                             {currentPage} of {numPages}
                                         </div>
-                                        
-                                        <button 
+
+                                        <button
                                             onClick={goToNextPage}
                                             disabled={currentPage >= numPages}
                                             title="Next Page"

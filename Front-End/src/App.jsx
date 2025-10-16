@@ -22,9 +22,11 @@ import UnderMaintenance from "./component/PublicView/AboutUs";
 import CategoryTable from "./component/AdminDashboard/Category/ManageCategoryTable";
 import UserManagement from "./component/UserManagement/UserManagement";
 import LatestNews from "./component/PublicView/NewandInformation/NewsContent";
+import NotFoundPage from "./component/404/404Component.jsx"; // ✅ import your 404 component
 
 function App() {
     const router = createBrowserRouter([
+        // 🌐 PUBLIC ROUTES
         {
             element: <PublicRoute />,
             children: [
@@ -37,6 +39,7 @@ function App() {
             ],
         },
 
+        // 🔒 PRIVATE ROUTES
         {
             path: "/dashboard",
             element: <PrivateRoute />,
@@ -45,61 +48,26 @@ function App() {
                     path: "",
                     element: <Layout />,
                     children: [
-                        {
-                            index: true,
-                            element: <DashboardPage />,
-                        },
-                        {
-                            path: "/dashboard/search-archiving",
-                            element: <ArchiveLayout />,
-                        },
-                        {
-                            path: "upload-documents",
-                            element: <UploadDocuments />,
-                        },
-                        {
-                            path: "view-documents",
-                            element: <DocumentLayout />,
-                        },
-                        {
-                            path: "/dashboard/OldFiles",
-                            element: <OldDocument />,
-                        },
-                        {
-                            path: "/dashboard/user-management",
-                            element: <UserManagement />,
-                        },
-                        {
-                            path: "/dashboard/logs",
-                            element: <LogsAndAudit />,
-                        },
-                        {
-                            path: "/dashboard/Category",
-                            element: <CategoryTable />,
-                        },
-                        {
-                            path: "pdf-viewer/:fileId",
-                            element: <PdfViewer />,
-                        },
-                        {
-                            path: "/dashboard/SPmember",
-                            element: <SBmember />,
-                        },
-                        {
-                            path: "/dashboard/task-managemnet",
-                            element: <UnderMaintenance />,
-                        },
-                        {
-                            path: "dashboard/settings",
-                            element: <SettingsPage />,
-                        },
-                        {
-                            path: "/dashboard/comments",
-                            element: <CommentLayout />,
-                        },
+                        { index: true, element: <DashboardPage /> },
+                        { path: "search-archiving", element: <ArchiveLayout /> },
+                        { path: "upload-documents", element: <UploadDocuments /> },
+                        { path: "view-documents", element: <DocumentLayout /> },
+                        { path: "OldFiles", element: <OldDocument /> },
+                        { path: "user-management", element: <UserManagement /> },
+                        { path: "logs", element: <LogsAndAudit /> },
+                        { path: "Category", element: <CategoryTable /> },
+                        { path: "pdf-viewer/:fileId", element: <PdfViewer /> },
+                        { path: "SPmember", element: <SBmember /> },
+                        { path: "task-managemnet", element: <UnderMaintenance /> },
+                        { path: "settings", element: <SettingsPage /> },
+                        { path: "comments", element: <CommentLayout /> },
                     ],
                 },
             ],
+        },
+        {
+            path: "*",
+            element: <NotFoundPage />,
         },
     ]);
 

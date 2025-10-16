@@ -1,10 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
-import { ChevronLeft, ChevronRight, FileText, Calendar, User, Tag, ArrowUp } from "lucide-react";
+import {ArrowUp } from "lucide-react";
 import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence } from "framer-motion";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
-import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
-import defaultCover from "../../../../src/assets/billpicture.jpg";
-import backgroundImage from "../../../../src/assets/capitol.png";
 import NewsandLatest from "../NewandInformation/NewsandLatest";
 import logo from "../../../../src/assets/logo-login.png";
 import PDFview from "../PDFview";
@@ -27,7 +24,6 @@ import Baground10 from "../../../../src/assets/ros555.jpg";
 
 import CardSwap, { Card } from "../CardSwap";
 
-// Scroll to Top button
 const ScrollToTop = () => {
     const { scrollYProgress } = useScroll();
     const scrollY = useSpring(scrollYProgress, {
@@ -123,6 +119,31 @@ const Home = ({ aboutUsRef }) => {
     const [isHoveringCarousel, setIsHoveringCarousel] = useState(false);
     const [isHoveringSPCarousel, setIsHoveringSPCarousel] = useState(false);
 
+    // Hero background hooks — moved UP
+    const heroBackgrounds = [Baground2, Baground3, Baground4, Baground5];
+    const [heroIndex, setHeroIndex] = useState(0);
+
+    useEffect(() => {
+        const heroInterval = setInterval(() => {
+            setHeroIndex((prev) => (prev + 1) % heroBackgrounds.length);
+        }, 15000);
+        return () => clearInterval(heroInterval);
+    }, []);
+
+    // Carousel intervals
+    useEffect(() => {
+        if (isHoveringCarousel || newsItems.length === 0) return;
+        const interval = setInterval(nextSlide, 5000);
+        return () => clearInterval(interval);
+    }, [isHoveringCarousel, newsItems.length]);
+
+    useEffect(() => {
+        if (isHoveringSPCarousel) return;
+        const interval = setInterval(nextSPSlide, 6000);
+        return () => clearInterval(interval);
+    }, [isHoveringSPCarousel]);
+
+    // Handler functions
     const handleViewFile = (fileId, fileData) => {
         setSelectedFile({ fileId, fileData });
     };
@@ -150,18 +171,7 @@ const Home = ({ aboutUsRef }) => {
         setSPCarouselIndex((prevIndex) => (prevIndex + 1) % documentsummary.length);
     };
 
-    useEffect(() => {
-        if (isHoveringCarousel || newsItems.length === 0) return;
-        const interval = setInterval(nextSlide, 5000);
-        return () => clearInterval(interval);
-    }, [isHoveringCarousel, newsItems.length]);
-
-    useEffect(() => {
-        if (isHoveringSPCarousel) return;
-        const interval = setInterval(nextSPSlide, 6000);
-        return () => clearInterval(interval);
-    }, [isHoveringSPCarousel]);
-
+    // CONDITIONAL RETURNS — now SAFE because all hooks are already called above
     if (selectedFile) {
         return (
             <PDFview
@@ -179,16 +189,8 @@ const Home = ({ aboutUsRef }) => {
             />
         );
     }
-    const heroBackgrounds = [Baground2, Baground3, Baground4, Baground5];
-    const [heroIndex, setHeroIndex] = useState(0);
 
-    useEffect(() => {
-        const heroInterval = setInterval(() => {
-            setHeroIndex((prev) => (prev + 1) % heroBackgrounds.length);
-        }, 15000);
-        return () => clearInterval(heroInterval);
-    }, []);
-
+    // Main JSX
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-50 font-sans text-slate-800 antialiased">
             <AnimatePresence>
@@ -274,7 +276,7 @@ const Home = ({ aboutUsRef }) => {
                 viewport={{ once: true, margin: "-100px" }}
                 variants={fadeInUp}
             >
-                <div class="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 sm:min-h-[500px] sm:flex-row sm:justify-between sm:py-20 lg:min-h-[600px] lg:py-16 xs:min-h-[250px]">
+                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 sm:min-h-[500px] sm:flex-row sm:justify-between sm:py-20 lg:min-h-[600px] lg:py-16 xs:min-h-[250px]">
                     <motion.div
                         className="flex-1 text-center sm:text-left"
                         variants={fadeInUp}
@@ -442,4 +444,5 @@ const HomeWithRef = React.forwardRef((props, ref) => (
         aboutUsRef={ref}
     />
 ));
+
 export default HomeWithRef;
