@@ -2428,11 +2428,13 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
     oldFile !== undefined
   );
   if (!hasQuery) {
-    // Return empty response — no files until user searches/filters
     return res.status(200).json([]);
   }
 
-  const matchStage = { status: "Approved", ArchivedStatus: "Active" };
+  const matchStage = {
+    status: "Approved",
+    ArchivedStatus: { $nin: ["Deleted", "For Restore"] },
+  };
 
   if (oldFile !== undefined) matchStage.oldFile = oldFile === "true";
 
@@ -2672,6 +2674,7 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 
   res.status(200).json(results);
 });
+
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo, Position, term_from, term_to, term } =

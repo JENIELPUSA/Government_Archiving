@@ -20,7 +20,7 @@ exports.setRetentionAndArchiveOldFiles = AsyncErrorHandler(async (req, res) => {
   } else {
     updatedSetting = await RetentionSetting.create({
       retentionDays,
-      enabled: enabled ?? true, // fallback to true kung undefined
+      enabled: enabled ?? true, 
     });
   }
 

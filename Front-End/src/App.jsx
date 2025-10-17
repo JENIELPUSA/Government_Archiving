@@ -22,11 +22,10 @@ import UnderMaintenance from "./component/PublicView/AboutUs";
 import CategoryTable from "./component/AdminDashboard/Category/ManageCategoryTable";
 import UserManagement from "./component/UserManagement/UserManagement";
 import LatestNews from "./component/PublicView/NewandInformation/NewsContent";
-import NotFoundPage from "./component/404/404Component.jsx"; // ✅ import your 404 component
+import NotFoundPage from "./component/404/404Component.jsx"; //import your 404 component
 
 function App() {
     const router = createBrowserRouter([
-        // 🌐 PUBLIC ROUTES
         {
             element: <PublicRoute />,
             children: [
@@ -39,7 +38,6 @@ function App() {
             ],
         },
 
-        // 🔒 PRIVATE ROUTES
         {
             path: "/dashboard",
             element: <PrivateRoute />,
