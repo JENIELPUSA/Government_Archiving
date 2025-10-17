@@ -804,23 +804,11 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
 
 exports.getLatestBillsThisWeek = async (req, res) => {
   try {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = (day === 0 ? -6 : 1) - day;
-    const startOfWeek = new Date(now);
-    startOfWeek.setDate(now.getDate() + diffToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
-    endOfWeek.setHours(23, 59, 59, 999);
-
     const latestBill = await Files.aggregate([
       {
         $match: {
-          ArchivedStatus: "Active",
-          status: "Approved", // o "Approved" kung yun ang gamit mo
-          dateOfResolution: { $ne: null }, // para sigurado may date
+          status: "Approved",
+          ArchivedStatus: { $nin: ["Deleted", "For Restore"] }, // ✅ Include Active & Archived only
         },
       },
       {
@@ -869,9 +857,8 @@ exports.getLatestBillsThisWeek = async (req, res) => {
       { $unwind: { path: "$officerInfo", preserveNullAndEmptyArrays: true } },
       { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
 
-      // sort by dateOfResolution para latest base sa resolution date
       { $sort: { dateOfResolution: -1 } },
-      { $limit: 3 }, // tatlo lang
+      { $limit: 3 },
 
       {
         $project: {
@@ -916,6 +903,7 @@ exports.getLatestBillsThisWeek = async (req, res) => {
         },
       },
     ]).allowDiskUse(true);
+
     res.status(200).json({
       status: "success",
       latestBill,
@@ -925,6 +913,7 @@ exports.getLatestBillsThisWeek = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo, term_from, term_to } = req.query;
