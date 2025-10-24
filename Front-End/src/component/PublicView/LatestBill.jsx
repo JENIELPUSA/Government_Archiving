@@ -1,106 +1,131 @@
 import React, { useContext, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
+import { FileText } from "lucide-react"; // icon for Resolution
 
-
-// Skeletons
+// Skeleton Loader
 const BillCardSkeleton = () => (
-    <div className="flex w-full items-start gap-4 overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-md">
-        <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-full bg-gray-300"></div>
-        <div className="flex flex-grow flex-col justify-between">
-            <div className="mb-2 h-6 w-3/4 animate-pulse rounded bg-gray-300"></div>
-            <div className="mb-1 h-4 w-full animate-pulse rounded bg-gray-300"></div>
-            <div className="mb-4 h-4 w-2/3 animate-pulse rounded bg-gray-300"></div>
-            <div className="h-5 w-32 animate-pulse rounded bg-gray-300"></div>
-        </div>
+  <div className="flex w-full items-start gap-4 overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-md">
+    <div className="h-10 w-10 flex-shrink-0 animate-pulse rounded-full bg-gray-300"></div>
+    <div className="flex flex-grow flex-col justify-between">
+      <div className="mb-2 h-6 w-3/4 animate-pulse rounded bg-gray-300"></div>
+      <div className="mb-1 h-4 w-full animate-pulse rounded bg-gray-300"></div>
+      <div className="mb-4 h-4 w-2/3 animate-pulse rounded bg-gray-300"></div>
+      <div className="h-5 w-32 animate-pulse rounded bg-gray-300"></div>
     </div>
+  </div>
 );
 
-// Animation variants (you can keep these in a separate variants file if you have many)
+// Animation variants
 const fadeInUp = {
-    hidden: { opacity: 0, y: 60 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: {
-            duration: 0.8,
-            ease: [0.16, 1, 0.3, 1],
-            when: "beforeChildren",
-            staggerChildren: 0.1,
-        },
+  hidden: { opacity: 0, y: 60 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.8,
+      ease: [0.16, 1, 0.3, 1],
+      when: "beforeChildren",
+      staggerChildren: 0.1,
     },
+  },
 };
 
 const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-        opacity: 1,
-        transition: {
-            staggerChildren: 0.15,
-            when: "beforeChildren",
-        },
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+      when: "beforeChildren",
     },
+  },
 };
 
 const LatestBills = ({ onFileView, isLoading }) => {
-    const { isLatestBill } = useContext(FilesDisplayContext);
-    const billsRef = useRef(null);
-    const billsInView = useInView(billsRef, { once: true, margin: "-10% 0px" });
+  const { isLatestBill } = useContext(FilesDisplayContext);
+  const billsRef = useRef(null);
+  const billsInView = useInView(billsRef, { once: true, margin: "-10% 0px" });
 
-    return (
-        <section
-            ref={billsRef}
-            className="container mx-auto lg:mt-0 2xs:mt-0"
-        >
-            <motion.div
-                initial="hidden"
-                animate={billsInView ? "visible" : "hidden"}
-                variants={staggerContainer}
-            >
+  console.log("isLatestBill",isLatestBill)
+
+return (
+  <section ref={billsRef} className="container mx-auto">
+    <motion.div
+      initial="hidden"
+      animate={billsInView ? "visible" : "hidden"}
+      variants={staggerContainer}
+    >
+      {/* Header */}
+      <motion.div variants={fadeInUp} className="text-center mb-2">
+        <h1 className="flex items-center justify-center gap-3 text-3xl font-bold text-blue-800">
+          <span className="h-1 w-10 bg-red-600 rounded-full"></span>
+          Transparency
+          <span className="h-1 w-10 bg-yellow-400 rounded-full"></span>
+        </h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Empowering citizens through accessible and transparent governance.
+        </p>
+      </motion.div>
+
+      {/* Bills List */}
+      <div className="flex flex-col gap-3">
+        {isLoading || isLatestBill.length === 0
+          ? Array.from({ length: 3 }).map((_, index) => (
+              <BillCardSkeleton key={index} />
+            ))
+          : isLatestBill.slice(0, 3).map((news, index) => {
+              // Extract category and first letter
+              const category = news.category || "";
+              const firstLetter = category.charAt(0).toUpperCase();
+
+              return (
                 <motion.div
-                    variants={fadeInUp}
-                    className="text-center"
+                  key={news.id || news._id}
+                  className="relative overflow-visible rounded-xl border border-gray-200 bg-gradient-to-r from-blue-50 via-white to-red-50 p-5 shadow-md transition-transform hover:scale-[1.01] hover:shadow-lg"
+                  variants={fadeInUp}
+                  custom={index}
                 >
-                    <h1 className="mb-6 xs:mb-2 xs-max:mb-2 2xs:mb-2 flex items-center text-2xl font-bold text-blue-800 md:text-3xl">
-                        <span className="flex-1 border-b border-gray-300"></span>
-                        <span className="px-4 xs:text-[17px] xs-max:text-[17px] 2xs:text-[17px]">Transparency</span>
-                        <span className="flex-1 border-b border-gray-300"></span>
-                    </h1>
+                  {/* Colored top border accent */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-700 via-yellow-400 to-red-600"></div>
+
+                  {/* Category Watermark for Resolution or Ordinance */}
+                  {["Resolution", "Ordinance"].includes(category) && (
+                    <div className="absolute top-2 left-2 transform -rotate-6 z-10">
+                      <span className="text-5xl md:text-6xl font-extrabold text-blue-800 opacity-10 drop-shadow-lg leading-none">
+                        {category}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <div className="flex items-start justify-between flex-wrap mt-6 relative z-20">
+                    <h3 className="font-extrabold uppercase text-blue-800 md:text-lg text-sm">
+                      {news.title}
+                    </h3>
+                  </div>
+
+                  {/* Summary */}
+                  <p className="mt-3 text-sm leading-relaxed text-gray-700">
+                    {news.summary}
+                  </p>
+
+                  {/* Read More */}
+                  <button
+                    onClick={() => onFileView(news._id, news)}
+                    className="mt-3 text-sm font-semibold text-blue-700 hover:text-red-600 transition"
+                  >
+                    Read more…
+                  </button>
                 </motion.div>
+              );
+            })}
+      </div>
+    </motion.div>
+  </section>
+);
 
-                <div className="flex flex-col gap-2">
-                    {isLoading || isLatestBill.length === 0
-                        ? Array.from({ length: 3 }).map((_, index) => <BillCardSkeleton key={index} />)
-                        : isLatestBill.slice(0, 3).map((bill, index) => (
-                              <motion.div
-                                  key={bill.id || bill._id}
-                                  className="rounded border border-gray-300 bg-white p-4 shadow-sm transition duration-200 hover:shadow-md"
-                                  variants={fadeInUp}
-                                  custom={index}
-                                  initial="hidden"
-                                  animate={billsInView ? "visible" : "hidden"}
-                              >
-                                  {/* Title */}
-                                  <h3 className="mb-3 font-bold uppercase text-blue-700 lg:text-lg 2xs:text-[10px] xs:text-[10px] xs:leading-5 xs-max:text-[10px] xs-max:leading-5">
-                                      {bill.title}
-                                  </h3>
 
-                                  {/* Summary */}
-                                  <p className="mb-4 text-sm leading-relaxed text-gray-600 xs:text-[9px] xs:leading-5 xs-max:text-[9px] xs-max:leading-5">{bill.summary}</p>
-
-                                  {/* Read more */}
-                                  <button
-                                      onClick={() => onFileView(bill._id, bill)}
-                                      className="font-medium text-blue-600 hover:text-blue-800 hover:underline lg:text-sm 2xs:text-[10px] xs:text-[12px] xs-max:text-[12px]"
-                                  >
-                                      read more…
-                                  </button>
-                              </motion.div>
-                          ))}
-                </div>
-            </motion.div>
-        </section>
-    );
 };
 
 export default LatestBills;

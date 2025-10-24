@@ -1,28 +1,85 @@
-const nodemailer = require('nodemailer');
+const { google } = require("googleapis");
+const dotenv = require("dotenv");
+const mime = require("mime-types");
 
-const sendEmail = async (options) => {
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        pool: true,
-        maxMessages: Infinity,
-        maxConnections: 500,
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASSWORD
-        }
-    });
+// Load environment variables
+dotenv.config({ path: "./config.env" });
 
-    const mailOptions = {
-        from: `Government File Archiving System <${process.env.EMAIL_USER}>`,
-        to: options.email,
-        subject: options.subject,
-        html: `
-        <!DOCTYPE html>
+// OAuth2 setup
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.CLIENT_ID,
+  process.env.CLIENT_SECRET,
+  process.env.REDIRECT_URI
+);
+
+oAuth2Client.setCredentials({
+  refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+});
+
+// Helper to encode message + attachments
+function makeRawMessage({ from, to, subject, htmlContent, attachments = [] }) {
+  const boundary = "boundary-example-" + Date.now();
+
+  const messageParts = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    "Content-Type: text/html; charset=UTF-8",
+    "Content-Transfer-Encoding: 7bit",
+    "",
+    htmlContent,
+  ];
+
+  // Add attachments kung meron
+  for (const file of attachments) {
+    const fileName = file.filename || "attachment";
+    const fileType =
+      file.contentType || mime.lookup(fileName) || "application/octet-stream";
+    const fileContent = Buffer.isBuffer(file.content)
+      ? file.content.toString("base64")
+      : Buffer.from(file.content).toString("base64");
+
+    messageParts.push(
+      "",
+      `--${boundary}`,
+      `Content-Type: ${fileType}; name="${fileName}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-Disposition: attachment; filename="${fileName}"`,
+      "",
+      fileContent
+    );
+  }
+
+  messageParts.push("", `--${boundary}--`);
+
+  return Buffer.from(messageParts.join("\r\n"))
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+}
+
+// Main send email function
+const sendEmail = async ({ email, subject, text, attachments }) => {
+  try {
+    const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
+
+    const from = `Newborn Tracking System <${
+      process.env.SENDER_EMAIL || "appuse12300@gmail.com"
+    }>`;
+    
+    // FIX: declare htmlContent properly
+    const htmlContent = `
+    <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${options.subject}</title>
+            <title>${subject}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap');
                 
@@ -182,12 +239,12 @@ const sendEmail = async (options) => {
                 <div class="content">
                     <h2 class="greeting">Greetings,</h2>
                     <div class="message">
-                        ${options.text}
+                        ${text}
                     </div>
                     
                     <div class="info-card">
                         <span class="info-label">Document Reference</span>
-                        <span class="info-value">${options.subject}</span>
+                        <span class="info-value">${subject}</span>
                     </div>
                     
                     <p class="message">
@@ -210,16 +267,25 @@ const sendEmail = async (options) => {
             </div>
         </body>
         </html>
-        `, attachments: options.attachments || []
-    };
+        `;
 
-    try {
-        await transporter.sendMail(mailOptions);
-        console.log('Email sent successfully');
-    } catch (error) {
-        console.error('Error sending email:', error);
-        throw new Error('Error sending email');
-    }
+    const raw = makeRawMessage({
+      from,
+      to: email,
+      subject,
+      htmlContent,
+      attachments: attachments || [],
+    });
+
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw },
+    });
+
+    console.log(`✅ Email sent successfully to ${email}`);
+  } catch (error) {
+    console.error("❌ Error sending email via Gmail API:", error);
+  }
 };
 
 module.exports = sendEmail;
