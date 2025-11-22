@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
-import {ArrowUp } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { motion, useScroll, useTransform, useSpring, useInView, AnimatePresence } from "framer-motion";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 import NewsandLatest from "../NewandInformation/NewsandLatest";
@@ -10,7 +10,7 @@ import Transparency from "../../../../src/assets/Transparency.svg";
 import BagongPilipinas from "../../../../src/assets/bagongpilipinas.png";
 import Hotline from "../NewandInformation/Hotline";
 import LatestBills from "../LatestBill";
-import NewsContent from "../NewandInformation/NewsContent";
+import NewsContent from "../../LandingPagePublic/LandingComponents/NewsContent";
 import Recentpost from "../NewandInformation/Recentpost";
 import LocalServicesGovernment from "../localservices";
 import Baground2 from "../../../../src/assets/ros2221.jpg";
@@ -270,54 +270,56 @@ const Home = ({ aboutUsRef }) => {
 
             {/* Quote Section */}
             <motion.div
-                className="relative bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 px-[40px] text-white sm:px-[20px] md:px-[120px] xs:px-[20px]"
+                className="relative bg-gradient-to-r from-blue-600 via-red-700 to-blue-600 px-4 text-white sm:px-6 md:px-8 lg:px-12 xl:px-16"
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true, margin: "-100px" }}
                 variants={fadeInUp}
             >
-                <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 sm:min-h-[500px] sm:flex-row sm:justify-between sm:py-20 lg:min-h-[600px] lg:py-16 xs:min-h-[250px]">
-                    <motion.div
-                        className="flex-1 text-center sm:text-left"
-                        variants={fadeInUp}
-                    >
-                        <h1 className="custom-3xs:mt-[200px] mt-10 font-serif italic leading-snug sm:leading-relaxed md:leading-relaxed lg:mt-0">
-                            <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xs:text-lg">
-                                "Together as one province, we commit to serve with integrity and unity, building a future where every community
-                                thrives in progress and peace."
-                            </span>
-                        </h1>
-                    </motion.div>
+                <div className="mx-auto max-w-7xl">
+                    <div className="flex h-full min-h-[300px] flex-col items-center justify-center gap-4 sm:min-h-[500px] sm:flex-row sm:justify-between sm:py-20 lg:min-h-[600px] lg:py-16 xs:min-h-[250px]">
+                        <motion.div
+                            className="flex-1 text-center sm:text-left"
+                            variants={fadeInUp}
+                        >
+                            <h1 className="mt-10 font-serif italic leading-snug sm:leading-relaxed md:leading-relaxed lg:mt-0 custom-3xs:mt-[200px]">
+                                <span className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xs:text-lg">
+                                    "Together as one province, we commit to serve with integrity and unity, building a future where every community
+                                    thrives in progress and peace."
+                                </span>
+                            </h1>
+                        </motion.div>
 
-                    <motion.div
-                        className="hidden flex-1 justify-center sm:flex sm:justify-start"
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                    >
-                        <CardSwap
-                            cardDistance={60}
-                            verticalDistance={70}
-                            delay={5000}
-                            pauseOnHover={false}
+                        <motion.div
+                            className="hidden flex-1 justify-center sm:flex sm:justify-start"
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 1, ease: "easeOut" }}
                         >
-                            <Card style={{ backgroundImage: `url(${Baground7})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                            <Card style={{ backgroundImage: `url(${Baground8})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                            <Card style={{ backgroundImage: `url(${Baground9})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                            <Card style={{ backgroundImage: `url(${Baground10})`, backgroundSize: "cover", backgroundPosition: "center" }} />
-                        </CardSwap>
-                    </motion.div>
-                    {/* Wave Divider */}
-                    <div className="absolute bottom-0 left-0 right-0">
-                        <svg
-                            viewBox="0 0 1440 120"
-                            className="h-auto w-full"
-                        >
-                            <path
-                                fill="#f8fafc"
-                                d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
-                            ></path>
-                        </svg>
+                            <CardSwap
+                                cardDistance={60}
+                                verticalDistance={70}
+                                delay={5000}
+                                pauseOnHover={false}
+                            >
+                                <Card style={{ backgroundImage: `url(${Baground7})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                                <Card style={{ backgroundImage: `url(${Baground8})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                                <Card style={{ backgroundImage: `url(${Baground9})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                                <Card style={{ backgroundImage: `url(${Baground10})`, backgroundSize: "cover", backgroundPosition: "center" }} />
+                            </CardSwap>
+                        </motion.div>
+                        {/* Wave Divider */}
+                        <div className="absolute bottom-0 left-0 right-0">
+                            <svg
+                                viewBox="0 0 1440 120"
+                                className="h-auto w-full"
+                            >
+                                <path
+                                    fill="#f8fafc"
+                                    d="M0,64L80,69.3C160,75,320,85,480,80C640,75,800,53,960,48C1120,43,1280,53,1360,58.7L1440,64L1440,120L1360,120C1280,120,1120,120,960,120C800,120,640,120,480,120C320,120,160,120,80,120L0,120Z"
+                                ></path>
+                            </svg>
+                        </div>
                     </div>
                 </div>
             </motion.div>
@@ -325,90 +327,96 @@ const Home = ({ aboutUsRef }) => {
             {/* Announcements and Hotlines */}
             <section
                 id="news"
-                className="container mx-auto mt-4 px-2 sm:px-4 md:px-6 lg:px-[150px]"
+                className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16"
             >
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-3">
-                    {/* Left Column: Bills & News */}
-                    <div className="order-1 md:col-span-2">
-                        <motion.div
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                        >
-                            <LatestBills
-                                onFileView={handleViewFile}
-                                loading={loading}
-                            />
-                        </motion.div>
+                <div className="mx-auto max-w-7xl">
+                    <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+                        {/* Left Column: Bills & News - Takes 3 columns on desktop */}
+                        <div className="lg:col-span-3">
+                            <div className="space-y-6">
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                >
+                                    <LatestBills
+                                        onFileView={handleViewFile}
+                                        loading={loading}
+                                    />
+                                </motion.div>
 
-                        <motion.div
-                            ref={newsAndLatestRef}
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                        >
-                            <NewsandLatest
-                                onNewsView={handleViewNews}
-                                loading={loading}
-                            />
-                        </motion.div>
-                    </div>
+                                <motion.div
+                                    ref={newsAndLatestRef}
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                >
+                                    <NewsandLatest
+                                        onNewsView={handleViewNews}
+                                        loading={loading}
+                                    />
+                                </motion.div>
+                            </div>
+                        </div>
 
-                    {/* Right Column: Cards */}
-                    <div className="order-2 flex flex-col space-y-4 sm:space-y-3 md:order-none md:col-span-1">
-                        {/* Bagong Pilipinas Card */}
-                        <motion.div
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
-                        >
-                            <img
-                                src={BagongPilipinas}
-                                alt="Bagong Pilipinas"
-                                className="h-20 object-contain sm:h-24 md:h-32 lg:h-36"
-                            />
-                        </motion.div>
+                        {/* Right Column: Cards - Takes 1 column on desktop */}
+                        <div className="lg:col-span-1">
+                            <div className="sticky top-6 mb-2 space-y-4">
+                                {/* Bagong Pilipinas Card */}
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                    className="flex items-center justify-center rounded-xl bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg"
+                                >
+                                    <img
+                                        src={BagongPilipinas}
+                                        alt="Bagong Pilipinas"
+                                        className="h-24 w-auto object-contain transition-transform duration-300 hover:scale-105 sm:h-28 md:h-32 lg:h-36"
+                                    />
+                                </motion.div>
 
-                        {/* Transparency Card */}
-                        <motion.div
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
-                        >
-                            <img
-                                src={Transparency}
-                                alt="Transparency"
-                                className="h-20 object-contain sm:h-24 md:h-32 lg:h-36"
-                            />
-                        </motion.div>
+                                {/* Transparency Card */}
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                    className="flex items-center justify-center rounded-xl bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg"
+                                >
+                                    <img
+                                        src={Transparency}
+                                        alt="Transparency"
+                                        className="h-24 w-auto object-contain transition-transform duration-300 hover:scale-105 sm:h-28 md:h-32 lg:h-36"
+                                    />
+                                </motion.div>
 
-                        {/* Hotline Card */}
-                        <motion.div
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
-                        >
-                            <Hotline />
-                        </motion.div>
+                                {/* Hotline Card */}
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                    className="rounded-xl bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg"
+                                >
+                                    <Hotline />
+                                </motion.div>
 
-                        {/* Recent Post Card */}
-                        <motion.div
-                            initial="hidden"
-                            whileInView="visible"
-                            viewport={{ once: true, margin: "-100px" }}
-                            variants={fadeInUp}
-                            className="flex items-center justify-center rounded-xl bg-white p-2 shadow-md sm:p-3 md:p-4"
-                        >
-                            <Recentpost />
-                        </motion.div>
+                                {/* Recent Post Card */}
+                                <motion.div
+                                    initial="hidden"
+                                    whileInView="visible"
+                                    viewport={{ once: true, margin: "-100px" }}
+                                    variants={fadeInUp}
+                                    className="rounded-xl bg-white p-4 shadow-md transition-all duration-300 hover:shadow-lg"
+                                >
+                                    <Recentpost />
+                                </motion.div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

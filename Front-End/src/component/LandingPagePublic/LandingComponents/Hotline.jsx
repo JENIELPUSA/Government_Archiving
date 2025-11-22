@@ -41,7 +41,7 @@ const Sidebar = () => {
     const headerLogos = [CoastGuardLogo, PNPLogo, MyLogo, BFP];
 
     return (
-        <aside className="w-full">
+        <aside className="w-full bg-gray-300 rounded-2xl">
             {/* Header with Logos */}
             <div className="bg-gradient-to-r from-blue-700 to-blue-900 p-4 text-center text-white rounded-t-2xl">
                 {/* Overlapping Logos */}
@@ -70,10 +70,10 @@ const Sidebar = () => {
             {/* Hotline List */}
             <div className="p-3">
                 <div className="mb-3">
-                    <h3 className="mb-1 text-sm font-semibold text-gray-700">
+                    <h3 className="mb-1 text-sm font-semibold text-white">
                         Emergency Contacts
                     </h3>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-white">
                         Tap to call available numbers directly
                     </p>
                 </div>

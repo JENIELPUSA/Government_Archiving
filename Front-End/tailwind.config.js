@@ -11,11 +11,19 @@ export default {
                 "2xs": { max: "320px" },
                 xs: { min: "321px", max: "360px" },
                 "xs-max": { min: "361px", max: "430px" },
-                "custom-3xs":{ min: "431px", max: "639px" },
+                "custom-3xs": { min: "431px", max: "639px" },
                 xm: "640px",
                 "lg-custom": "1024px",
             },
+            animation: {
+                marquee: "marquee 30s linear infinite",
+            },
+            keyframes: {
+                marquee: {
+                    "0%": { transform: "translateX(0%)" },
+                    "100%": { transform: "translateX(-50%)" },
+                },
+            },
         },
-    }
-
+    },
 };

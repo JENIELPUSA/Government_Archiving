@@ -858,7 +858,7 @@ exports.getLatestBillsThisWeek = async (req, res) => {
       { $unwind: { path: "$archiverInfo", preserveNullAndEmptyArrays: true } },
 
       { $sort: { dateOfResolution: -1 } },
-      { $limit: 3 },
+      { $limit: 5 },
 
       {
         $project: {

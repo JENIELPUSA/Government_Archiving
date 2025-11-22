@@ -46,9 +46,6 @@ const LatestBills = ({ onFileView, isLoading }) => {
   const { isLatestBill } = useContext(FilesDisplayContext);
   const billsRef = useRef(null);
   const billsInView = useInView(billsRef, { once: true, margin: "-10% 0px" });
-
-  console.log("isLatestBill",isLatestBill)
-
 return (
   <section ref={billsRef} className="container mx-auto">
     <motion.div

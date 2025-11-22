@@ -135,12 +135,12 @@ exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
       .sort({ date: -1 })
       .skip(skip)
       .limit(limit)
-      .select("_id avatar title date excerpt category")
+      .select("_id avatar title date excerpt category source")
       .lean();
 
     data = data.map((item) => ({
       ...item,
-      date: new Date(item.date).toLocaleDateString("en-US"), // Format: MM/DD/YYYY
+      date: new Date(item.date).toLocaleDateString("en-US"), 
     }));
 
     res.status(200).json({
@@ -325,3 +325,83 @@ exports.deleteNews = AsyncErrorHandler(async (req, res, next) => {
       });
   }
 });
+
+
+exports.DisplayNationalNews = AsyncErrorHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+
+    const { search = "", dateFrom, dateTo } = req.query;
+
+    const API_KEY = process.env.NEWS_API_KEY;
+    const API_URL = `http://api.mediastack.com/v1/news?access_key=${API_KEY}&countries=ph&limit=100`;
+
+    const response = await axios.get(API_URL);
+    let articles = response.data.data || [];
+
+    // 🔍 Searching
+    if (search.trim()) {
+      const keyword = search.trim().toLowerCase();
+      articles = articles.filter(
+        (a) =>
+          a.title?.toLowerCase().includes(keyword) ||
+          a.description?.toLowerCase().includes(keyword)
+      );
+    }
+
+    // 📅 Date Filtering
+    if (dateFrom || dateTo) {
+      articles = articles.filter((a) => {
+        const articleDate = new Date(a.published_at);
+        if (dateFrom && articleDate < new Date(dateFrom)) return false;
+        if (dateTo) {
+          const endDate = new Date(dateTo);
+          endDate.setDate(endDate.getDate() + 1);
+          if (articleDate >= endDate) return false;
+        }
+        return true;
+      });
+    }
+
+    // 📄 Pagination
+    const totalNews = articles.length;
+    const paginated = articles.slice(skip, skip + limit);
+
+    // 🧾 Format like database + default image
+    const DEFAULT_IMAGE = "https://images.unsplash.com/photo-1476242906366-d8eb64c2f661?auto=format&fit=crop&q=80&w=800";
+
+    const formatted = paginated.map((news, index) => ({
+      _id: `national-${index}-${Date.now()}`,
+      title: news.title,
+      excerpt: news.description || "No summary available.",
+      date: new Date(news.published_at).toLocaleDateString("en-US"),
+      avatar: { url: news.image || DEFAULT_IMAGE }, // ✅ fallback image
+      source: news.source || "National",
+      link: news.url,
+    }));
+
+    res.status(200).json({
+      status: "success",
+      data: formatted,
+      totalNews,
+      currentPage: page,
+      totalPages: Math.ceil(totalNews / limit),
+    });
+  } catch (error) {
+    console.error("Error fetching national news:");
+    console.log(error.response?.data || error.message);
+
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong fetching national news.",
+      error: error.response?.data || error.message,
+    });
+  }
+});
+
+
+
+
+

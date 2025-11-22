@@ -103,3 +103,49 @@
 .recharts-tooltip-item {
     @apply text-base font-medium !text-blue-500 dark:!text-blue-600;
 }
+
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-[#f2f4f6] text-slate-900 antialiased font-sans min-h-screen;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  @apply bg-slate-800 text-slate-100;
+}
+
+@layer utilities {
+  .neutral-gradient {
+    background: radial-gradient(circle at 0% 0%, rgba(171, 196, 255, 0.35) 0%, rgba(195, 203, 220, 0.2) 30%, rgba(226, 229, 235, 0.6) 65%, rgba(241, 244, 247, 0.9) 100%);
+  }
+
+  .ambient-shape {
+    background: radial-gradient(circle, rgba(167, 184, 210, 0.5) 0%, rgba(167, 184, 210, 0.15) 45%, transparent 70%);
+  }
+
+  .logo-marquee {
+    display: flex;
+    width: max-content;
+    animation: marquee 26s linear infinite;
+  }
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}

@@ -7,7 +7,7 @@ import Navbar from "./Navbar"; // This is your NavbarWithScroll
 import MyLogo from "../../assets/logo-login.png";
 import philippinelogo from "../../assets/philippines logo.png";
 import PDFview from "./PDFview";
-import NewsContent from "./NewandInformation/NewsContent";
+import NewsContent from "../LandingPagePublic/LandingComponents/NewsContent";
 import NewandInformation from "./NewandInformation/NewsandInformation";
 import NewsandLatest from "./NewandInformation/NewsandLatest";
 import { FaFacebook, FaEnvelope } from "react-icons/fa";

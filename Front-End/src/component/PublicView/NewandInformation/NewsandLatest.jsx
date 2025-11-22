@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 import { FileText } from "lucide-react";
+import FBPageEmbed from "./FBPageEmbed"; // Import the new component
 
 // Skeleton Loader
 const SkeletonCard = () => (
@@ -65,33 +66,6 @@ const NewsCard = ({ title, excerpt, linkText, imageUrl, onClick, category }) => 
   </div>
 );
 
-const FBPageEmbed = () => {
-  const [show, setShow] = React.useState(false);
-
-  React.useEffect(() => {
-    setShow(true);
-  }, []);
-
-  if (!show) return null;
-  const pageUrl = "https://web.facebook.com/spbiliran2019";
-  const src = `https://www.facebook.com/plugins/page.php?href=${encodeURIComponent(
-    pageUrl
-  )}&tabs=timeline&width=340&height=700&small_header=true&adapt_container_width=true&hide_cover=true&show_facepile=false`;
-
-  return (
-    <iframe
-      title="Facebook Page Timeline"
-      src={src}
-      className="h-[800px] w-full sm:h-[700px]"
-      style={{ border: "none" }}
-      scrolling="no"
-      frameBorder="0"
-      allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-      loading="lazy"
-    />
-  );
-};
-
 const NewsandLatest = ({ onNewsView }) => {
   const { pictures, loading } = useContext(NewsDisplayContext);
   const [displayedNews, setDisplayedNews] = useState([]);
@@ -103,7 +77,7 @@ const NewsandLatest = ({ onNewsView }) => {
   }, [pictures, loading]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl ">
+    <div className="mx-auto w-full max-w-7xl">
       {/* Section Header */}
       <div className="text-center mb-2 xs:py-2 py-4">
         <h1 className="flex items-center justify-center gap-3 text-3xl font-bold text-blue-800">
@@ -150,7 +124,7 @@ const NewsandLatest = ({ onNewsView }) => {
 
         {/* Facebook Embed */}
         <aside className="col-span-full mb-6 lg:col-span-2 lg:mb-0">
-          {typeof window !== "undefined" && <FBPageEmbed />}
+          <FBPageEmbed />
         </aside>
       </div>
     </div>

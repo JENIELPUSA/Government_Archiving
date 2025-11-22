@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
 import Mylogo from "../../../assets/logo-login.png";
 import bagongpilipinas from "../../../assets/bagongpilipinas.png";
-import BannerImage from "../BannerImage";
-import Breadcrumb from "../Breadcrumb";
+import BannerImage from "../../PublicView/BannerImage";
+import Breadcrumb from "../../PublicView/Breadcrumb";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 
 const NewsContent = ({ news, onBack }) => {

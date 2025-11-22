@@ -11,7 +11,7 @@ import PdfViewer from "./component/PdfViewer/PdfViewer";
 import OldDocument from "./component/FolderComponents/FolderUI";
 import ArchiveLayout from "./component/AdminDashboard/Archive/ArchiveLayout";
 import DocumentLayout from "./component/AdminDashboard/Document/DocumentsSidebar/DocumentsLayout";
-import PublicAccessLayout from "./component/PublicView/Publicview";
+import PublicAccessLayout from "./component/LandingPagePublic/LandingPageLayout.jsx";
 import ExpandPDFView from "./component/PublicView/PDFview";
 import CommentLayout from "./component/Comments/CommentLayout";
 import LogsAndAudit from "./component/LogsAudit/LogsAndAudit";
@@ -21,7 +21,7 @@ import SBmember from "./component/SBmember/SBmember";
 import UnderMaintenance from "./component/PublicView/AboutUs";
 import CategoryTable from "./component/AdminDashboard/Category/ManageCategoryTable";
 import UserManagement from "./component/UserManagement/UserManagement";
-import LatestNews from "./component/PublicView/NewandInformation/NewsContent";
+import LatestNews from "./component/LandingPagePublic/LandingComponents/NewsContent.jsx";
 import NotFoundPage from "./component/404/404Component.jsx"; //import your 404 component
 
 function App() {

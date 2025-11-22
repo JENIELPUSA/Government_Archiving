@@ -29,7 +29,7 @@ const RecentPosts = () => {
     .slice(0, 4);
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-md">
+    <div >
       <div className="p-4">
         <h3 className="mb-2 border-b border-gray-200 pb-1 text-xs sm:text-sm font-bold uppercase tracking-wide text-gray-700">
           RECENT POSTS

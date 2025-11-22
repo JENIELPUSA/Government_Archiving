@@ -47,16 +47,16 @@ export const navbarLinks = [
                 icon: FolderClock,
                 path: "/dashboard/oldFiles",
             },
-            {
-                label: "View Documents",
-                icon: View,
-                path: "/dashboard/view-documents",
-            },
-            {
-                label: "Upload Document",
-                icon: Upload,
-                path: "/dashboard/upload-documents",
-            },
+            //{
+                //label: "View Documents",
+                //icon: View,
+               // path: "/dashboard/view-documents",
+            //},
+           // {
+                //label: "Upload Document",
+               // icon: Upload,
+                //path: "/dashboard/upload-documents",
+            //},
             {
                 label: "Category",
                 icon: SquareMenu,

@@ -16,5 +16,9 @@ router
     NewsController.UpdateNews
   );
 
+router
+  .route("/national")
+   .get(NewsController.DisplayNationalNews)
+
 
 module.exports = router;

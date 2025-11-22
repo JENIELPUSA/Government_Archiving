@@ -16,7 +16,7 @@ const newsSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ["Documentation", "News","Announcement"],
+    enum: ["Documentation", "News", "Announcement"],
   },
   fileUrl: {
     type: String,
@@ -30,6 +30,7 @@ const newsSchema = new mongoose.Schema({
     url: String,
     public_id: String,
   },
+  source: { type: String, default: "Provincial" },
 });
 
 // Optional: para auto-convert yung string date kapag nagse-save
