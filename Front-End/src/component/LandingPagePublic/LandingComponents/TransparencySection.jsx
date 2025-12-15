@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FaChevronDown, FaFileAlt, FaSearch, FaFacebook } from "react-icons/fa";
 import LatestBills from "./LatestBill";
 import Hotline from "./Hotline";
-import background from "../../../assets/Bacground.jpg";
+import background from "../../../assets/random1.jpg";
 import Transparency from "../../../assets/Transparency.svg";
 import logoBiliran from "../../../assets/bagongpilipinas.png";
 
@@ -120,12 +120,13 @@ const TransparencySection = ({ onViewFile }) => {
             animate={isVisible ? "visible" : "hidden"}
             variants={containerVariants}
         >
-            {/* GRAYSCALE BACKGROUND WITH FADE IN ANIMATION */}
+            {/* BACKGROUND WITHOUT GRAYSCALE AND STRETCHED */}
             <motion.div
                 className="absolute inset-0 bg-cover bg-center"
                 style={{
                     backgroundImage: `url(${background})`,
-                    filter: "grayscale(100%) brightness(0.8)",
+                    backgroundSize: "100% 100%", // Stretched to fill entire container
+                    backgroundPosition: "center",
                     zIndex: 1,
                 }}
                 initial={{ opacity: 0 }}
@@ -172,9 +173,9 @@ const TransparencySection = ({ onViewFile }) => {
                         className="flex w-full flex-col items-center space-y-6 lg:col-span-1"
                         variants={slideInRight}
                     >
-                        {/* Transparency Image */}
+                        {/* Transparency Image - SMALLER SIZE */}
                         <motion.div 
-                            className="w-full p-4 "
+                            className="w-full max-w-xs p-4" // Added max-w-xs to limit width
                             variants={itemVariants}
                             whileHover={{ 
                                 scale: 1.05,
@@ -184,13 +185,14 @@ const TransparencySection = ({ onViewFile }) => {
                             <img
                                 src={Transparency}
                                 alt="Transparency"
-                                className="w-full object-contain"
+                                className="w-full object-contain" // Changed from w-full to w-auto
+                                style={{ maxHeight: '200px' }} // Added maxHeight
                             />
                         </motion.div>
 
-                        {/* Logo Biliran */}
+                        {/* Logo Biliran - SMALLER SIZE */}
                         <motion.div 
-                            className="w-full p-4 "
+                            className="w-full max-w-xs p-4" // Added max-w-xs to limit width
                             variants={itemVariants}
                             whileHover={{ 
                                 scale: 1.05,
@@ -200,7 +202,8 @@ const TransparencySection = ({ onViewFile }) => {
                             <img
                                 src={logoBiliran}
                                 alt="Logo Biliran"
-                                className="w-full object-contain"
+                                className="w-full object-contain" // Changed from w-full to w-auto
+                                style={{ maxHeight: '150px' }} // Added maxHeight
                             />
                         </motion.div>
                     </motion.div>

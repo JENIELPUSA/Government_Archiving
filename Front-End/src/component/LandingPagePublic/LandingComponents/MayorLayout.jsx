@@ -402,7 +402,7 @@ const OfficialProfileLayout = ({ fullName, Position, onBack }) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-blue-50">
       {/* Inject animation styles */}
       <style>{animationStyles}</style>
       

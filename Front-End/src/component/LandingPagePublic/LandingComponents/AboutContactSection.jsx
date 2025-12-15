@@ -1,10 +1,10 @@
 import React from "react";
-import { FaPhone, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
+import { FaPhone, FaEnvelope, FaFacebook, FaYoutube } from "react-icons/fa";
 import { motion } from "framer-motion";
 import background from "../../../assets/Bacground.jpg";
 import CountUp from "react-countup";
 import Arta from "../../../assets/Arta.jpg";
-import GlobalHotline from "../../../assets/globalhotline.jfif"
+import GlobalHotline from "../../../assets/globalhotline.jfif";
 
 const AboutContactSection = () => {
     return (
@@ -95,7 +95,7 @@ const AboutContactSection = () => {
                             <img
                                 src={Arta}
                                 alt="Arta"
-                                className="h-full w-full object-cover grayscale filter transition-all duration-500 hover:grayscale-0"
+                                className="h-full w-full object-cover grayscale transition-all duration-500 hover:grayscale-0"
                             />
                         </div>
 
@@ -105,39 +105,49 @@ const AboutContactSection = () => {
                             {/* Address */}
                             <div className="flex items-start gap-4">
                                 <span className="font-semibold">Address:</span>
-                                <p>123 Main Street, Brgy. Poblacion, Biliran Province</p>
+                                 <p className="text-sm 2xs:text-xs xs:text-[12px] xm:text-sm">
+                                Capitol Compound, National Highway,
+                                <br />
+                                Brgy. Calumpang, Naval, Biliran
+                            </p>
                             </div>
 
-                            {/* Email */}
-                            <div className="flex items-start gap-4">
-                                <span className="font-semibold">Email:</span>
-                                <p>info@biliran.gov.ph</p>
+                            {/* ⭐ Social Media Icons */}
+                            <div className="flex justify-center gap-6 pt-4">
+                                {/* Facebook */}
+                                <a
+                                    href="https://web.facebook.com/spbiliran2019/?locale=tl_PH&_rdc=1&_rdr#"
+                                    target="_blank"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-800 transition hover:bg-blue-600"
+                                >
+                                    <FaFacebook size={20} />
+                                </a>
+
+                                {/* YouTube */}
+                                <a
+                                    href="#"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full bg-red-700 transition hover:bg-red-600"
+                                >
+                                    <FaYoutube size={20} />
+                                </a>
+
+                                {/* Email */}
+                                <a
+                                    href="mailto:biliranofficial@gmail.com"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-700 transition hover:bg-blue-500"
+                                >
+                                    <FaEnvelope size={20} />
+                                </a>
                             </div>
 
-                            {/* Gmail */}
-                            <div className="flex items-start gap-4">
-                                <span className="font-semibold">Gmail:</span>
-                                <p>biliranofficial@gmail.com</p>
+                            {/* Hotline / Global Hotline Image */}
+                            <div className="h-40 w-full overflow-hidden rounded-2xl">
+                                <img
+                                    src={GlobalHotline}
+                                    alt="Hotline"
+                                    className="h-full w-full object-cover grayscale transition-all duration-500 hover:grayscale-0"
+                                />
                             </div>
-                             {/* Gmail */}
-                            <div className="flex items-start gap-4">
-                                <span className="font-semibold">Contact Number:</span>
-                                <p>biliranofficial@gmail.com</p>
-                            </div>
-
-                            {/* Facebook */}
-                            <div className="flex items-start gap-4">
-                                <span className="font-semibold">Facebook:</span>
-                                <p>facebook.com/BiliranOfficial</p>
-                            </div>
-                            {/* Arta Image */}
-                        <div className="h-40 w-full overflow-hidden rounded-2xl">
-                            <img
-                                src={GlobalHotline}
-                                alt="Arta"
-                                className="h-full w-full object-cover grayscale filter transition-all duration-500 hover:grayscale-0"
-                            />
-                        </div>
                         </div>
                     </motion.div>
                 </div>

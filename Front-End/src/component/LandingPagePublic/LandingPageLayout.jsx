@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Navbar from "./LandingComponents/Navbar";
 import Hero from "./LandingComponents/Hero";
@@ -10,7 +10,7 @@ import MapSection from "./LandingComponents/MapSection";
 import AboutContactSection from "./LandingComponents/AboutContactSection";
 import Footer from "./LandingComponents/Footer";
 import HotlineCarousel from "./LandingComponents/HotlineCarousel";
-
+import NewsContent from "./LandingComponents/NewsContent";
 // Import your components for Officials and Legislative
 import SBMembers from "./LandingComponents/SBMember";
 import BoardMemberLayout from "./LandingComponents/BoardMemberLayout";
@@ -18,7 +18,6 @@ import MayorLayout from "./LandingComponents/MayorLayout";
 import Documents from "./LandingComponents/Document";
 import PDFview from "./LandingComponents/PDFview";
 import BiliranLegislativeHistory from "./LandingComponents/BiliranLegislativeHistory";
-
 import LogoCarousel from "./LandingComponents/LogoCarousel";
 
 function LandingPageLayout() {
@@ -28,21 +27,32 @@ function LandingPageLayout() {
     const [selectedDocumentType, setSelectedDocumentType] = useState("");
     const [selectedFile, setSelectedFile] = useState(null);
     const [previousSection, setPreviousSection] = useState("hero");
+    const [selectedNews, setSelectedNews] = useState(null);
+    const [currentVisibleSection, setCurrentVisibleSection] = useState("hero");
 
     // Create a ref for the scroll container
     const scrollContainerRef = useRef(null);
+
+    // Function to scroll to top of main container
+    const scrollToTop = useCallback(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, []);
 
     // Function to handle file viewing
     const handleViewFile = (fileId, fileData, fileName) => {
         setPreviousSection(activeSection);
         setSelectedFile({ fileId, fileData, fileName });
         setActiveSection("pdf-view");
+        scrollToTop();
     };
 
     // Function to handle closing PDF view
     const handleClosePDF = () => {
         setSelectedFile(null);
         setActiveSection(previousSection);
+        scrollToTop();
     };
 
     // Function to handle setting officials or legislative
@@ -58,6 +68,132 @@ function LandingPageLayout() {
             setSelectedDocumentType("");
             setActiveSection("officials");
         }
+        scrollToTop();
+    };
+
+    // Function to handle viewing news content
+    const handleViewNews = (news) => {
+        setPreviousSection(activeSection);
+        setSelectedNews(news);
+        setActiveSection("news-content");
+        scrollToTop();
+    };
+
+    // Function to handle closing news content view
+    const handleCloseNews = () => {
+        setSelectedNews(null);
+        setActiveSection(previousSection);
+        scrollToTop();
+    };
+
+    // Function to handle navigation from Footer (similar to Navbar)
+    const handleNavigateFromFooter = useCallback((sectionId) => {
+        // First, always go back to hero section
+        if (activeSection !== "hero") {
+            setActiveSection("hero");
+            
+            // Wait for hero section to render then scroll to specific section
+            setTimeout(() => {
+                scrollToSectionInHero(sectionId);
+            }, 100);
+        } else {
+            // Already in hero section, just scroll
+            scrollToSectionInHero(sectionId);
+        }
+    }, [activeSection]);
+
+    // Function to scroll to specific section within hero (similar to Navbar)
+    const scrollToSectionInHero = (sectionId) => {
+        if (!scrollContainerRef.current) return;
+
+        const element = document.getElementById(`${sectionId}-section`);
+        if (element) {
+            const container = scrollContainerRef.current;
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            // Calculate scroll position
+            const scrollTop = elementRect.top - containerRect.top + container.scrollTop - 80; // Adjust for navbar
+            
+            container.scrollTo({
+                top: scrollTop,
+                behavior: "smooth"
+            });
+        }
+    };
+
+    // Function to go back to home/hero section
+    const handleBackToHome = useCallback(() => {
+        setActiveSection("hero");
+        setSelectedOfficialRole("");
+        setSelectedDocumentType("");
+        setSelectedFile(null);
+        setSelectedNews(null);
+        scrollToTop();
+    }, [scrollToTop]);
+
+    // Track which section is currently visible (for Footer highlighting)
+    useEffect(() => {
+        if (activeSection !== "hero") return;
+
+        const handleScroll = () => {
+            if (!scrollContainerRef.current) return;
+
+            const container = scrollContainerRef.current;
+            const scrollPosition = container.scrollTop + 100; // Offset for navbar
+
+            // Define section positions
+            const sections = [
+                { id: 'hero', element: document.getElementById('hero-section') },
+                { id: 'mission', element: document.getElementById('mission-section') },
+                { id: 'news', element: document.getElementById('news-section') },
+                { id: 'transparency', element: document.getElementById('transparency-section') },
+                { id: 'gallery', element: document.getElementById('gallery-section') },
+                { id: 'legislative-history', element: document.getElementById('legislative-history-section') },
+                { id: 'map', element: document.getElementById('map-section') },
+                { id: 'contact', element: document.getElementById('contact-section') }
+            ].filter(section => section.element);
+
+            // Find current visible section
+            let currentSection = 'hero';
+            for (const section of sections) {
+                const elementTop = section.element.offsetTop;
+                const elementBottom = elementTop + section.element.offsetHeight;
+                
+                if (scrollPosition >= elementTop && scrollPosition <= elementBottom) {
+                    currentSection = section.id;
+                    break;
+                }
+            }
+
+            setCurrentVisibleSection(currentSection);
+        };
+
+        const container = scrollContainerRef.current;
+        if (container) {
+            container.addEventListener('scroll', handleScroll);
+            // Initial check
+            handleScroll();
+            
+            return () => container.removeEventListener('scroll', handleScroll);
+        }
+    }, [activeSection]);
+
+    // Scroll to top whenever activeSection changes (key fix!)
+    useEffect(() => {
+        scrollToTop();
+    }, [activeSection, scrollToTop]);
+
+    // Animation variants
+    const pageVariants = {
+        initial: { opacity: 0, y: 20 },
+        in: { opacity: 1, y: 0 },
+        out: { opacity: 0, y: -20 }
+    };
+
+    const pageTransition = {
+        duration: 0.3,
+        ease: "easeInOut"
     };
 
     // Reusable LogoCarousel component with sticky behavior
@@ -79,23 +215,48 @@ function LandingPageLayout() {
             );
         }
 
+        if (activeSection === "news-content" && selectedNews) {
+            return (
+                <NewsContent
+                    news={selectedNews}
+                    onBack={handleCloseNews}
+                />
+            );
+        }
+
         if (activeSection === "hero") {
             return (
                 <div className="relative flex w-full flex-col">
-                    <Hero scrollContainerRef={scrollContainerRef} />
+                    <div id="hero-section">
+                        <Hero scrollContainerRef={scrollContainerRef} />
+                    </div>
 
                     {/* Single instance of LogoCarousel */}
                     <StickyLogoCarousel />
-                    <MissionVisionSection />
-     <NewsSection />
-
+                    <div id="mission-section">
+                        <MissionVisionSection />
+                    </div>
+                    {/* Pass handleViewNews prop to NewsSection */}
+                    <div id="news-section">
+                        <NewsSection onNewsView={handleViewNews} />
+                    </div>
 
                     <StickyLogoCarousel />
-                    <TransparencySection onViewFile={handleViewFile} />
-                    <GallerySection />
-                    <BiliranLegislativeHistory />
-                    <MapSection />
-                    <AboutContactSection />
+                    <div id="transparency-section">
+                        <TransparencySection onViewFile={handleViewFile} />
+                    </div>
+                    <div id="gallery-section">
+                        <GallerySection />
+                    </div>
+                    <div id="legislative-history-section">
+                        <BiliranLegislativeHistory />
+                    </div>
+                    <div id="map-section">
+                        <MapSection />
+                    </div>
+                    <div id="contact-section">
+                        <AboutContactSection />
+                    </div>
                     <HotlineCarousel />
                 </div>
             );
@@ -106,7 +267,7 @@ function LandingPageLayout() {
                 return (
                     <BoardMemberLayout
                         Position={selectedOfficialRole}
-                        onBack={() => setActiveSection("hero")}
+                        onBack={handleBackToHome}
                         onViewFile={handleViewFile}
                     />
                 );
@@ -114,7 +275,7 @@ function LandingPageLayout() {
                 return (
                     <MayorLayout
                         Position={selectedOfficialRole}
-                        onBack={() => setActiveSection("hero")}
+                        onBack={handleBackToHome}
                         onViewFile={handleViewFile}
                     />
                 );
@@ -122,7 +283,7 @@ function LandingPageLayout() {
                 return (
                     <SBMembers
                         Position={selectedOfficialRole}
-                        onBack={() => setActiveSection("hero")}
+                        onBack={handleBackToHome}
                         onViewFile={handleViewFile}
                     />
                 );
@@ -135,7 +296,7 @@ function LandingPageLayout() {
                     searchKeyword={searchKeyword}
                     onViewFile={handleViewFile}
                     documentType={selectedDocumentType}
-                    onBack={() => setActiveSection("hero")}
+                    onBack={handleBackToHome}
                 />
             );
         }
@@ -144,7 +305,8 @@ function LandingPageLayout() {
             case "mission":
                 return <MissionVisionSection />;
             case "news":
-                return <NewsSection />;
+                // For direct navigation to news section
+                return <NewsSection onNewsView={handleViewNews} />;
             case "transparency":
                 return <TransparencySection onViewFile={handleViewFile} />;
             case "gallery":
@@ -157,9 +319,8 @@ function LandingPageLayout() {
                 return (
                     <div className="relative flex w-full flex-col">
                         <Hero scrollContainerRef={scrollContainerRef} />
-                        <StickyLogoCarousel />
                         <MissionVisionSection />
-                        <NewsSection onViewFile={handleViewFile} />
+                        <NewsSection onNewsView={handleViewNews} />
                         <TransparencySection onViewFile={handleViewFile} />
                         <GallerySection />
                         <MapSection />
@@ -186,29 +347,29 @@ function LandingPageLayout() {
             >
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={activeSection === "pdf-view" ? "main-content" : activeSection}
-                        initial={{ opacity: 0, y: 100, filter: "blur(10px)" }}
-                        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                        exit={{ opacity: 0, y: -100, filter: "blur(10px)" }}
-                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                        className={`w-full max-w-full ${activeSection === "pdf-view" ? "pointer-events-none" : ""}`}
+                        key={activeSection}
+                        initial="initial"
+                        animate="in"
+                        exit="out"
+                        variants={pageVariants}
+                        transition={pageTransition}
+                        className="w-full max-w-full"
                     >
                         <div className="w-full max-w-full pt-[70px]">
-                            {activeSection !== "pdf-view" && renderContent()}
-                            {activeSection !== "pdf-view" && <Footer />}
+                            {renderContent()}
+                            {/* Avoid double footer in pdf-view and news-content */}
+                            {!["pdf-view", "news-content"].includes(activeSection) && (
+                                <Footer 
+                                    currentPage={activeSection}
+                                    setCurrentPage={setActiveSection}
+                                    searchKeyword={searchKeyword}
+                                    setSearchKeyword={setSearchKeyword}
+                                    setOfficial={handleSetOfficial}
+                                />
+                            )}
                         </div>
                     </motion.div>
                 </AnimatePresence>
-
-                {/* Render PDF view separately as an overlay */}
-                {activeSection === "pdf-view" && selectedFile && (
-                    <PDFview
-                        fileId={selectedFile.fileId}
-                        file={selectedFile.fileData}
-                        fileName={selectedFile.fileName}
-                        onClose={handleClosePDF}
-                    />
-                )}
             </main>
         </div>
     );

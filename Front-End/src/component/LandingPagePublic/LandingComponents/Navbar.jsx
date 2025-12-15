@@ -1,7 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import headlogo from "../../../assets/logo-login.png";
 
-const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword, setOfficial }) => {
+const NavbarWithScroll = ({ 
+    currentPage, 
+    setCurrentPage, 
+    searchKeyword, 
+    setSearchKeyword, 
+    setOfficial,
+    onNavigateToSection // NEW: Add this prop
+}) => {
     const [showScrollNavbar, setShowScrollNavbar] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -11,6 +18,7 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
     const lastScrollYRef = useRef(0);
     const desktopMenuRef = useRef(null);
     const mobileMenuRef = useRef(null);
+    const lastClickedPageRef = useRef(null);
 
     const pages = [
         { id: "hero", label: "Home" },
@@ -37,6 +45,8 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
         { id: "gallery", label: "Tourism" },
         { id: "about", label: "About Us" },
     ];
+
+    const heroSectionIds = ["hero", "mission", "news", "transparency", "gallery", "map", "contact", "about", "legislative-history"];
 
     const isSubpageOf = (pageId, parentId) => {
         const parent = pages.find((p) => p.id === parentId);
@@ -67,11 +77,53 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
         return () => window.removeEventListener("scroll", handleScroll);
     }, [handleScroll]);
 
+    const scrollToSection = (sectionId) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            const offsetTop = element.getBoundingClientRect().top + window.pageYOffset - 80;
+            window.scrollTo({
+                top: offsetTop,
+                behavior: "smooth"
+            });
+        }
+    };
+
     const handlePageClick = (pageId, parentId = null, href = null) => {
         if (href) {
             window.location.href = href;
             return;
         }
+
+        // NEW: Use onNavigateToSection for hero sections
+        if (onNavigateToSection && heroSectionIds.includes(pageId)) {
+            onNavigateToSection(pageId);
+            setDesktopOpenSubmenu(null);
+            setMobileMenuOpen(false);
+            setOpenSubmenu(null);
+            return;
+        }
+
+        // Old logic for officials and legislative
+        const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
+
+        if (isSamePage) {
+            if (pageId === "hero") {
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth"
+                });
+            } else {
+                scrollToSection(pageId);
+            }
+            
+            setDesktopOpenSubmenu(null);
+            setMobileMenuOpen(false);
+            setOpenSubmenu(null);
+            return;
+        }
+
+        setCurrentPage(pageId);
+        lastClickedPageRef.current = pageId;
 
         if (parentId && ["officials", "transparency"].includes(parentId)) {
             if (typeof setOfficial === "function") {
@@ -80,7 +132,15 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
             }
         }
 
-        setCurrentPage(pageId);
+        if (pageId === "hero") {
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth"
+            });
+        } else {
+            scrollToSection(pageId);
+        }
+
         setDesktopOpenSubmenu(null);
         setMobileMenuOpen(false);
         setOpenSubmenu(null);
@@ -124,7 +184,6 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                             className="flex cursor-pointer items-center gap-3 transition-transform duration-200 hover:scale-105"
                             onClick={() => handlePageClick("hero")}
                         >
-                            {/* Logo Container */}
                             <div className="h-12 w-12 flex-shrink-0 overflow-hidden md:h-16 md:w-16">
                                 <img
                                     src={headlogo}
@@ -133,15 +192,9 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                                 />
                             </div>
 
-                            {/* Text Content */}
                             <div className="flex flex-col text-white">
-                                {/* Republic of the Philippines */}
                                 <span className="text-xs font-semibold leading-tight md:text-sm">Republic of the Philippines</span>
-
-                                {/* Line separator */}
                                 <div className="my-1 h-px w-full bg-white"></div>
-
-                                {/* Province Details */}
                                 <span className="text-xs leading-tight">Province of Biliran</span>
                                 <span className="text-xs italic leading-tight">Official Website</span>
                             </div>
@@ -279,7 +332,6 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                         className="flex cursor-pointer items-center gap-3 transition-transform duration-200 hover:scale-105"
                         onClick={() => handlePageClick("hero")}
                     >
-                        {/* Logo Container */}
                         <div className="h-12 w-12 flex-shrink-0 overflow-hidden md:h-16 md:w-16">
                             <img
                                 src={headlogo}
@@ -288,15 +340,9 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
                             />
                         </div>
 
-                        {/* Text Content */}
                         <div className="flex flex-col text-white">
-                            {/* Republic of the Philippines */}
                             <span className="text-xs font-semibold leading-tight md:text-sm">Republic of the Philippines</span>
-
-                            {/* Line separator */}
                             <div className="my-1 h-px w-full bg-white"></div>
-
-                            {/* Province Details */}
                             <span className="text-xs leading-tight">Province of Biliran</span>
                             <span className="text-xs italic leading-tight">Official Website</span>
                         </div>

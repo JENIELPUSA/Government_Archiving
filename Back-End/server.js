@@ -108,9 +108,10 @@ mongoose
   });
   
 const port = process.env.PORT || 8000;
-server.listen(port, () => {
+server.listen(port, '0.0.0.0', () => {
   console.log(`Server running on port ${port}`);
 });
+
 
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection! Shutting down...");

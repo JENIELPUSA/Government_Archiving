@@ -102,12 +102,24 @@ export default function PDFview({ fileId, fileData }) {
                         </div>
 
                         {/* PDF Content */}
-                        <div className="flex-grow overflow-auto bg-gray-100 p-4 xs:overflow-visible xs-max:overflow-visible">
+                        <div className="relative flex-grow overflow-auto bg-gray-100 p-4 xs:overflow-visible xs-max:overflow-visible">
                             <ViewOnly
                                 fileId={fileId}
                                 fileData={fileData}
                                 onLoadComplete={handleLoadComplete}
                             />
+                            
+                            {/* Blur Overlay at Bottom */}
+                            <div className="absolute bottom-0 left-0 right-0 h-[500px] bg-gradient-to-t from-white via-white/95 to-transparent backdrop-blur-sm flex items-center justify-center">
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg transition-all duration-200 flex items-center space-x-2"
+                                >
+                                    <FileText className="h-5 w-5" />
+                                    <span>Contact for Full Access</span>
+                                </motion.button>
+                            </div>
                         </div>
                     </div>
 

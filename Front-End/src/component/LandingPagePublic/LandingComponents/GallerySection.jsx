@@ -50,6 +50,7 @@ const GallerySection = () => {
                     transition={{ duration: 0.6 }}
                     className="mb-12 text-center"
                 >
+                    
                     <h2 className="mb-4 text-3xl font-bold md:text-4xl">Tourism & Gallery</h2>
                     <p className="mx-auto max-w-2xl text-blue-200">
                         Explore the breathtaking beauty of Biliran Province. From majestic waterfalls to pristine white sand beaches.

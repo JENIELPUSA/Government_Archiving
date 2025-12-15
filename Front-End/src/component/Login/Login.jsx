@@ -5,6 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import LoadingIntro from "../../ReusableFolder/loadingIntro";
 import ForgotPassword from "../Login/ForgotPassword";
 import logo from "@/assets/logo-login.png";
+import backgroundImage from "@/assets/LoginBackground.png"; // Import your background image
 import { FolderArchive, Lock, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginStatusModal from "../../ReusableFolder/LogInStatusModal"; // Import the modal
@@ -78,233 +79,270 @@ export default function AuthForm() {
     };
 
     return (
-        <div className="font-inter flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-100 p-4 dark:from-slate-900 dark:to-slate-800">
-            {/* Login Status Modal */}
-            <LoginStatusModal
-                isOpen={loginStatus.show}
-                onClose={handleModalClose}
-                status={loginStatus.status}
-                customMessage={loginStatus.message}
-            />
+        <>
+            {/* Full-screen Loading Overlay */}
+            <AnimatePresence>
+                {isLoading && (
+                    <motion.div
+                        key="loading-overlay"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+                    >
+                        <LoadingIntro />
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-            {/* Subtle background animation */}
-            <motion.div
-                className="absolute inset-0 z-0 opacity-20"
-                initial={{ backgroundPosition: "0% 0%" }}
-                animate={{ backgroundPosition: "100% 100%" }}
-                transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+            <div 
+                className="font-inter flex min-h-screen items-center justify-center overflow-hidden p-4"
                 style={{
-                    backgroundImage: `radial-gradient(circle at top left, rgba(147, 197, 253, 0.3) 0%, transparent 50%),
-                                     radial-gradient(circle at bottom right, rgba(165, 180, 252, 0.3) 0%, transparent 50%)`,
+                    backgroundImage: `url(${backgroundImage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat',
                 }}
-            />
-
-            <motion.div
-                className="relative z-10 flex w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl"
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
             >
-                {/* Left Column - Blue Section */}
-                <div className="relative hidden w-2/5 flex-col items-start justify-between overflow-hidden bg-gradient-to-br from-blue-700 to-blue-900 p-12 text-white md:flex">
-                    {/* Background pattern */}
-                    <div
-                        className="absolute inset-0 opacity-30"
-                        style={{
-                            backgroundImage: `linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%),
-                                         linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%)`,
-                            backgroundSize: "20px 20px ",
-                        }}
-                    ></div>
+                {/* Overlay for better readability */}
+                <div className="absolute inset-0 bg-black/40 dark:bg-black/60"></div>
 
-                    <motion.div
-                        className="relative z-10 mb-8 flex items-center gap-2"
-                        variants={itemVariants}
-                        initial="hidden"
-                        animate="visible"
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white">
-                            <FolderArchive className="h-16 w-16 text-blue-800" />
-                        </div>
-                    </motion.div>
+                {/* Login Status Modal */}
+                <LoginStatusModal
+                    isOpen={loginStatus.show}
+                    onClose={handleModalClose}
+                    status={loginStatus.status}
+                    customMessage={loginStatus.message}
+                />
 
-                    <div className="relative z-10">
-                        <motion.h1
-                            className="mb-4 text-5xl font-extrabold leading-tight"
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 0.4 }}
-                        >
-                            Hello, <br /> welcome!
-                        </motion.h1>
-                        <motion.p
-                            className="text-md mb-8 text-blue-100"
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 0.5 }}
-                        >
-                            This File Archiving System securely organizes, stores, and retrieves PDF documents ensuring fast access, efficient
-                            control, and long-term digital preservation.
-                        </motion.p>
-                    </div>
-                    <div className="absolute bottom-4 left-4 text-xs text-blue-300 opacity-50">FREEPIK</div>
-                </div>
-
-                {/* Right Column - Login Form */}
-                <div className="flex w-full flex-col justify-center bg-white p-8 dark:bg-slate-800 md:w-3/5 md:p-12">
-                    <motion.div
-                        className="mb-8 text-center"
-                        variants={itemVariants}
-                        initial="hidden"
-                        animate="visible"
-                        transition={{ delay: 0.2 }}
-                    >
-                        <div className="mb-6 xs:mb-2 flex justify-center">
-                            <img
-                                src={logo}
-                                alt="App Logo"
-                                className="h-32 w-32 xs:h-20 xs:w-20 object-contain"
-                            />
-                        </div>
-                        <h2 className="text-center text-3xl font-extrabold leading-tight">
-                            <span className="block text-blue-400 xs:text-xl">Sangguniang Panlalawigan</span>
-                            <span className="block text-gray-800 dark:text-gray-100 xs:text-xl">Archiving System</span>
-                        </h2>
-
-                        <p className="text-md mt-2 xs:mt-1 text-gray-600 dark:text-gray-400 xs:text-sm">Securely manage your documents</p>
-                    </motion.div>
-
-                    <form
-                        className="space-y-6 xs:space-y-3"
-                        onSubmit={handleLoginSubmit}
-                    >
-                        <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 0.7 }}
-                        >
-                            <label
-                                htmlFor="email"
-                                className="mb-2 xs:mb-0 block text-sm font-medium text-gray-700 dark:text-gray-300 xs:text-[12px]"
-                            >
-                                Email Address
-                            </label>
-                            <div className="relative">
-                                <Mail
-                                    className="xs:text-[12px] absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                                    size={20}
-                                />
-                                <input
-                                    type="email"
-                                    id="email"
-                                    name="email"
-                                    value={values.email}
-                                    onChange={handleInput}
-                                    disabled={isLoading}
-                                    className="xs:text-[12px] w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
-                                    placeholder="name@mail.com"
-                                    required
-                                />
-                            </div>
-                        </motion.div>
-
-                        <motion.div
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 0.8 }}
-                        >
-                            <label
-                                htmlFor="password"
-                                className="xs:text-[12px] mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                            >
-                                Password
-                            </label>
-                            <div className="relative">
-                                <Lock
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                                    size={20}
-                                />
-                                <input
-                                    type="password"
-                                    id="password"
-                                    name="password"
-                                    value={values.password}
-                                    onChange={handleInput}
-                                    disabled={isLoading}
-                                    className="xs:text-[12px] focus:ring-600 w-full rounded-lg border border-gray-300 bg-gray-50 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-700 dark:text-white dark:placeholder-gray-400"
-                                    placeholder="••••••••"
-                                    required
-                                />
-                            </div>
-                        </motion.div>
-
-                        <motion.div
-                            className="flex items-center justify-between text-sm"
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 0.9 }}
-                        >
-                            <div className="flex items-center">
-                                <input
-                                    id="remember-me"
-                                    name="remember-me"
-                                    type="checkbox"
-                                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                />
-                                <label
-                                    htmlFor="remember-me"
-                                    className="xs:text-[12px] ml-2 block text-gray-900 dark:text-gray-300"
-                                >
-                                    Remember me
-                                </label>
-                            </div>
-                            <a
-                                onClick={() => setForgotPassword(true)}
-                                className="xs:text-[12px] cursor-pointer font-medium text-blue-700 hover:text-blue-900 hover:underline dark:text-blue-300 dark:hover:text-blue-100"
-                            >
-                                Forgot password?
-                            </a>
-                        </motion.div>
-
-                        <motion.button
-                            type="submit"
-                            className={`xs:text-[12px] flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white shadow-lg transition-all duration-300 ${
-                                isLoading
-                                    ? "cursor-not-allowed bg-blue-400"
-                                    : "active:scale-98 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
-                            }`}
-                            disabled={isLoading}
-                            variants={itemVariants}
-                            initial="hidden"
-                            animate="visible"
-                            transition={{ delay: 1.0 }}
-                        >
-                            {isLoading ? <LoadingIntro /> : "Login"}
-                        </motion.button>
-                    </form>
-
-                    <motion.div
-                        className="mt-6 text-center"
-                        variants={itemVariants}
-                        initial="hidden"
-                        animate="visible"
-                        transition={{ delay: 1.1 }}
-                    ></motion.div>
-                </div>
-
-                <ForgotPassword
-                    show={isForgotPassword}
-                    onClose={() => {
-                        setForgotPassword(false);
+                {/* Subtle background animation - Now placed over the background image */}
+                <motion.div
+                    className="absolute inset-0 z-0 opacity-10"
+                    initial={{ backgroundPosition: "0% 0%" }}
+                    animate={{ backgroundPosition: "100% 100%" }}
+                    transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                    style={{
+                        backgroundImage: `radial-gradient(circle at top left, rgba(147, 197, 253, 0.3) 0%, transparent 50%),
+                                         radial-gradient(circle at bottom right, rgba(165, 180, 252, 0.3) 0%, transparent 50%)`,
                     }}
                 />
-            </motion.div>
-        </div>
+
+                <motion.div
+                    className="relative z-10 flex w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl"
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    {/* Left Column - Blue Section with Glass Effect */}
+                    <div className="relative hidden w-2/5 flex-col items-start justify-between overflow-hidden p-12 text-white md:flex"
+                         style={{
+                             background: 'rgba(30, 64, 175, 0.8)', // Semi-transparent blue
+                             backdropFilter: 'blur(10px)',
+                             borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+                         }}>
+                        {/* Background pattern */}
+                        <div
+                            className="absolute inset-0 opacity-20"
+                            style={{
+                                backgroundImage: `linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%),
+                                             linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.1) 75%, rgba(255,255,255,0.1) 100%)`,
+                                backgroundSize: "20px 20px ",
+                            }}
+                        ></div>
+
+                        <motion.div
+                            className="relative z-10 mb-8 flex items-center gap-2"
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: 0.2 }}
+                        >
+                            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                                <FolderArchive className="h-16 w-16 text-white" />
+                            </div>
+                        </motion.div>
+
+                        <div className="relative z-10">
+                            <motion.h1
+                                className="mb-4 text-5xl font-extrabold leading-tight"
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 0.4 }}
+                            >
+                                Hello, <br /> welcome!
+                            </motion.h1>
+                            <motion.p
+                                className="text-md mb-8 text-blue-100"
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 0.5 }}
+                            >
+                                This File Archiving System securely organizes, stores, and retrieves PDF documents ensuring fast access, efficient
+                                control, and long-term digital preservation.
+                            </motion.p>
+                        </div>
+                        <div className="absolute bottom-4 left-4 text-xs text-blue-300 opacity-50">FREEPIK</div>
+                    </div>
+
+                    {/* Right Column - Login Form with Glass Effect */}
+                    <div className="flex w-full flex-col justify-center p-8 md:w-3/5 md:p-12"
+                         style={{
+                             background: 'rgba(255, 255, 255, 0.9)', // Semi-transparent white
+                             backdropFilter: 'blur(10px)',
+                         }}>
+                        <motion.div
+                            className="mb-8 text-center"
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: 0.2 }}
+                        >
+                            <div className="mb-6 xs:mb-2 flex justify-center">
+                                <img
+                                    src={logo}
+                                    alt="App Logo"
+                                    className="h-32 w-32 xs:h-20 xs:w-20 object-contain"
+                                />
+                            </div>
+                            <h2 className="text-center text-3xl font-extrabold leading-tight">
+                                <span className="block text-blue-600 xs:text-xl">Sangguniang Panlalawigan</span>
+                                <span className="block text-gray-800 xs:text-xl">Archiving System</span>
+                            </h2>
+
+                            <p className="text-md mt-2 xs:mt-1 text-gray-600 xs:text-sm">Securely manage your documents</p>
+                        </motion.div>
+
+                        <form
+                            className="space-y-6 xs:space-y-3"
+                            onSubmit={handleLoginSubmit}
+                        >
+                            <motion.div
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 0.7 }}
+                            >
+                                <label
+                                    htmlFor="email"
+                                    className="mb-2 xs:mb-0 block text-sm font-medium text-gray-700 xs:text-[12px]"
+                                >
+                                    Email Address
+                                </label>
+                                <div className="relative">
+                                    <Mail
+                                        className="xs:text-[12px] absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        size={20}
+                                    />
+                                    <input
+                                        type="email"
+                                        id="email"
+                                        name="email"
+                                        value={values.email}
+                                        onChange={handleInput}
+                                        disabled={isLoading}
+                                        className="xs:text-[12px] w-full rounded-lg border border-gray-300 bg-white/80 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 focus:ring-blue-600 disabled:opacity-50"
+                                        placeholder="name@mail.com"
+                                        required
+                                    />
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 0.8 }}
+                            >
+                                <label
+                                    htmlFor="password"
+                                    className="xs:text-[12px] mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Password
+                                </label>
+                                <div className="relative">
+                                    <Lock
+                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                        size={20}
+                                    />
+                                    <input
+                                        type="password"
+                                        id="password"
+                                        name="password"
+                                        value={values.password}
+                                        onChange={handleInput}
+                                        disabled={isLoading}
+                                        className="xs:text-[12px] focus:ring-600 w-full rounded-lg border border-gray-300 bg-white/80 py-2.5 pl-10 pr-4 text-gray-900 placeholder-gray-500 transition-all duration-200 focus:border-blue-600 focus:ring-2 disabled:opacity-50"
+                                        placeholder="••••••••"
+                                        required
+                                    />
+                                </div>
+                            </motion.div>
+
+                            <motion.div
+                                className="flex items-center justify-between text-sm"
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 0.9 }}
+                            >
+                                <div className="flex items-center">
+                                    <input
+                                        id="remember-me"
+                                        name="remember-me"
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <label
+                                        htmlFor="remember-me"
+                                        className="xs:text-[12px] ml-2 block text-gray-900"
+                                    >
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a
+                                    onClick={() => setForgotPassword(true)}
+                                    className="xs:text-[12px] cursor-pointer font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                                >
+                                    Forgot password?
+                                </a>
+                            </motion.div>
+
+                            <motion.button
+                                type="submit"
+                                className={`xs:text-[12px] flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 font-semibold text-white shadow-lg transition-all duration-300 ${
+                                    isLoading
+                                        ? "cursor-not-allowed bg-blue-400"
+                                        : "active:scale-98 bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900"
+                                }`}
+                                disabled={isLoading}
+                                variants={itemVariants}
+                                initial="hidden"
+                                animate="visible"
+                                transition={{ delay: 1.0 }}
+                            >
+                                {isLoading ? "Loading..." : "Login"}
+                            </motion.button>
+                        </form>
+
+                        <motion.div
+                            className="mt-6 text-center"
+                            variants={itemVariants}
+                            initial="hidden"
+                            animate="visible"
+                            transition={{ delay: 1.1 }}
+                        ></motion.div>
+                    </div>
+
+                    <ForgotPassword
+                        show={isForgotPassword}
+                        onClose={() => {
+                            setForgotPassword(false);
+                        }}
+                    />
+                </motion.div>
+            </div>
+        </>
     );
 }

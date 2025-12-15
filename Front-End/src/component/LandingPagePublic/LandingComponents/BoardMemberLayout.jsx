@@ -97,7 +97,7 @@ const BoardMemberLayout = ({ Position, onBack }) => {
   const prevPage = () => currentPage > 1 && setCurrentPage(currentPage - 1);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    <div className="min-h-screen bg-blue-950 relative">
       <BannerImage selection={activePosition} />
       <Breadcrumb position={Position} onBack={onBack} />
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
