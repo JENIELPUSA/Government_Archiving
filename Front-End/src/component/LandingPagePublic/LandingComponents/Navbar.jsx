@@ -7,7 +7,7 @@ const NavbarWithScroll = ({
     searchKeyword, 
     setSearchKeyword, 
     setOfficial,
-    onNavigateToSection // NEW: Add this prop
+    onNavigateToSection
 }) => {
     const [showScrollNavbar, setShowScrollNavbar] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
@@ -94,7 +94,6 @@ const NavbarWithScroll = ({
             return;
         }
 
-        // NEW: Use onNavigateToSection for hero sections
         if (onNavigateToSection && heroSectionIds.includes(pageId)) {
             onNavigateToSection(pageId);
             setDesktopOpenSubmenu(null);
@@ -103,7 +102,6 @@ const NavbarWithScroll = ({
             return;
         }
 
-        // Old logic for officials and legislative
         const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
 
         if (isSamePage) {
@@ -175,7 +173,7 @@ const NavbarWithScroll = ({
                 ref={desktopMenuRef}
                 className={`fixed left-0 right-0 top-0 z-[50] hidden w-full transition-all duration-300 ease-in-out md:block ${
                     showScrollNavbar ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
-                } ${isScrolled ? "border-b border-gray-200 bg-blue-950 shadow-lg" : "bg-blue-950 backdrop-blur-md"}`}
+                } ${isScrolled ? "border-b border-blue-800 bg-blue-950 shadow-lg" : "bg-blue-950 backdrop-blur-md"}`}
             >
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="flex h-20 items-center justify-between">
@@ -239,7 +237,7 @@ const NavbarWithScroll = ({
 
                                                 {/* Desktop Submenu */}
                                                 <div
-                                                    className={`absolute left-0 top-full z-20 w-56 rounded-xl border border-gray-100 bg-white p-2 shadow-xl transition-all duration-200 ${
+                                                    className={`absolute left-0 top-full z-20 w-56 rounded-xl border border-blue-800 bg-blue-900 p-2 shadow-xl transition-all duration-200 ${
                                                         desktopOpenSubmenu === page.id
                                                             ? "visible translate-y-0 opacity-100"
                                                             : "invisible -translate-y-2 opacity-0"
@@ -252,8 +250,8 @@ const NavbarWithScroll = ({
                                                                 onClick={() => handlePageClick(subItem.id, page.id)}
                                                                 className={`flex w-full items-center rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-all duration-150 ${
                                                                     currentPage === subItem.id
-                                                                        ? "bg-blue-50 text-white shadow-sm"
-                                                                        : "text-gray-700 hover:bg-gray-50 hover:text-blue-600"
+                                                                        ? "bg-blue-800 text-white shadow-sm"
+                                                                        : "text-blue-100 hover:bg-blue-800 hover:text-white"
                                                                 }`}
                                                             >
                                                                 <span className="flex-1">{subItem.label}</span>
@@ -319,12 +317,12 @@ const NavbarWithScroll = ({
                 </div>
             </nav>
 
-            {/* Mobile Navbar */}
+            {/* Mobile Navbar - SAME COLOR AS DESKTOP */}
             <nav
                 ref={mobileMenuRef}
-                className={`fixed left-0 right-0 top-0 z-[999] block border-b border-gray-200 bg-white shadow-md transition-all duration-300 md:hidden ${
+                className={`fixed left-0 right-0 top-0 z-[999] block transition-all duration-300 md:hidden ${
                     showScrollNavbar ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"
-                }`}
+                } ${isScrolled ? "border-b border-blue-800 bg-blue-950 shadow-lg" : "bg-blue-950 backdrop-blur-md"}`}
             >
                 <div className="flex items-center justify-between px-4 py-3">
                     {/* Logo Section */}
@@ -332,7 +330,7 @@ const NavbarWithScroll = ({
                         className="flex cursor-pointer items-center gap-3 transition-transform duration-200 hover:scale-105"
                         onClick={() => handlePageClick("hero")}
                     >
-                        <div className="h-12 w-12 flex-shrink-0 overflow-hidden md:h-16 md:w-16">
+                        <div className="h-12 w-12 flex-shrink-0 overflow-hidden">
                             <img
                                 src={headlogo}
                                 alt="Province of Biliran Official Logo"
@@ -341,7 +339,7 @@ const NavbarWithScroll = ({
                         </div>
 
                         <div className="flex flex-col text-white">
-                            <span className="text-xs font-semibold leading-tight md:text-sm">Republic of the Philippines</span>
+                            <span className="text-xs font-semibold leading-tight">Republic of the Philippines</span>
                             <div className="my-1 h-px w-full bg-white"></div>
                             <span className="text-xs leading-tight">Province of Biliran</span>
                             <span className="text-xs italic leading-tight">Official Website</span>
@@ -349,7 +347,7 @@ const NavbarWithScroll = ({
                     </div>
 
                     <button
-                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 transition-colors duration-200 hover:bg-gray-100 focus:outline-none"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-white transition-colors duration-200 hover:bg-blue-800 focus:outline-none"
                         onClick={() => {
                             setMobileMenuOpen(!mobileMenuOpen);
                             if (!mobileMenuOpen) setOpenSubmenu(null);
@@ -375,12 +373,13 @@ const NavbarWithScroll = ({
                     </button>
                 </div>
 
+                {/* Mobile Menu Content */}
                 <div
                     className={`overflow-hidden transition-all duration-300 ease-in-out ${
                         mobileMenuOpen ? "max-h-[80vh] opacity-100" : "max-h-0 opacity-0"
                     }`}
                 >
-                    <div className="border-t border-gray-200 bg-gray-50 px-4 py-4">
+                    <div className="border-t border-blue-800 bg-blue-950 px-4 py-4">
                         {shouldShowSearchBar && (
                             <div className="mb-4">
                                 <div className="relative">
@@ -404,7 +403,7 @@ const NavbarWithScroll = ({
                                         placeholder="Search documents..."
                                         value={searchKeyword}
                                         onChange={(e) => setSearchKeyword(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm text-gray-900 placeholder-gray-500 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                        className="w-full rounded-lg border border-blue-700 bg-blue-900 py-2 pl-10 pr-4 text-sm text-white placeholder-blue-300 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
                             </div>
@@ -421,8 +420,8 @@ const NavbarWithScroll = ({
                                                     currentPage === page.id ||
                                                     isSubpageOf(currentPage, "officials") ||
                                                     isSubpageOf(currentPage, "transparency")
-                                                        ? "bg-blue-600 text-white shadow-sm"
-                                                        : "bg-white text-gray-700 hover:bg-gray-100"
+                                                        ? "bg-blue-800 text-white shadow-sm"
+                                                        : "text-white hover:bg-blue-800"
                                                 }`}
                                             >
                                                 <span>{page.label}</span>
@@ -453,8 +452,8 @@ const NavbarWithScroll = ({
                                                                 onClick={() => handlePageClick(subItem.id, page.id)}
                                                                 className={`flex w-full items-center rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors duration-150 ${
                                                                     currentPage === subItem.id
-                                                                        ? "bg-blue-600 text-white shadow-sm"
-                                                                        : "bg-white text-gray-700 hover:bg-gray-100"
+                                                                        ? "bg-blue-800 text-white shadow-sm"
+                                                                        : "text-blue-100 hover:bg-blue-800"
                                                                 }`}
                                                             >
                                                                 {subItem.label}
@@ -469,8 +468,8 @@ const NavbarWithScroll = ({
                                             onClick={() => handlePageClick(page.id)}
                                             className={`flex w-full items-center rounded-lg px-4 py-3 text-sm font-semibold transition-colors duration-200 ${
                                                 currentPage === page.id
-                                                    ? "bg-blue-600 text-white shadow-sm"
-                                                    : "bg-white text-gray-700 hover:bg-gray-100"
+                                                    ? "bg-blue-800 text-white shadow-sm"
+                                                    : "text-white hover:bg-blue-800"
                                             }`}
                                         >
                                             {page.label}
@@ -483,9 +482,10 @@ const NavbarWithScroll = ({
                 </div>
             </nav>
 
+            {/* Overlay for mobile menu */}
             {mobileMenuOpen && (
                 <div
-                    className="fixed inset-0 z-[998] bg-black/30 backdrop-blur-sm transition-opacity duration-300 md:hidden"
+                    className="fixed inset-0 z-[998] bg-black/50 backdrop-blur-sm transition-opacity duration-300 md:hidden"
                     onClick={() => {
                         setMobileMenuOpen(false);
                         setOpenSubmenu(null);

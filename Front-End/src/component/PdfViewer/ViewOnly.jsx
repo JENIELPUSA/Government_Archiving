@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useContext } from "rea
 import { Document, Page, pdfjs } from "react-pdf";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
-import { Download, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
+import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -145,32 +145,6 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
         [numPages],
     );
 
-    const handleDownload = useCallback(async () => {
-        if (!cachedPdfRef.current.bytes) {
-            alert("PDF not loaded.");
-            return;
-        }
-
-        try {
-            const blob = new Blob([cachedPdfRef.current.bytes], { type: "application/pdf" });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${fileData?.title || "document"}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-
-            setTimeout(() => {
-                a.remove();
-                URL.revokeObjectURL(url);
-            }, 100);
-        } catch (err) {
-            console.error("Error during PDF download:", err);
-            alert("Error downloading PDF.");
-        }
-    }, [fileData]);
-
     // Keyboard navigation
     useEffect(() => {
         const handleKeyPress = (e) => {
@@ -229,19 +203,19 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                 }
 
                 .toolbar {
-    position: sticky;
-    top: 15px;
-    display: flex;
-    gap: 12px;
-    padding: 12px 16px;
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    z-index: 20;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
-    align-items: center;
-}
+                    position: sticky;
+                    top: 15px;
+                    display: flex;
+                    gap: 12px;
+                    padding: 12px 16px;
+                    background: white;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+                    z-index: 20;
+                    margin-bottom: 20px;
+                    flex-wrap: wrap;
+                    align-items: center;
+                }
 
                 .toolbar button {
                     background-color: #f8fafc;
@@ -268,17 +242,6 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                     opacity: 0.5;
                     cursor: not-allowed;
                     background-color: #f1f5f9;
-                }
-
-                .toolbar .download-btn {
-                    background-color: #3b82f6;
-                    color: white;
-                    border: none;
-                }
-
-                .toolbar .download-btn:hover {
-                    background-color: #2563eb;
-                    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
                 }
 
                 .page-navigation {
@@ -492,13 +455,6 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                         >
                             <ZoomOut size={20} />
                         </button>
-                        <button
-                            onClick={handleDownload}
-                            className="download-btn"
-                            title="Download PDF"
-                        >
-                            <Download size={20} />
-                        </button>
 
                         {numPages && (
                             <div className="page-navigation">
@@ -557,14 +513,6 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                                 <button onClick={handleZoomOut}>
                                     <ZoomOut size={20} />
                                     <span>Zoom Out</span>
-                                </button>
-
-                                <button
-                                    onClick={handleDownload}
-                                    className="download-btn"
-                                >
-                                    <Download size={20} />
-                                    <span>Download</span>
                                 </button>
 
                                 {numPages && (

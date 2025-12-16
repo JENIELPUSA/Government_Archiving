@@ -17,7 +17,7 @@ const UploadForm = () => {
     const [customAuthorError, setCustomAuthorError] = useState("");
     const { approver } = useContext(ApproverDisplayContext);
     const { isDropdown, AddSbData } = useContext(SbMemberDisplayContext);
-    const { AddFiles, customError } = useContext(FilesDisplayContext);
+    const { AddFiles} = useContext(FilesDisplayContext);
     const { linkId } = useContext(AuthContext);
     const { isCategory } = useContext(CategoryContext);
     const [selectedFile, setSelectedFile] = useState(null);
@@ -262,7 +262,6 @@ const UploadForm = () => {
         formData.append("summary", summary);
         formData.append("admin", linkId);
         formData.append("dateOfResolution", dateOfResolution);
-
         if (authorId) {
             formData.append("author", authorId);
         } else if (customAuthorId) {

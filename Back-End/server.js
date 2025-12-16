@@ -107,11 +107,10 @@ mongoose
     process.exit(1);
   });
   
-const port = process.env.PORT || 8000;
-server.listen(port, '0.0.0.0', () => {
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
 
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled Rejection! Shutting down...");

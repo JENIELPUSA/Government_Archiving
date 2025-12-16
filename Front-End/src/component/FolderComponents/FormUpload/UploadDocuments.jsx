@@ -494,6 +494,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
                                                                     <div
                                                                         key={member._id}
                                                                         onClick={() => {
+                                                                            console.log("Debugg",member._id)
                                                                             setAuthorId(member._id);
                                                                             setCustomAuthor("");
                                                                             setIsAuthorDropdownOpen(false);

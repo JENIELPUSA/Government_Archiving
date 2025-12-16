@@ -119,6 +119,7 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
     const { search = "" } = req.query;
 
     const pipeline = [
+      // 1️⃣ Build full name
       {
         $addFields: {
           full_name: {
@@ -136,6 +137,8 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
           },
         },
       },
+
+      // 2️⃣ Optional search
       ...(search.trim()
         ? [
             {
@@ -145,20 +148,30 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
             },
           ]
         : []),
-      // --- Group by first, middle, last name to remove duplicates ---
+
+      // 3️⃣ GROUP BY NAME (remove duplicates)
       {
         $group: {
-          _id: { first_name: "$first_name", middle_name: "$middle_name", last_name: "$last_name" },
+          _id: {
+            first_name: "$first_name",
+            middle_name: "$middle_name",
+            last_name: "$last_name",
+          },
+          authorId: { $first: "$_id" }, // ✅ REAL ObjectId
           full_name: { $first: "$full_name" },
           Position: { $first: "$Position" },
         },
       },
+
+      // 4️⃣ Sort
       {
         $sort: { full_name: 1 },
       },
+
+      // 5️⃣ Final shape
       {
         $project: {
-          _id: 1,
+          _id: "$authorId", // ✅ ObjectId returned as _id
           full_name: 1,
           Position: 1,
         },

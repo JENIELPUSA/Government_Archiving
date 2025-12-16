@@ -104,7 +104,7 @@ const BoardMemberLayout = ({ Position, onBack }) => {
         <div className="flex flex-col gap-8 lg:flex-row">
           {/* Main Content */}
           <div className="flex-1">
-            <h1 className="mb-6 text-2xl font-bold text-gray-800">
+            <h1 className="mb-6 text-2xl font-bold text-gray-300">
               {activePosition || "Board Members"}
             </h1>
 
