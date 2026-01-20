@@ -85,43 +85,6 @@ function LandingPageLayout() {
         setActiveSection(previousSection);
         scrollToTop();
     };
-
-    // Function to handle navigation from Footer (similar to Navbar)
-    const handleNavigateFromFooter = useCallback((sectionId) => {
-        // First, always go back to hero section
-        if (activeSection !== "hero") {
-            setActiveSection("hero");
-            
-            // Wait for hero section to render then scroll to specific section
-            setTimeout(() => {
-                scrollToSectionInHero(sectionId);
-            }, 100);
-        } else {
-            // Already in hero section, just scroll
-            scrollToSectionInHero(sectionId);
-        }
-    }, [activeSection]);
-
-    // Function to scroll to specific section within hero (similar to Navbar)
-    const scrollToSectionInHero = (sectionId) => {
-        if (!scrollContainerRef.current) return;
-
-        const element = document.getElementById(`${sectionId}-section`);
-        if (element) {
-            const container = scrollContainerRef.current;
-            const elementRect = element.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            // Calculate scroll position
-            const scrollTop = elementRect.top - containerRect.top + container.scrollTop - 80; // Adjust for navbar
-            
-            container.scrollTo({
-                top: scrollTop,
-                behavior: "smooth"
-            });
-        }
-    };
-
     // Function to go back to home/hero section
     const handleBackToHome = useCallback(() => {
         setActiveSection("hero");
@@ -206,28 +169,32 @@ function LandingPageLayout() {
     const renderContent = () => {
         if (activeSection === "pdf-view" && selectedFile) {
             return (
-                <PDFview
-                    fileId={selectedFile.fileId}
-                    file={selectedFile.fileData}
-                    fileName={selectedFile.fileName}
-                    onClose={handleClosePDF}
-                />
+                <div className="min-h-screen bg-white">
+                    <PDFview
+                        fileId={selectedFile.fileId}
+                        file={selectedFile.fileData}
+                        fileName={selectedFile.fileName}
+                        onClose={handleClosePDF}
+                    />
+                </div>
             );
         }
 
         if (activeSection === "news-content" && selectedNews) {
             return (
-                <NewsContent
-                    news={selectedNews}
-                    onBack={handleCloseNews}
-                />
+                <div className="min-h-screen bg-white">
+                    <NewsContent
+                        news={selectedNews}
+                        onBack={handleCloseNews}
+                    />
+                </div>
             );
         }
 
         if (activeSection === "hero") {
             return (
                 <div className="relative flex w-full flex-col">
-                    <div id="hero-section">
+                    <div id="hero-section" className="h-screen">
                         <Hero scrollContainerRef={scrollContainerRef} />
                     </div>
 
@@ -263,41 +230,49 @@ function LandingPageLayout() {
         }
 
         if (activeSection === "officials") {
-            if (selectedOfficialRole === "Board Member") {
+            if (selectedOfficialRole === "Board_Member") {
                 return (
-                    <BoardMemberLayout
-                        Position={selectedOfficialRole}
-                        onBack={handleBackToHome}
-                        onViewFile={handleViewFile}
-                    />
+                    <div className="min-h-screen bg-white">
+                        <BoardMemberLayout
+                            Position={selectedOfficialRole}
+                            onBack={handleBackToHome}
+                            onViewFile={handleViewFile}
+                        />
+                    </div>
                 );
-            } else if (selectedOfficialRole === "Mayor" || selectedOfficialRole === "Vice-Mayor") {
+            } else if (selectedOfficialRole === "Governor" || selectedOfficialRole === "Vice_Governor") {
                 return (
-                    <MayorLayout
-                        Position={selectedOfficialRole}
-                        onBack={handleBackToHome}
-                        onViewFile={handleViewFile}
-                    />
+                    <div className="min-h-screen bg-white">
+                        <MayorLayout
+                            Position={selectedOfficialRole}
+                            onBack={handleBackToHome}
+                            onViewFile={handleViewFile}
+                        />
+                    </div>
                 );
             } else {
                 return (
-                    <SBMembers
-                        Position={selectedOfficialRole}
-                        onBack={handleBackToHome}
-                        onViewFile={handleViewFile}
-                    />
+                    <div className="min-h-screen bg-white">
+                        <SBMembers
+                            Position={selectedOfficialRole}
+                            onBack={handleBackToHome}
+                            onViewFile={handleViewFile}
+                        />
+                    </div>
                 );
             }
         }
 
         if (activeSection === "legislative") {
             return (
-                <Documents
-                    searchKeyword={searchKeyword}
-                    onViewFile={handleViewFile}
-                    documentType={selectedDocumentType}
-                    onBack={handleBackToHome}
-                />
+                <div className="min-h-screen bg-white">
+                    <Documents
+                        searchKeyword={searchKeyword}
+                        onViewFile={handleViewFile}
+                        documentType={selectedDocumentType}
+                        onBack={handleBackToHome}
+                    />
+                </div>
             );
         }
 
@@ -318,20 +293,24 @@ function LandingPageLayout() {
             default:
                 return (
                     <div className="relative flex w-full flex-col">
-                        <Hero scrollContainerRef={scrollContainerRef} />
+                        <div className="h-screen">
+                            <Hero scrollContainerRef={scrollContainerRef} />
+                        </div>
+                        <StickyLogoCarousel />
                         <MissionVisionSection />
                         <NewsSection onNewsView={handleViewNews} />
                         <TransparencySection onViewFile={handleViewFile} />
                         <GallerySection />
                         <MapSection />
                         <AboutContactSection />
+                        <HotlineCarousel />
                     </div>
                 );
         }
     };
 
     return (
-        <div className="flex min-h-screen flex-col overflow-x-hidden bg-blue-50 font-sans text-slate-800 antialiased">
+        <div className="flex min-h-screen flex-col overflow-x-hidden bg-white font-sans text-slate-800 antialiased">
             <Navbar
                 currentPage={activeSection}
                 setCurrentPage={setActiveSection}
@@ -342,8 +321,12 @@ function LandingPageLayout() {
 
             <main
                 ref={scrollContainerRef}
-                className="scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-blue-100 relative w-full flex-1 overflow-y-auto overflow-x-hidden"
-                style={{ height: "calc(100vh - 70px)" }}
+                className="scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-blue-100 relative w-full flex-1 overflow-y-auto overflow-x-hidden bg-white"
+                style={{ 
+                    height: "calc(100vh - 70px)",
+                    // Ito ang important fix:
+                    WebkitOverflowScrolling: "touch"
+                }}
             >
                 <AnimatePresence mode="wait">
                     <motion.div
@@ -353,9 +336,9 @@ function LandingPageLayout() {
                         exit="out"
                         variants={pageVariants}
                         transition={pageTransition}
-                        className="w-full max-w-full"
+                        className="w-full max-w-full bg-white"
                     >
-                        <div className="w-full max-w-full pt-[70px]">
+                        <div className="w-full max-w-full bg-white pt-[70px]">
                             {renderContent()}
                             {/* Avoid double footer in pdf-view and news-content */}
                             {!["pdf-view", "news-content"].includes(activeSection) && (

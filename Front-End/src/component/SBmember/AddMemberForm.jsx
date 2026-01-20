@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Image } from "lucide-react";
+
 function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
     const [newMember, setNewMember] = useState({
         first_name: "",
@@ -16,7 +17,58 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
         preview: null,
     });
     const [isLoading, setIsLoading] = useState(false);
+    const [positionInput, setPositionInput] = useState("");
     const fileInputRef = useRef(null);
+
+    // Function to standardize position input - UPDATED LOGIC
+    const standardizePosition = (input) => {
+        if (!input) return "";
+
+        const lowerInput = input.toLowerCase().trim();
+
+        // IMPORTANT: Check for Vice Governor FIRST (specific to general)
+        if (lowerInput.includes("vice") && lowerInput.includes("governor")) {
+            return "Vice_Governor";
+        }
+
+        if (lowerInput.includes("vicegovernor")) {
+            return "Vice_Governor";
+        }
+
+        if (lowerInput === "vice gov" || lowerInput === "vice-gov") {
+            return "Vice_Governor";
+        }
+
+        if (lowerInput.includes("vice") && !lowerInput.includes("governor")) {
+            // Assume they mean Vice Governor if they just type "vice"
+            return "Vice_Governor";
+        }
+
+        // Then check for Governor
+        if (lowerInput === "governor" || lowerInput === "gov") {
+            return "Governor";
+        }
+
+        if (lowerInput.includes("governor") && !lowerInput.includes("vice")) {
+            return "Governor";
+        }
+
+        // Finally check for Board Member
+        if (lowerInput.includes("board") || lowerInput.includes("bm") || lowerInput.includes("boardmember")) {
+            return "Board_Member";
+        }
+
+        if (lowerInput.includes("board member") || lowerInput.includes("board-member")) {
+            return "Board_Member";
+        }
+
+        // If no match, return the original input capitalized
+        return input
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    };
+
     useEffect(() => {
         if (memberToEdit) {
             setNewMember({
@@ -32,6 +84,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
                 avatar: null,
                 preview: Image,
             });
+            setPositionInput(memberToEdit.Position || "");
         } else {
             setNewMember({
                 first_name: "",
@@ -46,15 +99,28 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
                 avatar: null,
                 preview: null,
             });
+            setPositionInput("");
         }
     }, [memberToEdit]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setNewMember((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+
+        if (name === "position") {
+            setPositionInput(value);
+
+            // Debounced standardization (optional, for better UX)
+            const standardizedValue = standardizePosition(value);
+            setNewMember((prev) => ({
+                ...prev,
+                [name]: standardizedValue,
+            }));
+        } else {
+            setNewMember((prev) => ({
+                ...prev,
+                [name]: value,
+            }));
+        }
     };
 
     const handleImageChange = (e) => {
@@ -79,13 +145,28 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
         setIsLoading(true);
 
         try {
-            const memberData = memberToEdit ? { ...newMember, _id: memberToEdit._id } : newMember;
+            // Final standardization with the updated logic
+            const memberData = {
+                ...newMember,
+                position: standardizePosition(newMember.position || positionInput),
+                ...(memberToEdit && { _id: memberToEdit._id }),
+            };
+
+            console.log("Submitting with position:", memberData.position);
             await onAddMember(memberData);
         } catch (error) {
             console.error("Error submitting form:", error);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleQuickSelect = (selectedPosition, displayText) => {
+        setPositionInput(displayText);
+        setNewMember((prev) => ({
+            ...prev,
+            position: selectedPosition,
+        }));
     };
 
     return (
@@ -180,17 +261,17 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar }) {
 
                             {/* Position Input */}
                             <div className="mt-6 w-full">
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Position</label>
                                 <input
                                     type="text"
                                     name="position"
-                                    value={newMember.position}
+                                    value={positionInput}
                                     onChange={handleInputChange}
                                     disabled={isLoading}
-                                    placeholder="Enter position"
+                                    placeholder="Enter position (e.g., Board Member, Governor, Vice Governor)"
                                     className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${
                                         isLoading ? "cursor-not-allowed opacity-50" : ""
                                     }`}
+                                    required
                                 />
                             </div>
 

@@ -26,10 +26,10 @@ const NavbarWithScroll = ({
             id: "officials",
             label: "Officials",
             subItems: [
-                { id: "Mayor", label: "Mayor" },
-                { id: "Vice-Mayor", label: "Vice-Mayor" },
+                { id: "Governor", label: "Governor" },
+                { id: "Vice_Governor", label: "Vice-Governor" },
                 { id: "sb-members", label: "SP Members" },
-                { id: "Board Member", label: "Board Members" },
+                { id: "Board_Member", label: "Board Members" },
             ],
         },
         {

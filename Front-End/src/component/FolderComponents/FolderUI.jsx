@@ -7,6 +7,7 @@ import FoldersView from "./FoldersView";
 import CategoryFolder from "./CategoryFolder";
 import StatusVerification from "../../ReusableFolder/StatusModal";
 import FilesView from "./FilesView";
+import PdfViewer from "../PdfViewer/PdfViewer";
 
 const FolderCreationUI = () => {
     const {
@@ -61,6 +62,8 @@ const FolderCreationUI = () => {
     const [searchTimer, setSearchTimer] = useState(null);
     const [selectedTags, setSelectedTags] = useState([]);
     const [isTagsDropdownOpen, setIsTagsDropdownOpen] = useState(false);
+    const [pdfVisible, setpdfVisible] = useState(false);
+    const [file, setfile] = useState();
     const handleFolderSearch = (value) => {
         setSearchTerm(value);
     };
@@ -111,10 +114,8 @@ const FolderCreationUI = () => {
     }, [fileSearchTerm, fileTypeInput, fileDateFrom, fileDateTo, openCategory]);
 
     const handleViewPdf = (file) => {
-        const fileId = file._id;
-        if (!fileId) return;
-        console.log(`Viewing PDF: ${file.fileName}`);
-        navigate(`/dashboard/pdf-viewer/${fileId}`, { state: { fileData: file } });
+        setpdfVisible(true);
+        setfile(file);
     };
 
     // Ito ang function para sa Main Folder
@@ -457,8 +458,8 @@ const FolderCreationUI = () => {
                 />
             ) : openFolder ? ( // Kung may main folder na na-click, ipakita ang CategoryFolder
                 <CategoryFolder
-                isTagsDropdownOpen={isTagsDropdownOpen}
-                setIsTagsDropdownOpen={setIsTagsDropdownOpen}
+                    isTagsDropdownOpen={isTagsDropdownOpen}
+                    setIsTagsDropdownOpen={setIsTagsDropdownOpen}
                     selectedTags={selectedTags}
                     setSelectedTags={setSelectedTags}
                     fetchFilterTags={fetchFilterTags}
@@ -535,6 +536,11 @@ const FolderCreationUI = () => {
                 isOpen={isVerification}
                 onConfirmDelete={handleConfirmDelete}
                 onClose={handleCloseVerificationModal}
+            />
+            <PdfViewer
+                onClose={() => setpdfVisible(false)}
+                isVisible={pdfVisible}
+                file={file}
             />
         </div>
     );

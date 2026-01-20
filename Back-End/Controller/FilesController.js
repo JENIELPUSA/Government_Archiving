@@ -98,7 +98,7 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
       {
         new: true,
         runValidators: true,
-      }
+      },
     );
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
@@ -309,10 +309,10 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
           if (targetUser) {
             io.to(targetUser.socketId).emit(
               "SentDocumentNotification",
-              SendMessage
+              SendMessage,
             );
             console.log(
-              `📨 Sent socket notification to ONLINE admin (${adminId})`
+              `📨 Sent socket notification to ONLINE admin (${adminId})`,
             );
           } else {
             console.log(`📭 Admin (${adminId}) is OFFLINE — saved in DB only.`);
@@ -406,8 +406,6 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       folderID,
       status = "Approved",
     } = req.body;
-
-  
 
     if (!title) {
       return res.status(400).json({ error: "Please Enter Title!" });
@@ -776,8 +774,18 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
   ]);
 
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const monthlyFileSummary = months.map((month, index) => {
@@ -802,7 +810,6 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     monthlyFileSummary,
   });
 });
-
 
 exports.getLatestBillsThisWeek = async (req, res) => {
   try {
@@ -916,7 +923,6 @@ exports.getLatestBillsThisWeek = async (req, res) => {
   }
 };
 
-
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo, term_from, term_to } = req.query;
   const aggregationPipeline = [];
@@ -964,7 +970,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         },
         memberInfo: "$$ROOT",
       },
-    }
+    },
   );
 
   // --- Search filter ---
@@ -1040,12 +1046,11 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         members: 1,
       },
     },
-    { $sort: { term_from: -1 } }
+    { $sort: { term_from: -1 } },
   );
 
-  const AuthorsWithFiles = await SBmember.aggregate(
-    aggregationPipeline
-  ).allowDiskUse(true);
+  const AuthorsWithFiles =
+    await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
   // --- Compute counts and paginate per term ---
   const limit = parseInt(req.query.limit) || 9;
@@ -1310,7 +1315,7 @@ exports.updateFileOfficer = AsyncErrorHandler(async (req, res) => {
   const updated = await Files.findByIdAndUpdate(
     id,
     { officer, status: "Pending" },
-    { new: true }
+    { new: true },
   );
 
   if (!updated) {
@@ -1418,7 +1423,7 @@ exports.updateFileOfficer = AsyncErrorHandler(async (req, res) => {
   if (targetUser) {
     io.to(targetUser.socketId).emit("SentDocumentNotification", SendMessage);
     console.log(
-      `📨 Sent document notification to online officer (${officerId})`
+      `📨 Sent document notification to online officer (${officerId})`,
     );
   } else {
     console.log(`📭 Officer (${officerId}) is offline. Notification saved.`);
@@ -1595,7 +1600,7 @@ exports.getFileForArchive = AsyncErrorHandler(async (req, res) => {
     { $project: { tags: 1 } },
   ]);
   const allActiveTags = Array.from(
-    new Set(activeTagDocs.flatMap((doc) => doc.tags || []))
+    new Set(activeTagDocs.flatMap((doc) => doc.tags || [])),
   );
 
   // Main query with pagination
@@ -2265,8 +2270,8 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
         regex.test(f.summary || "") ||
         regex.test(f.tags?.join(",") || "") ||
         regex.test(
-          `${f.authorInfo?.first_name || ""} ${f.authorInfo?.last_name || ""}`
-        )
+          `${f.authorInfo?.first_name || ""} ${f.authorInfo?.last_name || ""}`,
+        ),
     );
   }
 
@@ -2282,7 +2287,7 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
   const activeTagsPerCategory = {};
   for (const [catId, catFiles] of Object.entries(filesByCategory)) {
     activeTagsPerCategory[catId] = Array.from(
-      new Set(catFiles.flatMap((f) => f.tags || []))
+      new Set(catFiles.flatMap((f) => f.tags || [])),
     );
   }
 
@@ -2358,7 +2363,7 @@ exports.DisplayFilesArchive = AsyncErrorHandler(async (req, res) => {
           },
           {
             $match: {
-              ArchivedStatus: "Archived",
+              ArchivedStatus: { $in: ["Archived", "Active"] },
               "categoryInfo.category": { $nin: ["Resolution", "Ordinance"] },
             },
           },
@@ -2666,69 +2671,44 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
   res.status(200).json(results);
 });
 
-
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to, term } =
+  const { search, district, detailInfo, Position, term_from, term_to, term, page, limit } =
     req.query;
+
   const aggregationPipeline = [];
   const matchStage = {};
 
-  // --- Existing filters ---
+  // --- Filters ---
   if (district) matchStage.district = district;
   if (detailInfo) matchStage.detailInfo = detailInfo;
-  if (Position) matchStage.Position = Position;
 
-  // --- Term text filter ---
-  if (term && term.trim() !== "") {
-    matchStage.term = {
-      $regex: new RegExp(`^\\s*${term.trim()}\\s*$`, "i"),
-    };
+  if (Position) {
+    // Case-insensitive match sa Position
+    matchStage.Position = { $regex: new RegExp(`^${Position}$`, "i") };
   }
 
+  if (term && term.trim() !== "") {
+    matchStage.term = { $regex: new RegExp(`^\\s*${term.trim()}\\s*$`, "i") };
+  }
+
+  // Push match stage kung may filter
   if (Object.keys(matchStage).length > 0) {
     aggregationPipeline.push({ $match: matchStage });
   }
 
-  // --- Year-based filtering for term_from and term_to ---
+  // --- Year-based filtering ---
   if (term_from || term_to) {
-    if (term_from && term_to) {
+    const exprConditions = [];
+    if (term_from) exprConditions.push({ $gte: [{ $year: "$term_from" }, parseInt(term_from)] });
+    if (term_to) exprConditions.push({ $lte: [{ $year: "$term_to" }, parseInt(term_to)] });
+
+    if (exprConditions.length > 0) {
       aggregationPipeline.push({
         $match: {
-          $expr: {
-            $and: [
-              { $gte: [{ $year: "$term_from" }, parseInt(term_from)] },
-              { $lte: [{ $year: "$term_to" }, parseInt(term_to)] },
-            ],
-          },
-        },
-      });
-    } else if (term_from) {
-      aggregationPipeline.push({
-        $match: {
-          $expr: {
-            $gte: [{ $year: "$term_from" }, parseInt(term_from)],
-          },
-        },
-      });
-    } else if (term_to) {
-      aggregationPipeline.push({
-        $match: {
-          $expr: {
-            $lte: [{ $year: "$term_to" }, parseInt(term_to)],
-          },
+          $expr: exprConditions.length === 1 ? exprConditions[0] : { $and: exprConditions },
         },
       });
     }
-  } else {
-    // Default: show terms starting from current year upward
-    const currentYear = new Date().getFullYear();
-    aggregationPipeline.push({
-      $match: {
-        $expr: {
-          $gte: [{ $year: "$term_from" }, currentYear],
-        },
-      },
-    });
   }
 
   // --- Lookup files ---
@@ -2780,10 +2760,21 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           ],
         },
         "files.categoryName": "$categoryInfo.category",
+        // --- Override Position for display ---
+        Position: {
+          $switch: {
+            branches: [
+              { case: { $eq: ["$Position", "Board_Member"] }, then: "Board Member" },
+              { case: { $eq: ["$Position", "Vice_Governor"] }, then: "Vice Governor" },
+            ],
+            default: "$Position",
+          },
+        },
       },
     }
   );
 
+  // --- Search filter ---
   if (search) {
     aggregationPipeline.push({
       $match: {
@@ -2793,18 +2784,22 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           { last_name: { $regex: search, $options: "i" } },
           { fullName: { $regex: search, $options: "i" } },
           { "files.title": { $regex: search, $options: "i" } },
+          { "files": { $exists: false } },
+          { "files": { $eq: [] } },
         ],
       },
     });
   }
+
+  // --- Group by fullName (same name members combined) ---
   aggregationPipeline.push(
     {
       $group: {
-        _id: "$_id",
+        _id: "$fullName", // group by name
         fullName: { $first: "$fullName" },
         district: { $first: "$district" },
         detailInfo: { $first: "$detailInfo" },
-        Position: { $first: "$Position" },
+        Position: { $first: "$Position" }, // already display-friendly
         term: { $first: "$term" },
         term_from: { $first: "$term_from" },
         term_to: { $first: "$term_to" },
@@ -2812,7 +2807,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         files: {
           $push: {
             $cond: [
-              { $ne: ["$files._id", null] },
+              { $and: [{ $ne: ["$files", null] }, { $ne: ["$files._id", null] }] },
               {
                 _id: "$files._id",
                 title: "$files.title",
@@ -2833,14 +2828,10 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] },
         },
         resolutionCount: {
-          $sum: {
-            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
-          },
+          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0] },
         },
         ordinanceCount: {
-          $sum: {
-            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
-          },
+          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0] },
         },
       },
     },
@@ -2848,17 +2839,15 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   );
 
   // --- Execute aggregation ---
-  const AuthorsWithFiles = await SBmember.aggregate(
-    aggregationPipeline
-  ).allowDiskUse(true);
+  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
   // --- Pagination ---
   const totalCount = AuthorsWithFiles.length;
-  const limit = parseInt(req.query.limit) || 20;
-  const currentPage = parseInt(req.query.page) || 1;
-  const totalPages = Math.ceil(totalCount / limit);
-  const startIndex = (currentPage - 1) * limit;
-  const endIndex = currentPage * limit;
+  const limitNumber = parseInt(limit) || 20;
+  const currentPage = parseInt(page) || 1;
+  const totalPages = Math.ceil(totalCount / limitNumber);
+  const startIndex = (currentPage - 1) * limitNumber;
+  const endIndex = currentPage * limitNumber;
   const paginatedData = AuthorsWithFiles.slice(startIndex, endIndex);
 
   res.status(200).json({
@@ -2868,6 +2857,8 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
+
+
 
 exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
   const { first_name, middle_name, last_name } = req.query;
@@ -3074,7 +3065,7 @@ exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
           },
           "files.categoryName": "$categoryInfo.category",
         },
-      }
+      },
     );
 
     // --- Search filter ---
@@ -3136,7 +3127,7 @@ exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
           },
         },
       },
-      { $sort: { fullName: 1 } }
+      { $sort: { fullName: 1 } },
     );
 
     // --- Facet for pagination ---
@@ -3148,9 +3139,8 @@ exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
     });
 
     // --- Execute aggregation ---
-    const result = await SBmember.aggregate(aggregationPipeline).allowDiskUse(
-      true
-    );
+    const result =
+      await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
     const totalCount = result[0].metadata[0]?.total || 0;
     const totalPages = Math.ceil(totalCount / limitNumber);
@@ -3161,5 +3151,5 @@ exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
       totalPages,
       data: result[0].data,
     });
-  }
+  },
 );

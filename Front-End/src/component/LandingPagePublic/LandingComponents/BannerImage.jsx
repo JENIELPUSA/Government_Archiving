@@ -1,7 +1,13 @@
 import React from "react";
 
 const BannerImage = ({ selection }) => {
-  const displayText = selection || "";
+  // Mapping ng selection para sa display
+  const displayText = {
+    Board_Member: "Board Member",
+    Vice_Governor: "Vice Governor",
+  }[selection] || selection || ""; // default sa original o empty string
+
+  console.log("displayText", displayText);
 
   return (
     <div

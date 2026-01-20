@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { FilesDisplayContext } from ".././../../contexts/FileContext/FileContext";
 import { CategoryContext } from ".././../../contexts/CategoryContext/CategoryContext";
 import { useNavigate } from "react-router-dom";
-import { ChevronDown, ChevronUp, Loader, FileText } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader, FileText, X } from "lucide-react";
 import { debounce } from "lodash";
 import BannerImage from "./BannerImage";
 import Breadcrumb from "./Breadcrumb";
@@ -32,7 +32,7 @@ const SkeletonYearSection = () => (
                 <SkeletonItem key={i} />
             ))}
         </div>
-    </motion.div>
+</motion.div>
 );
 
 const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
@@ -73,22 +73,45 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
         [fetchPublicDisplay, clearPublicDisplay],
     );
 
+    // Function to fetch ALL years data (for "All Years" view)
+    const fetchAllYears = useMemo(
+        () =>
+            debounce(async () => {
+                if (clearPublicDisplay) {
+                    clearPublicDisplay();
+                }
+
+                setShowSkeleton(true);
+                setIsFetching(true);
+
+                try {
+                    await fetchPublicDisplay({
+                        title: searchKeyword || null,
+                        category: effectiveCategory,
+                        page: 1,
+                        // Remove year filter to get all years
+                    });
+                } finally {
+                    setIsFetching(false);
+                    setTimeout(() => setShowSkeleton(false), 300);
+                }
+            }, 500),
+        [fetchPublicDisplay, clearPublicDisplay, searchKeyword, effectiveCategory],
+    );
+
+    // Initial fetch for "All Years" view
     useEffect(() => {
         setShowSkeleton(true);
 
         const clearTimer = setTimeout(() => {
-            debouncedFetch({
-                title: searchKeyword || null,
-                category: effectiveCategory,
-                page: 1,
-            });
+            fetchAllYears();
         }, 100);
 
         return () => {
             clearTimeout(clearTimer);
-            debouncedFetch.cancel();
+            fetchAllYears.cancel();
         };
-    }, [searchKeyword, effectiveCategory, debouncedFetch]);
+    }, [searchKeyword, effectiveCategory, fetchAllYears]);
 
     useEffect(() => {
         return () => {
@@ -163,8 +186,18 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
 
     const toggleYear = (year) => {
         if (showSkeleton || isFetching || globalIsLoading) return;
-        const isCurrentlyOpen = openYear === year;
-        setOpenYear(isCurrentlyOpen ? null : year);
+        
+        // If clicking on an already open year, return to "All Years" view
+        if (openYear === year) {
+            // Fetch ALL years data
+            fetchAllYears();
+            setSelectedYear("All Years");
+            setOpenYear(null);
+        } else {
+            // If clicking on a different year, open that year
+            setSelectedYear(year);
+            setOpenYear(year);
+        }
     };
 
     const handlePageChange = async (year, page) => {
@@ -173,18 +206,31 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
         try {
             setShowSkeleton(true);
             setIsFetching(true);
+            
+            // Kapag nag-change page sa specific year, manatili sa specific year
             await fetchPublicDisplay({
                 title: searchKeyword || null,
                 year: year === "Unknown" ? null : parseInt(year, 10),
                 category: effectiveCategory,
                 page,
             });
+            
+            // Manatiling selected ang year na ito
+            setSelectedYear(year);
+            setOpenYear(year);
         } catch (error) {
             console.error("Pagination error:", error);
         } finally {
             setIsFetching(false);
             setTimeout(() => setShowSkeleton(false), 300);
         }
+    };
+
+    // Function to return to "All Years" view
+    const returnToAllYears = () => {
+        fetchAllYears();
+        setSelectedYear("All Years");
+        setOpenYear(null);
     };
 
     const formatDate = (dateString) => {
@@ -200,8 +246,24 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
     const showCategoryFilter = !documentType;
 
     const yearSectionVariants = {
-        closed: { height: 0, opacity: 0, transition: { duration: 0.3 } },
-        open: { height: "auto", opacity: 1, transition: { duration: 0.4 } },
+        closed: { 
+            height: 0, 
+            opacity: 0,
+            transition: { 
+                duration: 0.3,
+                height: { duration: 0.3 },
+                opacity: { duration: 0.2 }
+            } 
+        },
+        open: { 
+            height: "auto", 
+            opacity: 1,
+            transition: { 
+                duration: 0.4,
+                height: { duration: 0.4 },
+                opacity: { duration: 0.3 }
+            } 
+        },
     };
 
     const shouldShowSkeletonState = showSkeleton || isFetching || globalIsLoading;
@@ -225,8 +287,12 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                             value={selectedYear}
                             onChange={(e) => {
                                 const year = e.target.value;
-                                setSelectedYear(year);
-                                setOpenYear(year !== "All Years" ? year : null);
+                                if (year === "All Years") {
+                                    returnToAllYears();
+                                } else {
+                                    setSelectedYear(year);
+                                    setOpenYear(year);
+                                }
                             }}
                             disabled={shouldShowSkeletonState}
                         >
@@ -263,14 +329,14 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                 </div>
                 {/* Main Content */}
                 {shouldShowSkeletonState ? (
-                    // ✅ Show skeleton during clearing/loading
+                    // Show skeleton during clearing/loading
                     <div className="space-y-6">
                         {[...Array(2)].map((_, i) => (
                             <SkeletonYearSection key={i} />
                         ))}
                     </div>
                 ) : hasData ? (
-                    // ✅ Show data when available
+                    // Show data when available
                     <div className="space-y-6">
                         {Object.entries(filteredData)
                             .sort(([a], [b]) => (a === "Unknown" ? 1 : b === "Unknown" ? -1 : parseInt(b) - parseInt(a)))
@@ -280,6 +346,7 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                                 const totalPages = yearData.totalPages;
                                 const totalCount = yearData.totalCount || 0;
                                 const isOpen = openYear === year;
+                                const isSpecificYearView = selectedYear !== "All Years";
 
                                 return (
                                     <motion.div
@@ -290,15 +357,16 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
                                             className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 xs:p-2 text-white transition-all duration-200 hover:from-blue-800 hover:to-blue-900"
                                             onClick={() => toggleYear(year)}
                                         >
-                                            <h2 className="flex items-center gap-3 text-xl font-bold">
-                                                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900 xs:text-[12px] xs-max:text-[15px]">
-                                                    {year === "Unknown" ? "?" : year.substring(2)}
-                                                </span>
-                                                <div className="xs:text-[15px] xs-max:text-[15px]">
-                                                     {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
-                                                </div>
-                                               
-                                            </h2>
+                                            <div className="flex items-center gap-3">
+                                                <h2 className="flex items-center gap-3 text-xl font-bold">
+                                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900 xs:text-[12px] xs-max:text-[15px]">
+                                                        {year === "Unknown" ? "?" : year.substring(2)}
+                                                    </span>
+                                                    <div className="xs:text-[15px] xs-max:text-[15px]">
+                                                        {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
+                                                    </div>
+                                                </h2>
+                                            </div>
                                             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                         </motion.div>
 

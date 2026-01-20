@@ -27,7 +27,6 @@ import AutoLogout from "./component/AutoLogout.jsx";
 createRoot(document.getElementById("root")).render(
     // <StrictMode>
     <AuthProvider>
-        <AutoLogout>
             <NoSignalModal />
             <FolderDisplayProvider>
                 <NewsDisplayProvider>
@@ -72,7 +71,6 @@ createRoot(document.getElementById("root")).render(
                     </ApproverDisplayProvider>
                 </NewsDisplayProvider>
             </FolderDisplayProvider>
-        </AutoLogout>
     </AuthProvider>,
     // </StrictMode>
 );

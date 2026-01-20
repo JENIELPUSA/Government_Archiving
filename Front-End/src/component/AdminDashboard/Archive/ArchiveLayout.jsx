@@ -138,6 +138,7 @@ const SkeletonArchiveHeaderContent = () => (
 
 const ArchiveLayout = () => {
     const { isLoading, fetchAchivedData, isArchived, Archivedtotalpage, Archivedcurrentpage, CountAll } = useContext(FilesDisplayContext);
+    
     const folderCountMap = useMemo(() => {
         if (!CountAll) return {};
         return {
@@ -207,7 +208,8 @@ const ArchiveLayout = () => {
             return allTags;
         }, []);
     }, [isArchived, isLoading]);
-    // Optimized logic for organizing and counting data
+
+    // Optimized logic for organizing and counting data - FOR NAVIGATION ONLY
     const organizedData = useMemo(() => {
         const organized = {
             "Pending Deletion": { count: 0, years: {} },
@@ -237,6 +239,7 @@ const ArchiveLayout = () => {
                 } else if (doc.ArchivedStatus === "Archived" && doc.category !== "Resolution" && doc.category !== "Ordinance") {
                     targetFolder = "Archived Files";
                 }
+                
                 if (!organized[targetFolder].years[year]) {
                     organized[targetFolder].years[year] = { count: 0, categories: {} };
                 }
@@ -255,39 +258,59 @@ const ArchiveLayout = () => {
         return organized;
     }, [isArchived, isLoading]);
 
-    const currentYears = useMemo(() => {
-        if (isLoading || !selectedMainFolder || !organizedData[selectedMainFolder]?.years) {
-            return [];
-        }
-        return Object.keys(organizedData[selectedMainFolder].years).sort((a, b) => parseInt(b) - parseInt(a));
-    }, [selectedMainFolder, organizedData, isLoading]);
-
-    const currentCategories = useMemo(() => {
-        if (isLoading || !selectedMainFolder || !selectedYear || !organizedData[selectedMainFolder]?.years?.[selectedYear]?.categories) {
-            return [];
-        }
-        return Object.keys(organizedData[selectedMainFolder].years[selectedYear].categories).sort();
-    }, [selectedMainFolder, selectedYear, organizedData, isLoading]);
-
+    // Get current documents from API response - FOR DISPLAYING DOCUMENTS
     const currentDocuments = useMemo(() => {
         if (
             isLoading ||
             !selectedMainFolder ||
             !selectedYear ||
             !selectedCategory ||
-            !organizedData[selectedMainFolder]?.years?.[selectedYear]?.categories?.[selectedCategory]
+            !selectedCategoryId
         ) {
             return [];
         }
-        const documentsInCurrentCategory = organizedData[selectedMainFolder].years[selectedYear].categories[selectedCategory].files;
-        if (selectedTags.length === 0) {
-            return documentsInCurrentCategory;
+        
+        // Get data from API response (isArchived) instead of organizedData
+        const currentCategoryData = isArchived?.find((cat) => cat.categoryId === selectedCategoryId);
+        
+        if (!currentCategoryData || !currentCategoryData.files) {
+            return [];
         }
-        return documentsInCurrentCategory.filter((doc) => doc.tags?.some((tag) => selectedTags.includes(tag)));
-    }, [selectedMainFolder, selectedYear, selectedCategory, organizedData, isLoading, selectedTags]);
+        
+        let documents = currentCategoryData.files;
+        
+        // Apply tag filtering locally if needed
+        if (selectedTags.length > 0) {
+            documents = documents.filter((doc) => 
+                doc.tags?.some((tag) => selectedTags.includes(tag))
+            );
+        }
+        
+        // Apply search filtering locally if not included in API call
+        if (debouncedSearch && !searchQuery.includes(debouncedSearch)) {
+            documents = documents.filter((doc) =>
+                doc.title?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                doc.description?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+                doc.tags?.some(tag => tag.toLowerCase().includes(debouncedSearch.toLowerCase()))
+            );
+        }
+        
+        return documents;
+    }, [
+        selectedMainFolder, 
+        selectedYear, 
+        selectedCategory, 
+        selectedCategoryId, 
+        isArchived,
+        isLoading, 
+        selectedTags,
+        debouncedSearch,
+        searchQuery
+    ]);
 
     const handlePageChange = (newPage) => {
-        if (!selectedMainFolder) return;
+        if (!selectedMainFolder || !selectedYear || !selectedCategoryId) return;
+        
         setIsNavigating(true);
         const baseParams = folderStatusMap[selectedMainFolder];
         const params = {
@@ -298,6 +321,7 @@ const ArchiveLayout = () => {
             ...(debouncedSearch && { search: debouncedSearch }),
             ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
         };
+        
         fetchAchivedData(params).finally(() => {
             setIsNavigating(false);
         });
@@ -334,6 +358,23 @@ const ArchiveLayout = () => {
         setSelectedCategory(category);
         setSelectedCategoryId(categoryId);
         setSelectedDocument(null);
+        
+        // Fetch data for the selected category
+        if (selectedMainFolder && selectedYear) {
+            const baseParams = folderStatusMap[selectedMainFolder];
+            const params = {
+                ...baseParams,
+                page: 1,
+                year: selectedYear,
+                ...(categoryId && { category: categoryId }),
+                ...(debouncedSearch && { search: debouncedSearch }),
+                ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
+            };
+            
+            fetchAchivedData(params).finally(() => {
+                setIsNavigating(false);
+            });
+        }
     };
 
     // New function: Handle back navigation from any view
@@ -343,15 +384,48 @@ const ArchiveLayout = () => {
             setSelectedDocument(null);
         } else if (selectedCategory) {
             // Back from category view to year view
+            setIsNavigating(true);
             setSelectedCategory(null);
             setSelectedCategoryId(null);
+            
+            // Fetch year data when going back
+            if (selectedMainFolder && selectedYear) {
+                const baseParams = folderStatusMap[selectedMainFolder];
+                const params = {
+                    ...baseParams,
+                    page: 1,
+                    year: selectedYear,
+                    ...(debouncedSearch && { search: debouncedSearch }),
+                    ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
+                };
+                
+                fetchAchivedData(params).finally(() => {
+                    setIsNavigating(false);
+                });
+            }
         } else if (selectedYear) {
             // Back from year view to main folder view
+            setIsNavigating(true);
             setSelectedYear(null);
             setSelectedCategory(null);
             setSelectedCategoryId(null);
             setSearchQuery("");
             setSelectedTags([]);
+            
+            // Fetch main folder data when going back
+            if (selectedMainFolder) {
+                const baseParams = folderStatusMap[selectedMainFolder];
+                const params = {
+                    ...baseParams,
+                    page: 1,
+                    ...(debouncedSearch && { search: debouncedSearch }),
+                    ...(selectedTags.length > 0 && { tags: selectedTags.join(",") }),
+                };
+                
+                fetchAchivedData(params).finally(() => {
+                    setIsNavigating(false);
+                });
+            }
         } else if (selectedMainFolder) {
             // Back from main folder view to root
             handleSelectMainFolder(null);
@@ -427,9 +501,10 @@ const ArchiveLayout = () => {
     } else {
         // Actual content when not loading
         if (selectedMainFolder && selectedYear && selectedCategory) {
+            // Get pagination info from API response
             const currentCategoryData = isArchived?.find((cat) => cat.categoryId === selectedCategoryId);
-            const totalPagesToShow = currentCategoryData?.totalPages || Archivedtotalpage;
-            const currentPageToShow = currentCategoryData?.currentPage || Archivedcurrentpage;
+            const totalPagesToShow = currentCategoryData?.totalPages || Archivedtotalpage || 1;
+            const currentPageToShow = currentCategoryData?.currentPage || Archivedcurrentpage || 1;
 
             content = (
                 <>

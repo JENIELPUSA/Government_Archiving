@@ -1,90 +1,184 @@
-import React from "react";
-import { motion, useScroll, useTransform } from "framer-motion";
-import LogoCarousel from "./LogoCarousel";
-import Biliran from "../../../assets/Biliran-Bridge-2.jpg";
+import React, { useEffect, useState, useCallback } from "react";
+import skyImg from "../../../assets/Sky.png";
+import mountainImg from "../../../assets/Mountain.png";
+import forestImg from "../../../assets/Forest.png";
 import logo from "../../../assets/logo-login.png";
 
-const Hero = ({ scrollContainerRef }) => {
-  // Scroll-based parallax
-  const { scrollY } = useScroll({
-    container: scrollContainerRef,
-  });
+const Hero = () => {
+    const [isVisible, setIsVisible] = useState(false);
+    const [scrollY, setScrollY] = useState(0);
+    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(false);
 
-  const y = useTransform(scrollY, [0, 500], [0, -100]); // background parallax
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]); // fade-out text
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
 
-  return (
-    <section className="relative flex h-[calc(100vh-80px)] items-center justify-center overflow-hidden bg-blue-900">
-      {/* Background Image with Parallax */}
-      <motion.div className="absolute inset-0 z-0" style={{ y }}>
-        <img
-          src={Biliran}
-          alt="Biliran Landscape"
-          className="h-full w-full object-cover opacity-40"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 via-blue-900/50 to-blue-900/90"></div>
-      </motion.div>
+        checkMobile();
+        window.addEventListener("resize", checkMobile);
 
-      {/* Hero Content */}
-      <motion.div
-        className="relative z-10 flex w-full flex-col items-center justify-center text-center px-4"
-        style={{ opacity }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        >
-          {/* Logo */}
-          <motion.div
-            className="mb-6 flex items-center justify-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-          >
-            <div className="flex h-32 w-32 items-center justify-center rounded-full shadow-2xl bg-white">
-              <img
-                src={logo}
-                alt="Biliran Logo"
-                className="h-full w-full object-contain"
-              />
+        return () => {
+            window.removeEventListener("resize", checkMobile);
+        };
+    }, []);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setIsVisible(true);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
+    const handleScroll = useCallback(() => {
+        setScrollY(window.scrollY);
+    }, []);
+
+    const handleMouseMove = useCallback(
+        (e) => {
+            if (isMobile) return;
+
+            const { clientX, clientY } = e;
+            const x = (clientX / window.innerWidth - 0.5) * 40;
+            const y = (clientY / window.innerHeight - 0.5) * 40;
+            setMousePosition({ x, y });
+        },
+        [isMobile],
+    );
+
+    useEffect(() => {
+        window.addEventListener("scroll", handleScroll);
+
+        if (!isMobile) {
+            window.addEventListener("mousemove", handleMouseMove);
+        }
+
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("mousemove", handleMouseMove);
+        };
+    }, [handleScroll, handleMouseMove, isMobile]);
+
+    const mobileFactor = isMobile ? 0.3 : 1;
+    const mouseFactor = isMobile ? 0 : 0.3;
+
+    const parallaxValues = {
+        sky: {
+            y: scrollY * 0.1 * mobileFactor + mousePosition.y * mouseFactor * 0.1,
+            x: mousePosition.x * mouseFactor * 0.1,
+        },
+        mountain: {
+            y: scrollY * 0.3 * mobileFactor + mousePosition.y * mouseFactor * 0.3,
+            x: mousePosition.x * mouseFactor * 0.3,
+        },
+        text: {
+            y: scrollY * 0.5 * mobileFactor + mousePosition.y * mouseFactor * 0.5,
+            x: mousePosition.x * mouseFactor * 0.5,
+        },
+        logo: {
+            y: scrollY * 0.4 * mobileFactor + mousePosition.y * mouseFactor * 0.4,
+            x: mousePosition.x * mouseFactor * 0.4,
+        },
+        forest: {
+            y: scrollY * 0.7 * mobileFactor + mousePosition.y * mouseFactor * 0.7,
+            x: mousePosition.x * mouseFactor * 0.7,
+        },
+    };
+
+    return (
+        <div className="relative h-[200vh] w-full overflow-x-hidden bg-[#0b0f0b] font-sans">
+            <div className="sticky top-0 h-screen overflow-hidden">
+                <div
+                    className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+                    style={{
+                        backgroundImage: `url(${skyImg})`,
+                        transform: `translate(${parallaxValues.sky.x}px, ${parallaxValues.sky.y}px)`,
+                        transition: isMobile ? "transform 0.3s ease-out" : "transform 0.1s ease-out",
+                    }}
+                />
+
+                <div
+                    className={`absolute left-1/2 z-10 -translate-x-1/2 transition-all duration-[2500ms] ease-out ${isVisible ? "bottom-0 opacity-100" : "bottom-[-10%] opacity-0"}`}
+                    style={{
+                        transform: `translateX(calc(-50% + ${parallaxValues.mountain.x}px)) translateY(${parallaxValues.mountain.y}px)`,
+                    }}
+                >
+                    <img
+                        src={mountainImg}
+                        alt="Mountain"
+                        className={`h-auto transition-all duration-[2500ms] ease-out ${isVisible ? "scale-105" : "scale-110"}`}
+                        style={{
+                            height: isMobile ? "100vh" : "130vh",
+                            width: "auto",
+                            minWidth: isMobile ? "180vw" : "120vw",
+                            objectFit: "contain",
+                            objectPosition: "bottom center",
+                        }}
+                    />
+                </div>
+
+                <div
+                    className="absolute left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                    style={{
+                        top: isMobile ? "50%" : "54%",
+                        transform: `translateX(calc(-50% + ${parallaxValues.text.x}px)) translateY(calc(-50% + ${parallaxValues.text.y}px))`,
+                    }}
+                >
+                    <div
+                        className={`transition-all duration-[2000ms] ease-out ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-[50px] opacity-0"}`}
+                        style={{
+                            marginBottom: isMobile ? "0.5rem" : "1rem",
+                            transform: `translateY(${parallaxValues.logo.y * (isMobile ? 0.1 : 0.3)}px)`,
+                        }}
+                    >
+                        <img
+                            src={logo}
+                            alt="Logo"
+                            className="h-12 w-auto sm:h-20 md:h-24 lg:h-28 xs:h-14"
+                            style={{
+                                filter: "drop-shadow(0 0 20px rgba(0, 0, 0, 0.7))",
+                            }}
+                        />
+                    </div>
+                    <h1
+                        className={`cubic-bezier(0.16, 1, 0.3, 1) font-black uppercase text-white drop-shadow-[0_0_60px_rgba(0,0,0,0.9)] transition-all duration-[2000ms] ${
+                            isVisible ? "translate-y-0 opacity-100" : "translate-y-[100px] opacity-0"
+                        } ${
+                            isMobile
+                                ? "text-3xl tracking-[0.3em] xs:text-4xl xs:tracking-[0.4em]"
+                                : "text-6xl tracking-[0.5em] sm:text-8xl md:text-9xl md:tracking-[1.2rem] lg:text-[11rem]"
+                        }`}
+                        style={{
+                            whiteSpace: "nowrap",
+                            textAlign: "center",
+                        }}
+                    >
+                        Biliran
+                    </h1>
+
+                    {isMobile && <p className="mt-2 text-sm font-medium text-gray-300 opacity-90 xs:text-base">Explore the Beauty</p>}
+                </div>
+
+                <div
+                    className="absolute bottom-0 left-0 z-30 w-full bg-no-repeat"
+                    style={{
+                        backgroundImage: `url(${forestImg})`,
+                        height: isMobile ? "25vh" : "35vh",
+                        backgroundSize: "100% 100%",
+                        backgroundPosition: "bottom center",
+                        transform: `translate(${parallaxValues.forest.x}px, ${parallaxValues.forest.y}px)`,
+                    }}
+                />
+
+                <div
+                    className="pointer-events-none absolute bottom-0 left-0 z-40 w-full bg-gradient-to-t from-black via-black/80 to-transparent"
+                    style={{ height: isMobile ? "10vh" : "15vh" }}
+                />
             </div>
-          </motion.div>
 
-          {/* Title */}
-          <h1 className="mb-6 text-5xl font-bold tracking-tight md:text-7xl text-yellow-500">
-            Provincial{" "}
-            <span className="bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-              Government
-            </span>
-          </h1>
-
-          {/* Description */}
-          <p className="mx-auto mb-10 max-w-2xl text-lg font-light leading-relaxed text-gray-200 md:text-xl">
-            Discover the island paradise of Eastern Visayas. A haven of
-            natural wonders, warm hospitality, and progressive governance.
-          </p>
-
-          {/* CTA Button */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-               onClick={() =>
-              window.open(
-                "https://tourism.biliranisland.com/island-attractions",
-                "_blank"
-              )
-            }
-              className="rounded-full bg-red-600 px-8 py-4 font-bold text-white shadow-lg shadow-red-600/30 transition-colors hover:bg-red-700"
-            >
-              Explore Tourism
-            </motion.button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </section>
-  );
+            <div className="h-screen"></div>
+        </div>
+    );
 };
 
 export default Hero;

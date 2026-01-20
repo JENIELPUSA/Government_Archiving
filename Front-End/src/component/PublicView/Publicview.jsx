@@ -5,7 +5,7 @@ import Home from "./Home/Home";
 import Documents from "./Document";
 import Navbar from "./Navbar"; // This is your NavbarWithScroll
 import MyLogo from "../../assets/logo-login.png";
-import philippinelogo from "../../assets/philippines logo.png";
+import philippinelogo from "../../assets";
 import PDFview from "./PDFview";
 import NewsContent from "../LandingPagePublic/LandingComponents/NewsContent";
 import NewandInformation from "./NewandInformation/NewsandInformation";
