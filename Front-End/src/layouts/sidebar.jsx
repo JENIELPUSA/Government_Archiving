@@ -12,7 +12,7 @@ export const Sidebar = forwardRef(({ collapsed }, ref) => {
     const { logout, role } = useAuth();
     const navigate = useNavigate();
     const rolePermissions = {
-        officer: ["/dashboard"],
+        officer: ["/dashboard","/dashboard/search-archiving","/dashboard/oldFiles","/dashboard/Category","/dashboard/SPmember"],
         approver: ["/dashboard"],
         sbmember: ["/dashboard"],
         admin: [],

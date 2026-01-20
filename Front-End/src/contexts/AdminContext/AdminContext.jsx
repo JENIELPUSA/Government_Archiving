@@ -113,7 +113,8 @@ export const AdminDisplayProvider = ({ children }) => {
 
             if (response.data?.status === "success") {
                 FetchAdminData();
-                return { success: true, data: response.data.data };
+                setModalStatus("success");
+                setShowModal(true);
             } else {
                 return { success: false, error: "Unexpected response from server." };
             }
@@ -129,13 +130,14 @@ export const AdminDisplayProvider = ({ children }) => {
     };
 
     const AddAminData = async (values) => {
+        console.log("values", values);
         try {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");
             formData.append("last_name", values.last_name || "");
             formData.append("email", values.email || "");
             formData.append("gender", values.gender || "");
-            formData.append("role", "admin");
+            formData.append("role", values.role);
 
             if (values.middle_name) {
                 formData.append("middle_name", values.middle_name);
@@ -164,6 +166,8 @@ export const AdminDisplayProvider = ({ children }) => {
             }
         } catch (error) {
             if (error.response?.data) {
+                setModalStatus("failed");
+                setShowModal(true);
                 const message = error.response.data.message || error.response.data.error || "Something went wrong.";
                 setCustomError(message);
             } else if (error.request) {

@@ -12,11 +12,17 @@ const UserLoginSchema = new mongoose.Schema({
   first_name: { type: String },
   last_name: { type: String },
   contact_number: { type: Number },
-  username: { type: String},
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+  },
+
   password: { type: String, required: true },
   role: {
     type: String,
-    enum: ["admin", "officer", "approver", "sbmember"],
+    enum: ["admin", "officer", "approver", "sbmember", "Uploader"],
     required: true,
     lowercase: true,
   },
@@ -70,7 +76,7 @@ UserLoginSchema.methods.isPasswordChanged = async function (JWTTimestamp) {
   if (this.passwordChangedAt) {
     const pswdChangedTimestamp = parseInt(
       this.passwordChangedAt.getTime() / 1000,
-      10
+      10,
     );
     return JWTTimestamp < pswdChangedTimestamp;
   }

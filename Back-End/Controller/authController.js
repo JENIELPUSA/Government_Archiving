@@ -59,12 +59,12 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const defaultPassword = "123456789";
 
-    // Validate required fields by role
+    // --- Validate required fields by role ---
     const requiredFieldsByRole = {
       officer: ["first_name", "middle_name", "last_name", "email", "gender"],
       admin: ["first_name", "middle_name", "last_name", "email", "gender"],
       approver: ["first_name", "middle_name", "last_name", "email"],
-      sbmember: ["first_name", "last_name"], // email NOT required for sbmember
+      sbmember: ["first_name", "last_name"],
     };
 
     const requiredFields = requiredFieldsByRole[role];
@@ -75,7 +75,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // Check missing fields
     const missingFields = requiredFields.filter((field) => !req.body[field]);
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -83,7 +82,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // Only check for existing user if email is required
+    // --- Check existing user (only if email is required) ---
     if (role !== "sbmember") {
       const existingUser = await UserLogin.findOne({ username: email });
       if (existingUser) {
@@ -97,7 +96,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     // --- Upload avatar if file exists ---
     if (req.file) {
-      const fileName = req.file.filename; // multer diskStorage filename
+      const fileName = req.file.filename;
       const form = new FormData();
       form.append(
         "file",
@@ -106,14 +105,10 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       );
 
       try {
-        const response = await axios.post(
-          process.env.UPLOAD_URL,
-          form,
-          {
-            maxBodyLength: Infinity,
-            headers: { "Content-Type": "multipart/form-data" },
-          }
-        );
+        const response = await axios.post(process.env.UPLOAD_URL, form, {
+          maxBodyLength: Infinity,
+          headers: { "Content-Type": "multipart/form-data" },
+        });
 
         if (!response.data.success) {
           return res
@@ -140,8 +135,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       }
     }
 
-
-
     // --- Create profile record ---
     const profileModels = {
       admin: Admin,
@@ -149,6 +142,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       approver: Approver,
       sbmember: SBmember,
     };
+
     const profileModel = profileModels[role];
 
     const profileData = {
@@ -163,7 +157,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       term,
     };
 
-    if (email && role !== "sbmember") profileData.email = email; // include email only if not sbmember
+    if (email && role !== "sbmember") profileData.email = email;
     if (gender) profileData.gender = gender;
     if (Position)
       profileData.Position = Array.isArray(Position) ? Position[0] : Position;
@@ -195,26 +189,48 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       );
     }
 
+    // --- Send response ---
     res.status(201).json({
       status: "Success",
       user: newUserLogin,
       profile: linkedRecord,
     });
 
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("newUserSignup", {
-        user: newUserLogin
-          ? { id: newUserLogin._id, first_name, last_name, role }
-          : null,
-        profile: linkedRecord,
-      });
+    // --- Emit socket event ONLY for officer and admin ---
+    if (role === "officer" || role === "admin") {
+      const io = req.app.get("io");
+        io.emit("newUserSignup", {
+          role,
+          user: newUserLogin
+            ? {
+                id: newUserLogin._id,
+                first_name,
+                last_name,
+                email,
+                role,
+              }
+            : null,
+          profile: {
+            id: linkedRecord._id,
+            first_name: linkedRecord.first_name,
+            last_name: linkedRecord.last_name,
+            Position: linkedRecord.Position || null,
+          },
+          createdAt: new Date(),
+        });
+
+        console.log(`📢 Socket emitted for new ${role} signup`);
+      
     }
   } catch (error) {
     console.error("❌ Signup failed:", error);
-    res.status(500).json({ message: "Internal Server Error", error: error.message });
+    res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
   }
 });
+
 
 exports.login = AsyncErrorHandler(async (req, res, next) => {
   const { email, password } = req.body;

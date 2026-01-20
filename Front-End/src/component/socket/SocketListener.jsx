@@ -12,7 +12,7 @@ const SocketListener = () => {
     const { fetchSpecificData, fetchSpecifiCategory } = useContext(FolderContext);
     const { setFiles } = useContext(FilesDisplayContext);
     const { setNotify, fetchNotifications } = useContext(NotificationDisplayContext);
-    const { setOfficerData, FetchOfficerFiles } = useContext(OfficerDisplayContext);
+    const { setOfficerData, FetchOfficerFiles, FetchOfficer } = useContext(OfficerDisplayContext);
     const { FetchDropdown } = useContext(SbMemberDisplayContext);
 
     const formatNotification = (data, fallbackMessage = "You have a new notification") => ({
@@ -43,7 +43,12 @@ const SocketListener = () => {
             FetchOfficerFiles();
         };
 
-        const handleSigup = async () => {
+        const handleSigup = async (data) => {
+            console.log("data", data.user.role);
+            const roleUser = data.user.role;
+            if (roleUser === "officer") {
+                await FetchOfficer();
+            } 
             await FetchDropdown();
         };
 

@@ -8,35 +8,35 @@ const ErrorController = require("./Controller/errorController");
 const session = require("express-session");
 const MongoStore = require("connect-mongo");
 
-
 const AdminRoute = require("./Routes/AdminRoute");
 
 const Notification = require("./Routes/NotificationRoute");
 
-const Retention = require("./Routes/RetentionRoute")
+const Retention = require("./Routes/RetentionRoute");
 
-const Logs=require("./Routes/LogsRoute")
+const Logs = require("./Routes/LogsRoute");
 
-const Comments = require("./Routes/CommentRoute")
+const Comments = require("./Routes/CommentRoute");
 
-const FilesRoute = require ("./Routes/FilesRoute")
+const FilesRoute = require("./Routes/FilesRoute");
 
 const authentic = require("./Routes/authRouter");
 
-const RatingRoute = require("./Routes/RatingRoute")
+const RatingRoute = require("./Routes/RatingRoute");
 
-const CategoryFileRouter = require("./Routes/CategoryFileRouter")
+const CategoryFileRouter = require("./Routes/CategoryFileRouter");
 
-const StorageOptimization = require("./Routes/StorageOptimizedRoute")
+const StorageOptimization = require("./Routes/StorageOptimizedRoute");
 
-const SbmemberRoute = require("./Routes/SbmemberRoute")
+const SbmemberRoute = require("./Routes/SbmemberRoute");
 
-const ApproverRoute = require("./Routes/ApproverRoute")
+const ApproverRoute = require("./Routes/ApproverRoute");
 
-const NewsRoute = require("./Routes/NewsRoute")
+const NewsRoute = require("./Routes/NewsRoute");
 
+const Officer = require("./Routes/OfficerRoute");
 
-const FolderRoute = require("./Routes/FolderRoute")
+const FolderRoute = require("./Routes/FolderRoute");
 
 let app = express();
 
@@ -63,30 +63,27 @@ app.use(
       sameSite: "none",
       maxAge: 12 * 60 * 60 * 1000,
     },
-     rolling: true,
-  })
+    rolling: true,
+  }),
 );
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     methods: ["GET", "POST", "PATCH", "DELETE"],
     credentials: true,
-  })
+  }),
 );
 
 app.use(logger);
-
-
-
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
 //importante ito para pag view ng picture sa table .etcc..
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+const uploadsDir = path.join(__dirname, "..", "uploads");
 
-app.use('/uploads', express.static(uploadsDir));
+app.use("/uploads", express.static(uploadsDir));
 app.use("/api/v1/authentication", authentic);
 app.use("/api/v1/Admin", AdminRoute);
 app.use("/api/v1/Notification", Notification);
@@ -100,8 +97,8 @@ app.use("/api/v1/Optimization", StorageOptimization);
 app.use("/api/v1/SbmemberRoute", SbmemberRoute);
 app.use("/api/v1/Approver", ApproverRoute);
 app.use("/api/v1/News", NewsRoute);
-app.use("/api/v1/Folder",FolderRoute)
-
+app.use("/api/v1/Folder", FolderRoute);
+app.use("/api/v1/Officer", Officer);
 
 app.use(ErrorController);
 

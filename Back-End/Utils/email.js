@@ -68,7 +68,7 @@ const sendEmail = async ({ email, subject, text, attachments }) => {
   try {
     const gmail = google.gmail({ version: "v1", auth: oAuth2Client });
 
-    const from = `Newborn Tracking System <${
+    const from = `Government Archiving System <${
       process.env.SENDER_EMAIL || "appuse12300@gmail.com"
     }>`;
     

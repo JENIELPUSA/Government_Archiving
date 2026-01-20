@@ -52,7 +52,7 @@ export const OfficerDisplayProvider = ({ children }) => {
     const FetchOfficer = async () => {
         if (!authToken) return;
         try {
-            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient`, {
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Officer`, {
                 withCredentials: true,
                 headers: {
                     Authorization: `Bearer ${authToken}`,
@@ -68,7 +68,7 @@ export const OfficerDisplayProvider = ({ children }) => {
             setTotalOfficer(TotalOfficer);
             setOfficer(cleanedData);
 
-            return cleanedData; 
+            return cleanedData;
         } catch (error) {
             console.error("Error fetching data:", error);
         }
@@ -143,7 +143,7 @@ export const OfficerDisplayProvider = ({ children }) => {
                 },
             );
             if (res.data.status === "Success") {
-                setOfficer((prevUsers) => [...prevUsers, res.data.data]);
+                await FetchOfficer();
                 setModalStatus("success");
                 setShowModal(true);
             } else {
@@ -166,7 +166,7 @@ export const OfficerDisplayProvider = ({ children }) => {
 
     const DeleteOfficer = async (officerID) => {
         try {
-            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${officerID}`, {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Officer/${officerID}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -195,7 +195,7 @@ export const OfficerDisplayProvider = ({ children }) => {
                 email: values.email || "",
             };
 
-            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Patient/${dataID}`, dataToSend, {
+            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Officer/${dataID}`, dataToSend, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
 
@@ -220,7 +220,6 @@ export const OfficerDisplayProvider = ({ children }) => {
             }
         }
     };
-
 
     const contextValue = useMemo(
         () => ({

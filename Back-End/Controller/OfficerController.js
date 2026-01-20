@@ -24,6 +24,7 @@ exports.DisplayOfficer = AsyncErrorHandler(async (req, res) => {
         _id: 1,
         first_name: 1,
         last_name: 1,
+        middle_name:1,
         email: 1,
         gender: 1,
         avatar: 1,

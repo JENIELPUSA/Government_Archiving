@@ -1,11 +1,10 @@
 import React, { useContext, useState } from "react";
-import { Edit, Trash, Plus, ChevronLeft, ChevronRight, User, Database, Users, Shield } from "lucide-react";
-import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
+import { Edit, Trash, Plus, ChevronLeft, ChevronRight, User, Database } from "lucide-react";
+import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 import AddUserModal from "./AddUserModal";
 import "react-toastify/dist/ReactToastify.css";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
 import StatusVerification from "../../ReusableFolder/StatusModal";
-import OfficerTable from "./OfficerTable";
 const ITEMS_PER_PAGE = 5;
 
 // Skeleton component para sa isang table row
@@ -32,115 +31,21 @@ const UserRowSkeleton = () => (
     </tr>
 );
 
-// New component para sa tab navigation
-const TabNavigation = ({ activeTab, onTabChange }) => {
-    const tabs = [
-        { id: 'admins', label: 'Admins', icon: <Shield size={18} /> },
-        { id: 'officers', label: 'Officers', icon: <Users size={18} /> }
-    ];
-
-    return (
-        <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex space-x-6">
-                {tabs.map((tab) => (
-                    <button
-                        key={tab.id}
-                        onClick={() => onTabChange(tab.id)}
-                        className={`flex items-center gap-2 px-1 py-3 text-sm font-medium transition-colors ${
-                            activeTab === tab.id
-                                ? 'border-b-2 border-blue-500 text-blue-600 dark:text-blue-400'
-                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                        }`}
-                    >
-                        {tab.icon}
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-        </div>
-    );
-};
-
-// NEW: Component para sa Header - FIXED "Add Admin" lang ang button
-const GlobalHeader = ({ activeTab, onAddAdmin }) => {
-    const getTitle = () => {
-        switch (activeTab) {
-            case 'admins':
-                return "Admin Management";
-            case 'officers':
-                return "Officer Management";
-            default:
-                return "User Management";
-        }
-    };
-
-    const getDescription = () => {
-        switch (activeTab) {
-            case 'admins':
-                return "Manage system administrators and their permissions";
-            case 'officers':
-                return "Manage officers and their assignments";
-            default:
-                return "Manage system users from this dashboard";
-        }
-    };
-
-    const getIcon = () => {
-        switch (activeTab) {
-            case 'admins':
-                return <Shield size={32} />;
-            case 'officers':
-                return <Users size={32} />;
-            default:
-                return <Shield size={32} />;
-        }
-    };
-
-    return (
-        <div className="rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white shadow-lg dark:from-blue-600 dark:to-blue-700">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <div className="rounded-full bg-white/20 p-3">
-                        {getIcon()}
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold">{getTitle()}</h1>
-                        <p className="mt-2 opacity-90">
-                            {getDescription()}
-                        </p>
-                    </div>
-                </div>
-                
-                {/* "Add Admin" LANG ang button - GLOBAL */}
-                <button
-                    onClick={onAddAdmin}
-                    className="flex items-center gap-2 rounded-lg bg-white px-4 py-3 text-blue-600 transition-colors hover:bg-blue-50"
-                >
-                    <Plus size={18} />
-                    Add User
-                </button>
-            </div>
-        </div>
-    );
-};
-
-const UserTable = () => {
-    const [activeTab, setActiveTab] = useState('admins');
+const OfficerTable = () => {
+    const { isOfficer, customError, DeleteOfficer, UpdateOfficer } = useContext(OfficerDisplayContext);
     const [currentPage, setCurrentPage] = useState(1);
     const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-    const { DeleteAdmin, isAdmin, AddAminData, UpdateAdmin, customError, setCustomError } = useContext(AdminDisplayContext);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
     const [loading, setLoading] = useState(false);
     const [isPageChanging, setIsPageChanging] = useState(false);
     const [isVerification, setVerification] = useState(false);
     const [isDeleteID, setIsDeleteId] = useState("");
-    
-    const totalPages = Math.ceil((isAdmin?.length || 0) / ITEMS_PER_PAGE);
+    const totalPages = Math.ceil((isOfficer?.length || 0) / ITEMS_PER_PAGE);
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const currentAdmins = (isAdmin || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    
+    const currentAdmins = (isOfficer || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
     const goToPage = (page) => {
         if (page < 1 || page > totalPages) return;
 
@@ -155,7 +60,7 @@ const UserTable = () => {
         setLoading(true);
         try {
             if (values._id) {
-                await UpdateAdmin(values._id, values);
+                await UpdateOfficer(values._id, values);
             } else {
                 await AddAminData(values);
             }
@@ -198,7 +103,7 @@ const UserTable = () => {
     const handleConfirmDelete = async () => {
         setLoading(true);
         try {
-            const result = await DeleteAdmin(isDeleteID, "Deleted");
+            const result = await DeleteOfficer(isDeleteID, "Deleted");
             if (result.success) {
                 handleCloseVerificationModal();
             }
@@ -209,27 +114,9 @@ const UserTable = () => {
         }
     };
 
-    // Handler para sa Add Admin button (global)
-    const handleAddAdmin = () => {
-        setEditingUser(null);
-        setAddUserModalOpen(true);
-    };
+    return (
+        <div className="relative w-full space-y-6">
 
-    // Main wrapper component - SIMPLIFIED VERSION
-    const TableWrapper = ({ children, title }) => {
-        return (
-            <div className="relative w-full space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
-                    {title}
-                </h2>
-                {children}
-            </div>
-        );
-    };
-
-    // Content para sa Admin tab
-    const AdminContent = () => (
-        <TableWrapper title="Admin List">
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-800">
                 <table className="w-full table-auto">
                     <thead className="bg-gray-50 dark:bg-gray-700">
@@ -262,14 +149,15 @@ const UserTable = () => {
                                         className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50"
                                     >
                                         <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-white">
-                                            {user.avatar.url ? (
+                                            {user?.avatar?.url ? (
                                                 <img
-                                                    src={user.avatar.url}
+                                                    src={user?.avatar?.url}
                                                     alt="User Avatar"
                                                     className="h-10 w-10 rounded-full object-cover"
                                                     onError={(e) => {
-                                                        e.target.style.display = 'none';
-                                                        e.target.nextSibling.style.display = 'flex';
+                                                        // If image fails to load, show default avatar
+                                                        e.target.style.display = "none";
+                                                        e.target.nextSibling.style.display = "flex";
                                                     }}
                                                 />
                                             ) : (
@@ -277,21 +165,14 @@ const UserTable = () => {
                                                     <User size={18} />
                                                 </div>
                                             )}
-                                            <div 
-                                                className="hidden h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400"
-                                            >
+                                            {/* Fallback avatar that's hidden by default */}
+                                            <div className="hidden h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400">
                                                 <User size={18} />
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {`${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`}
-                                        </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {user.gender}
-                                        </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {user.email}
-                                        </td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{`${user.first_name} ${user.middle_name ? user.middle_name + " " : ""}${user.last_name}`}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.gender}</td>
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600 dark:text-gray-300">{user.email}</td>
                                         <td className="whitespace-nowrap px-6 py-4 text-center text-sm">
                                             <div className="flex justify-center gap-3">
                                                 <button
@@ -315,18 +196,19 @@ const UserTable = () => {
                             })
                         ) : (
                             <tr>
-                                <td colSpan="6" className="px-6 py-12 text-center">
+                                <td
+                                    colSpan="6"
+                                    className="px-6 py-12 text-center"
+                                >
                                     <div className="flex flex-col items-center justify-center">
                                         <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400">
                                             <Database className="h-10 w-10" />
                                         </div>
-                                        <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">
-                                            No Admins Available
-                                        </h3>
+                                        <h3 className="mb-2 text-xl font-semibold text-gray-700 dark:text-gray-300">No Documents Available</h3>
                                         <p className="text-center text-gray-500 dark:text-gray-400">
-                                            There are no Admins to display in the database.
+                                            There are no Users to display in the database.
                                             <br />
-                                            Click "Add Admin" to create a new admin.
+                                            Create a new data to get started.
                                         </p>
                                     </div>
                                 </td>
@@ -338,7 +220,8 @@ const UserTable = () => {
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, isAdmin?.length || 0)} of {isAdmin?.length || 0} admins
+                            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, isOfficer?.length || 0)} of {isOfficer?.length || 0}{" "}
+                            admins
                         </div>
                         <div className="flex gap-1">
                             <button
@@ -373,33 +256,7 @@ const UserTable = () => {
                     </div>
                 )}
             </div>
-        </TableWrapper>
-    );
 
-    // Content para sa Officer tab
-    const OfficerContent = () => (
-        <TableWrapper title="Officer List">
-            <OfficerTable />
-        </TableWrapper>
-    );
-
-    return (
-        <div className="space-y-6">
-            {/* GLOBAL HEADER - "Add Admin" LANG ang button */}
-            <GlobalHeader 
-                activeTab={activeTab}
-                onAddAdmin={handleAddAdmin}
-            />
-
-            {/* Tab Navigation */}
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-
-            {/* Main Content */}
-            <div className="rounded-lg bg-white p-6 shadow-sm dark:bg-gray-800">
-                {activeTab === 'admins' ? <AdminContent /> : <OfficerContent />}
-            </div>
-
-            {/* Modal para sa Add/Edit Admin */}
             <AddUserModal
                 isOpen={isAddUserModalOpen}
                 onClose={handleCloseForm}
@@ -423,4 +280,4 @@ const UserTable = () => {
     );
 };
 
-export default UserTable;
+export default OfficerTable;

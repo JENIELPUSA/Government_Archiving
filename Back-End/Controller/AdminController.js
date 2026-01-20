@@ -5,6 +5,7 @@ const fs = require("fs");
 const axios = require("axios");
 const { URLSearchParams } = require("url");
 const FormData = require("form-data");
+
 exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   const AdminID = req.params.id;
 
@@ -47,25 +48,25 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
           },
-        }
+        },
       )
       .then((response) => {
         if (response.data.success) {
           console.log(
             "Avatar deleted from Hostinger in background:",
-            avatarUrl
+            avatarUrl,
           );
         } else {
           console.error(
             "Failed to delete avatar from Hostinger in background:",
-            response.data.message
+            response.data.message,
           );
         }
       })
       .catch((error) => {
         console.error(
           "Error deleting avatar from Hostinger in background:",
-          error.message
+          error.message,
         );
       });
   }
@@ -143,12 +144,12 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
         {
           headers: form.getHeaders(),
           maxBodyLength: Infinity,
-        }
+        },
       );
 
       if (!uploadResponse.data.success) {
         throw new Error(
-          uploadResponse.data.message || "Failed to upload new avatar"
+          uploadResponse.data.message || "Failed to upload new avatar",
         );
       }
 
@@ -189,7 +190,7 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
         .post(
           "https://bp-sangguniangpanlalawigan.com/delete.php",
           params.toString(),
-          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+          { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
         )
         .then((response) => {
           if (response.data.success) {
@@ -197,14 +198,14 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
           } else {
             console.error(
               "Failed to delete old news image in background:",
-              response.data.message
+              response.data.message,
             );
           }
         })
         .catch((error) => {
           console.error(
             "Error deleting old news image in background:",
-            error.message
+            error.message,
           );
         });
     }
