@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser, faEnvelope, faVenusMars, faSignature, faIdCard, faCamera, faUserShield } from "@fortawesome/free-solid-svg-icons";
 
-const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType = 'admin' }) => {
+const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType = "admin" }) => {
     if (!isOpen) return null;
 
     const isEditing = !!editableUser;
@@ -63,7 +63,7 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType =
             // For new users, set role based on modalType
             setFormData({
                 ...initialFormState,
-                role: modalType === 'admin' ? 'admin' : 'officer'
+                role: modalType === "admin" ? "admin" : "officer",
             });
         }
     }, [editableUser, isEditing, modalType]);
@@ -102,11 +102,11 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType =
 
         // Validation para sa mga required fields
         // IMPORTANT: Kapag edit mode, hindi na kailangan i-validate ang role
-        const requiredFields = ['first_name', 'last_name', 'email', 'gender'];
-        
+        const requiredFields = ["first_name", "last_name", "email", "gender"];
+
         // For new users only, add role to required fields
         if (!isEditing) {
-            requiredFields.push('role');
+            requiredFields.push("role");
         }
 
         for (const field of requiredFields) {
@@ -120,12 +120,12 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType =
         try {
             // Prepare data for submission
             const submitData = { ...formData };
-            
+
             // Kung edit mode, huwag na isama ang role sa data
             if (isEditing) {
                 delete submitData.role;
             }
-            
+
             await onFormSubmit(submitData);
             setMessage(`Success: User ${isEditing ? "updated" : "added"} successfully.`);
             onClose();
@@ -158,9 +158,7 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType =
                     ×
                 </button>
 
-                <h2 className="mb-4 text-xl font-bold">
-                    {isEditing ? `Edit User` : `Add New ${modalType === 'admin' ? 'Admin' : 'Officer'}`}
-                </h2>
+                <h2 className="mb-4 text-xl font-bold">Add User</h2>
 
                 <form
                     onSubmit={handleSubmit}
@@ -310,7 +308,6 @@ const AddUserModal = ({ isOpen, onClose, editableUser, onFormSubmit, modalType =
                                     <option value="">Select Role</option>
                                     <option value="admin">Admin</option>
                                     <option value="officer">Uploader</option>
-                  
                                 </select>
                             </div>
                         )}

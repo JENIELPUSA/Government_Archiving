@@ -792,7 +792,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     const found = monthlySummaryRaw.find((m) => m._id === index + 1);
     return {
       month,
-      totalFileSize: found ? found.totalFileSize : 0,
+      totalFileSize: found ? found.totalFileSize * 15 : 0, // multiply by 15
     };
   });
 
@@ -2672,8 +2672,17 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const { search, district, detailInfo, Position, term_from, term_to, term, page, limit } =
-    req.query;
+  const {
+    search,
+    district,
+    detailInfo,
+    Position,
+    term_from,
+    term_to,
+    term,
+    page,
+    limit,
+  } = req.query;
 
   const aggregationPipeline = [];
   const matchStage = {};
@@ -2699,13 +2708,20 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   // --- Year-based filtering ---
   if (term_from || term_to) {
     const exprConditions = [];
-    if (term_from) exprConditions.push({ $gte: [{ $year: "$term_from" }, parseInt(term_from)] });
-    if (term_to) exprConditions.push({ $lte: [{ $year: "$term_to" }, parseInt(term_to)] });
+    if (term_from)
+      exprConditions.push({
+        $gte: [{ $year: "$term_from" }, parseInt(term_from)],
+      });
+    if (term_to)
+      exprConditions.push({ $lte: [{ $year: "$term_to" }, parseInt(term_to)] });
 
     if (exprConditions.length > 0) {
       aggregationPipeline.push({
         $match: {
-          $expr: exprConditions.length === 1 ? exprConditions[0] : { $and: exprConditions },
+          $expr:
+            exprConditions.length === 1
+              ? exprConditions[0]
+              : { $and: exprConditions },
         },
       });
     }
@@ -2764,14 +2780,20 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         Position: {
           $switch: {
             branches: [
-              { case: { $eq: ["$Position", "Board_Member"] }, then: "Board Member" },
-              { case: { $eq: ["$Position", "Vice_Governor"] }, then: "Vice Governor" },
+              {
+                case: { $eq: ["$Position", "Board_Member"] },
+                then: "Board Member",
+              },
+              {
+                case: { $eq: ["$Position", "Vice_Governor"] },
+                then: "Vice Governor",
+              },
             ],
             default: "$Position",
           },
         },
       },
-    }
+    },
   );
 
   // --- Search filter ---
@@ -2784,8 +2806,8 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           { last_name: { $regex: search, $options: "i" } },
           { fullName: { $regex: search, $options: "i" } },
           { "files.title": { $regex: search, $options: "i" } },
-          { "files": { $exists: false } },
-          { "files": { $eq: [] } },
+          { files: { $exists: false } },
+          { files: { $eq: [] } },
         ],
       },
     });
@@ -2807,7 +2829,12 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         files: {
           $push: {
             $cond: [
-              { $and: [{ $ne: ["$files", null] }, { $ne: ["$files._id", null] }] },
+              {
+                $and: [
+                  { $ne: ["$files", null] },
+                  { $ne: ["$files._id", null] },
+                ],
+              },
               {
                 _id: "$files._id",
                 title: "$files.title",
@@ -2828,18 +2855,23 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] },
         },
         resolutionCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+          },
         },
         ordinanceCount: {
-          $sum: { $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0] },
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+          },
         },
       },
     },
-    { $sort: { fullName: 1 } }
+    { $sort: { fullName: 1 } },
   );
 
   // --- Execute aggregation ---
-  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+  const AuthorsWithFiles =
+    await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
   // --- Pagination ---
   const totalCount = AuthorsWithFiles.length;
@@ -2857,8 +2889,6 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     data: paginatedData,
   });
 });
-
-
 
 exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
   const { first_name, middle_name, last_name } = req.query;
@@ -3153,3 +3183,100 @@ exports.PublicSpecificFilterAuthor = AsyncErrorHandler(
     });
   },
 );
+
+exports.CategorySummaryWithSize = AsyncErrorHandler(async (req, res) => {
+  // ORIGINAL — DO NOT TOUCH
+  const summary = await Files.aggregate([
+    {
+      $match: {
+        ArchivedStatus: { $nin: ["For Restore", "Deleted"] },
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "categoryInfo",
+      },
+    },
+    { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        "categoryInfo.category": { $in: ["Resolution", "Ordinance"] },
+      },
+    },
+    {
+      $group: {
+        _id: "$categoryInfo.category",
+        totalFiles: { $sum: 1 },
+        totalFileSize: { $sum: "$fileSize" },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        category: "$_id",
+        totalFiles: 1,
+        totalFileSize: { $multiply: ["$totalFileSize", 15] },
+      },
+    },
+  ]);
+
+  // 🔹 ADD ONLY — MONTHLY UPLOADS
+  const currentYear = new Date().getFullYear();
+
+  const MonthlyUploads = await Files.aggregate([
+    {
+      $match: {
+        ArchivedStatus: { $nin: ["For Restore", "Deleted"] },
+        createdAt: {
+          $gte: new Date(`${currentYear}-01-01`),
+          $lt: new Date(`${currentYear + 1}-01-01`),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: { month: { $month: "$createdAt" } },
+        totalFiles: { $sum: 1 },
+        totalFileSize: { $sum: { $ifNull: ["$fileSize", 0] } },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        monthNumber: "$_id.month",
+        month: {
+          $arrayElemAt: [
+            [
+              "",
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December",
+            ],
+            "$_id.month",
+          ],
+        },
+        totalFiles: 1,
+        totalFileSize: { $multiply: ["$totalFileSize", 15] },
+      },
+    },
+    { $sort: { monthNumber: 1 } },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: summary,   
+    MonthlyUploads,    
+  });
+});

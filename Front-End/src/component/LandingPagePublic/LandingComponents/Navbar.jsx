@@ -1,14 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import headlogo from "../../../assets/logo-login.png";
 
-const NavbarWithScroll = ({ 
-    currentPage, 
-    setCurrentPage, 
-    searchKeyword, 
-    setSearchKeyword, 
-    setOfficial,
-    onNavigateToSection
-}) => {
+const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword, setOfficial, onNavigateToSection }) => {
     const [showScrollNavbar, setShowScrollNavbar] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -83,7 +76,7 @@ const NavbarWithScroll = ({
             const offsetTop = element.getBoundingClientRect().top + window.pageYOffset - 80;
             window.scrollTo({
                 top: offsetTop,
-                behavior: "smooth"
+                behavior: "smooth",
             });
         }
     };
@@ -108,12 +101,12 @@ const NavbarWithScroll = ({
             if (pageId === "hero") {
                 window.scrollTo({
                     top: 0,
-                    behavior: "smooth"
+                    behavior: "smooth",
                 });
             } else {
                 scrollToSection(pageId);
             }
-            
+
             setDesktopOpenSubmenu(null);
             setMobileMenuOpen(false);
             setOpenSubmenu(null);
@@ -133,7 +126,7 @@ const NavbarWithScroll = ({
         if (pageId === "hero") {
             window.scrollTo({
                 top: 0,
-                behavior: "smooth"
+                behavior: "smooth",
             });
         } else {
             scrollToSection(pageId);
@@ -192,9 +185,9 @@ const NavbarWithScroll = ({
 
                             <div className="flex flex-col text-white">
                                 <span className="text-xs font-semibold leading-tight md:text-sm">Republic of the Philippines</span>
+                                <span className="text-xs italic leading-tight">Sangguniang Panlalawigan</span>
                                 <div className="my-1 h-px w-full bg-white"></div>
                                 <span className="text-xs leading-tight">Province of Biliran</span>
-                                <span className="text-xs italic leading-tight">Official Website</span>
                             </div>
                         </div>
 
@@ -340,9 +333,9 @@ const NavbarWithScroll = ({
 
                         <div className="flex flex-col text-white">
                             <span className="text-xs font-semibold leading-tight">Republic of the Philippines</span>
+                            <span className="text-xs italic leading-tight">Sangguniang Panlalawigan</span>
                             <div className="my-1 h-px w-full bg-white"></div>
                             <span className="text-xs leading-tight">Province of Biliran</span>
-                            <span className="text-xs italic leading-tight">Official Website</span>
                         </div>
                     </div>
 
@@ -467,9 +460,7 @@ const NavbarWithScroll = ({
                                         <button
                                             onClick={() => handlePageClick(page.id)}
                                             className={`flex w-full items-center rounded-lg px-4 py-3 text-sm font-semibold transition-colors duration-200 ${
-                                                currentPage === page.id
-                                                    ? "bg-blue-800 text-white shadow-sm"
-                                                    : "text-white hover:bg-blue-800"
+                                                currentPage === page.id ? "bg-blue-800 text-white shadow-sm" : "text-white hover:bg-blue-800"
                                             }`}
                                         >
                                             {page.label}

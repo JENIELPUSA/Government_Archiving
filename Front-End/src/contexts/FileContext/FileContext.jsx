@@ -41,6 +41,8 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isPublictotalpage, setPublictotalpage] = useState({});
     const [isPubliccurrentpage, setPubliccurrentpage] = useState({});
     const [isMonthlyFile, setMonthlyFile] = useState(0);
+    const [categorySummary, setCategorySummary] = useState([]);
+    const [MonthlyUploads,setMonthlyUploads]=useState([])
     useEffect(() => {
         if (!authToken) return;
 
@@ -62,7 +64,7 @@ export const FilesDisplayProvider = ({ children }) => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                await Promise.all([fetchlatestdata(), fetchpublicdata(), fetchPublicDisplay()]);
+                await Promise.all([fetchlatestdata(), fetchpublicdata(), fetchPublicDisplay(), fetchCategorySummary()]);
             } catch (err) {
                 console.error("Error fetching data:", err);
             } finally {
@@ -494,6 +496,23 @@ export const FilesDisplayProvider = ({ children }) => {
         [authToken],
     );
 
+    const fetchCategorySummary = useCallback(async () => {
+        if (!authToken) return;
+        try {
+            setLoading(true);
+            const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/CategorySummaryWithSize`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+                withCredentials: true,
+            });
+            setCategorySummary(res.data.data || []);
+            setMonthlyUploads(res.data.MonthlyUploads || []);
+        } catch (err) {
+            console.error("Error fetching category summary:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, [authToken]);
+
     return (
         <FilesDisplayContext.Provider
             value={{
@@ -536,6 +555,7 @@ export const FilesDisplayProvider = ({ children }) => {
                 isTags,
                 isLoading,
                 isMonthlyFile,
+                categorySummary,MonthlyUploads
             }}
         >
             {children}

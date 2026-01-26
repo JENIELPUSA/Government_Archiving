@@ -8,14 +8,17 @@ router
   .post(
     authController.protect,
     upload.single("file"),
-    FilesController.createFiles
+    FilesController.createFiles,
   )
   .get(authController.protect, FilesController.DisplayFiles);
 
 router
   .route("/FilesWithAuthor")
-  .get(authController.protect,FilesController.getAllAuthorsWithFiles);
+  .get(authController.protect, FilesController.getAllAuthorsWithFiles);
 
+router
+  .route("/CategorySummaryWithSize")
+  .get(authController.protect, FilesController.CategorySummaryWithSize);
 
 router
   .route("/:id")
@@ -27,9 +30,11 @@ router
   .route("/UpdateFileDocument/:id")
   .patch(authController.protect, FilesController.updateFiles);
 
-router.route("/OfficerUpdate/:id").patch(authController.protect,FilesController.updateFileOfficer);
+router
+  .route("/OfficerUpdate/:id")
+  .patch(authController.protect, FilesController.updateFileOfficer);
 
-router.get("/stream/:id",authController.protect,FilesController.getFileCloud);
+router.get("/stream/:id", authController.protect, FilesController.getFileCloud);
 
 router.get("/streampublic/:id", FilesController.getFileForPubliCloud);
 
@@ -40,12 +45,11 @@ router
   .post(
     authController.protect,
     upload.single("file"),
-    FilesController.UpdateCloudinaryFile
+    FilesController.UpdateCloudinaryFile,
   );
 router
   .route("/GetOfficerData")
   .post(authController.protect, FilesController.getOfficer);
-
 
 router.get("/test", (req, res) => {
   console.log("🧪 test route hit!");
@@ -56,24 +60,20 @@ router.route("/GetPublicData").post(FilesController.PublicDisplayController);
 
 router.route("/GetLatestBill").post(FilesController.getLatestBillsThisWeek);
 
-router.route("/GetArchivedData").post(authController.protect,FilesController.DisplayFilesArchive);
+router
+  .route("/GetArchivedData")
+  .post(authController.protect, FilesController.DisplayFilesArchive);
 
 router.route("/DocumentPerYear").post(FilesController.DisplayDocumentPerYear);
-
-
 
 router
   .route("/PublicGetAuthorwithFiles")
   .post(FilesController.PublicGetAuthorwithFiles);
 
-router
-  .route("/PublicSummaryTerm")
-  .post(FilesController.PublicSummaryTerm);
+router.route("/PublicSummaryTerm").post(FilesController.PublicSummaryTerm);
 
 router
   .route("/PublicSpecificFilterAuthor")
   .post(FilesController.PublicSpecificFilterAuthor);
-
-
 
 module.exports = router;

@@ -116,18 +116,17 @@ const Hero = () => {
                         }}
                     />
                 </div>
-
                 <div
                     className="absolute left-1/2 z-20 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                     style={{
-                        top: isMobile ? "50%" : "54%",
+                        top: isMobile ? "60%" : "49%",
                         transform: `translateX(calc(-50% + ${parallaxValues.text.x}px)) translateY(calc(-50% + ${parallaxValues.text.y}px))`,
                     }}
                 >
                     <div
                         className={`transition-all duration-[2000ms] ease-out ${isVisible ? "translate-y-0 opacity-100" : "-translate-y-[50px] opacity-0"}`}
                         style={{
-                            marginBottom: isMobile ? "0.5rem" : "1rem",
+                            marginBottom: isMobile ? "0.5rem" : "3rem",
                             transform: `translateY(${parallaxValues.logo.y * (isMobile ? 0.1 : 0.3)}px)`,
                         }}
                     >
@@ -141,19 +140,37 @@ const Hero = () => {
                         />
                     </div>
                     <h1
-                        className={`cubic-bezier(0.16, 1, 0.3, 1) font-black uppercase text-white drop-shadow-[0_0_60px_rgba(0,0,0,0.9)] transition-all duration-[2000ms] ${
-                            isVisible ? "translate-y-0 opacity-100" : "translate-y-[100px] opacity-0"
-                        } ${
+  className={`cubic-bezier(0.16, 1, 0.3, 1) font-bold uppercase text-white 
+  drop-shadow-[0_0_60px_rgba(0,0,0,0.9)] transition-all duration-[2000ms]
+  ${isVisible ? "translate-y-0 opacity-100" : "translate-y-[100px] opacity-0"}
+  ${
+    isMobile
+      ? "text-xl tracking-[0.15em] xs:text-2xl xs:tracking-[0.2em]"
+      : "text-2xl tracking-[0.2em] sm:text-5xl md:text-2xl md:tracking-[0.5em] lg:text-3xl"
+  }`}
+  style={{
+    whiteSpace: isMobile ? "normal" : "nowrap",
+    lineHeight: isMobile ? "1.2" : "normal",  
+    textAlign: "center",
+    marginBottom: isMobile ? "0.75rem" : "1.5rem",
+    marginTop: isMobile ? "-0.25rem" : "-1rem",
+  }}
+>
+  Sangguniang Panlalawigan
+</h1>
+
+                    <h1
+                        className={`cubic-bezier(0.16, 1, 0.3, 1) font-black uppercase text-white drop-shadow-[0_0_60px_rgba(0,0,0,0.9)] transition-all duration-[2000ms] ${isVisible ? "translate-y-0 opacity-100" : "translate-y-[100px] opacity-0"} ${
                             isMobile
-                                ? "text-3xl tracking-[0.3em] xs:text-4xl xs:tracking-[0.4em]"
-                                : "text-6xl tracking-[0.5em] sm:text-8xl md:text-9xl md:tracking-[1.2rem] lg:text-[11rem]"
+                                ? "text-lg tracking-[0.3em] xs:text-xl xs:tracking-[0.4em]"
+                                : "text-3xl tracking-[0.5em] sm:text-5xl md:text-6xl md:tracking-[1.2rem] lg:text-[6rem]"
                         }`}
                         style={{
                             whiteSpace: "nowrap",
                             textAlign: "center",
                         }}
                     >
-                        Biliran
+                        Biliran Province
                     </h1>
 
                     {isMobile && <p className="mt-2 text-sm font-medium text-gray-300 opacity-90 xs:text-base">Explore the Beauty</p>}
