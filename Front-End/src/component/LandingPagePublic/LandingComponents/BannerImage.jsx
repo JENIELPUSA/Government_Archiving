@@ -7,8 +7,6 @@ const BannerImage = ({ selection }) => {
     Vice_Governor: "Vice Governor",
   }[selection] || selection || ""; // default sa original o empty string
 
-  console.log("displayText", displayText);
-
   return (
     <div
       className="relative w-full h-64 sm:h-[500px] bg-cover bg-center"

@@ -8,6 +8,7 @@ import gallery2 from "../../../assets/gallery2.jpg";
 import gallery1 from "../../../assets/gallery1.jpg";
 import gallery6 from "../../../assets/gallery6.webp";
 import gallery5 from "../../../assets/gallery5.jfif";
+
 const GallerySection = () => {
     const images = [
         { src: UlanUlan, alt: "Ulan Ulan Falls", span: "col-span-1 md:col-span-2 row-span-2" },
@@ -41,16 +42,28 @@ const GallerySection = () => {
     return (
         <section
             id="gallery"
-            className="min-h-full bg-blue-950 py-20 text-white"
+            className="relative min-h-full overflow-hidden bg-blue-950 py-20 text-white"
         >
-            <div className="container mx-auto px-4">
+            {/* Enhanced Animated Background with Grid */}
+            <div className="absolute inset-0">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.15),transparent_60%)]"></div>
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                
+                {/* Grid Pattern Overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+            </div>
+
+            {/* Content */}
+            <div className="container relative mx-auto z-10 px-4">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6 }}
                     className="mb-12 text-center"
                 >
-                    
                     <h2 className="mb-4 text-3xl font-bold md:text-4xl">Tourism & Gallery</h2>
                     <p className="mx-auto max-w-2xl text-blue-200">
                         Explore the breathtaking beauty of Biliran Province. From majestic waterfalls to pristine white sand beaches.

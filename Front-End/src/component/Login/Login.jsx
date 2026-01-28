@@ -17,6 +17,7 @@ export default function AuthForm() {
         status: "success",
         message: "",
     });
+    const [showPassword, setShowPassword] = useState(false); // New state for password visibility
 
     const [values, setValues] = useState({
         email: "",
@@ -28,13 +29,16 @@ export default function AuthForm() {
     const navigate = useNavigate();
     const { login } = useAuth();
 
-
     const handleInput = useCallback((event) => {
         const { name, value } = event.target;
         setValues((prevValues) => ({
             ...prevValues,
             [name]: value,
         }));
+    }, []);
+
+    const toggleShowPassword = useCallback(() => {
+        setShowPassword((prev) => !prev);
     }, []);
 
     const handleLoginSubmit = async (e) => {
@@ -267,7 +271,7 @@ export default function AuthForm() {
                                         size={20}
                                     />
                                     <input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         id="password"
                                         name="password"
                                         value={values.password}
@@ -289,16 +293,18 @@ export default function AuthForm() {
                             >
                                 <div className="flex items-center">
                                     <input
-                                        id="remember-me"
-                                        name="remember-me"
+                                        id="show-password"
+                                        name="show-password"
                                         type="checkbox"
+                                        checked={showPassword}
+                                        onChange={toggleShowPassword}
                                         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                     />
                                     <label
-                                        htmlFor="remember-me"
+                                        htmlFor="show-password"
                                         className="xs:text-[12px] ml-2 block text-gray-900"
                                     >
-                                        Remember me
+                                        Show Password
                                     </label>
                                 </div>
                                 <a

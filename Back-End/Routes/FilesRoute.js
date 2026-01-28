@@ -19,6 +19,9 @@ router
 router
   .route("/CategorySummaryWithSize")
   .get(authController.protect, FilesController.CategorySummaryWithSize);
+router
+  .route("/DisplayByPositionInFile")
+  .get(FilesController.DisplayByPositionInFile);
 
 router
   .route("/:id")

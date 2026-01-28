@@ -271,177 +271,192 @@ const Documents = ({ searchKeyword, onViewFile, documentType, onBack }) => {
     const hasData = !shouldShowSkeletonState && Object.values(filteredData).flatMap((yearData) => yearData.data).length > 0;
 
     return (
-        <>
-            <BannerImage selection={documentType} />
-            <Breadcrumb position={documentType} onBack={onBack}/>
+        <div className="relative min-h-screen overflow-hidden bg-blue-950">
+            {/* Enhanced Animated Background with Grid */}
+            <div className="absolute inset-0">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_60%)]"></div>
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.15),transparent_60%)]"></div>
+                <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+                
+                {/* Grid Pattern Overlay */}
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+            </div>
 
-            <motion.div className="mb-6 xs:mb-2 xs-max:mb-2 container mx-auto mt-8 xs:mt-2 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
-                <motion.h1 className="mb-6 text-3xl font-bold text-blue-800 xs:text-lg">DOCUMENTS</motion.h1>
+            {/* Content */}
+            <div className="relative z-10">
+                <BannerImage selection={documentType} />
+                <Breadcrumb position={documentType} onBack={onBack}/>
 
-                {/* Filters */}
-                <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
-                        <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Year:</label>
-                        <select
-                            className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner xs:text-[12px]"
-                            value={selectedYear}
-                            onChange={(e) => {
-                                const year = e.target.value;
-                                if (year === "All Years") {
-                                    returnToAllYears();
-                                } else {
-                                    setSelectedYear(year);
-                                    setOpenYear(year);
-                                }
-                            }}
-                            disabled={shouldShowSkeletonState}
-                        >
-                            {years.map((year) => (
-                                <option
-                                    key={year}
-                                    value={year}
-                                >
-                                    {year}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                <motion.div className="mb-6 xs:mb-2 xs-max:mb-2 container mx-auto mt-8 xs:mt-2 min-h-[400px] max-w-7xl flex-grow rounded-lg bg-white p-6 shadow-xl">
+                    <motion.h1 className="mb-6 text-3xl font-bold text-blue-800 xs:text-lg">DOCUMENTS</motion.h1>
 
-                    {showCategoryFilter && (
+                    {/* Filters */}
+                    <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
-                            <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Category:</label>
+                            <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Year:</label>
                             <select
-                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner"
-                                value={""}
-                                disabled
+                                className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner xs:text-[12px]"
+                                value={selectedYear}
+                                onChange={(e) => {
+                                    const year = e.target.value;
+                                    if (year === "All Years") {
+                                        returnToAllYears();
+                                    } else {
+                                        setSelectedYear(year);
+                                        setOpenYear(year);
+                                    }
+                                }}
+                                disabled={shouldShowSkeletonState}
                             >
-                                {categories.map((category) => (
+                                {years.map((year) => (
                                     <option
-                                        key={category.id}
-                                        value={category.id}
+                                        key={year}
+                                        value={year}
                                     >
-                                        {category.name}
+                                        {year}
                                     </option>
                                 ))}
                             </select>
                         </div>
-                    )}
-                </div>
-                {/* Main Content */}
-                {shouldShowSkeletonState ? (
-                    // Show skeleton during clearing/loading
-                    <div className="space-y-6">
-                        {[...Array(2)].map((_, i) => (
-                            <SkeletonYearSection key={i} />
-                        ))}
-                    </div>
-                ) : hasData ? (
-                    // Show data when available
-                    <div className="space-y-6">
-                        {Object.entries(filteredData)
-                            .sort(([a], [b]) => (a === "Unknown" ? 1 : b === "Unknown" ? -1 : parseInt(b) - parseInt(a)))
-                            .map(([year, yearData]) => {
-                                const yearFiles = yearData.data;
-                                const currentPage = yearData.currentPage;
-                                const totalPages = yearData.totalPages;
-                                const totalCount = yearData.totalCount || 0;
-                                const isOpen = openYear === year;
-                                const isSpecificYearView = selectedYear !== "All Years";
 
-                                return (
-                                    <motion.div
-                                        key={year}
-                                        className="rounded-xl border border-gray-200 shadow-sm"
-                                    >
-                                        <motion.div
-                                            className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 xs:p-2 text-white transition-all duration-200 hover:from-blue-800 hover:to-blue-900"
-                                            onClick={() => toggleYear(year)}
+                        {showCategoryFilter && (
+                            <div className="rounded-lg bg-blue-50 p-4 shadow-sm">
+                                <label className="mb-2 block text-sm font-medium text-blue-800 xs:text-[12px]">Filter by Category:</label>
+                                <select
+                                    className="w-full rounded-lg border border-blue-200 bg-white px-4 py-2.5 shadow-inner"
+                                    value={""}
+                                    disabled
+                                >
+                                    {categories.map((category) => (
+                                        <option
+                                            key={category.id}
+                                            value={category.id}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <h2 className="flex items-center gap-3 text-xl font-bold">
-                                                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900 xs:text-[12px] xs-max:text-[15px]">
-                                                        {year === "Unknown" ? "?" : year.substring(2)}
-                                                    </span>
-                                                    <div className="xs:text-[15px] xs-max:text-[15px]">
-                                                        {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
-                                                    </div>
-                                                </h2>
-                                            </div>
-                                            {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                                        </motion.div>
+                                            {category.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                    </div>
+                    {/* Main Content */}
+                    {shouldShowSkeletonState ? (
+                        // Show skeleton during clearing/loading
+                        <div className="space-y-6">
+                            {[...Array(2)].map((_, i) => (
+                                <SkeletonYearSection key={i} />
+                            ))}
+                        </div>
+                    ) : hasData ? (
+                        // Show data when available
+                        <div className="space-y-6">
+                            {Object.entries(filteredData)
+                                .sort(([a], [b]) => (a === "Unknown" ? 1 : b === "Unknown" ? -1 : parseInt(b) - parseInt(a)))
+                                .map(([year, yearData]) => {
+                                    const yearFiles = yearData.data;
+                                    const currentPage = yearData.currentPage;
+                                    const totalPages = yearData.totalPages;
+                                    const totalCount = yearData.totalCount || 0;
+                                    const isOpen = openYear === year;
+                                    const isSpecificYearView = selectedYear !== "All Years";
 
-                                        <AnimatePresence>
-                                            {isOpen && (
-                                                <motion.div
-                                                    className="overflow-hidden bg-white"
-                                                    initial="closed"
-                                                    animate="open"
-                                                    exit="closed"
-                                                    variants={yearSectionVariants}
-                                                >
-                                                    <div className="space-y-4 p-6 xs:p-2">
-                                                        {yearFiles.map((item) => (
-                                                            <div
-                                                                key={item._id}
-                                                                className="rounded-lg border border-gray-200 p-5 transition-all duration-200 hover:bg-blue-50"
-                                                            >
-                                                                <h3 className="mb-2 text-lg font-bold text-gray-800 xs:text-[12px] xs-max:text-[12px] xs:leading-4 2xs:leading-4 xs-max:leading-4">{item?.title}</h3>
-                                                                <p className="mb-3 line-clamp-2 text-gray-600 xs:text-[12px] xs-max:text-[15px]">{item?.summary}</p>
-                                                                <div className="mb-3 flex flex-wrap gap-4 text-sm text-gray-700 xs:text-[12px] xs-max:text-[12px]">
-                                                                    <span>Author: {item?.author || "N/A"}</span>
-                                                                    <span>Category: {item?.category || "Uncategorized"}</span>
-                                                                    <span>Created: {formatDate(item?.createdAt)}</span>
+                                    return (
+                                        <motion.div
+                                            key={year}
+                                            className="rounded-xl border border-gray-200 shadow-sm"
+                                        >
+                                            <motion.div
+                                                className="flex cursor-pointer items-center justify-between bg-gradient-to-r from-blue-700 to-blue-800 p-5 xs:p-2 text-white transition-all duration-200 hover:from-blue-800 hover:to-blue-900"
+                                                onClick={() => toggleYear(year)}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="flex items-center gap-3 text-xl font-bold">
+                                                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-900 xs:text-[12px] xs-max:text-[15px]">
+                                                            {year === "Unknown" ? "?" : year.substring(2)}
+                                                        </span>
+                                                        <div className="xs:text-[15px] xs-max:text-[15px]">
+                                                            {year} • {totalCount} document{totalCount !== 1 ? "s" : ""}
+                                                        </div>
+                                                    </h2>
+                                                </div>
+                                                {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                            </motion.div>
+
+                                            <AnimatePresence>
+                                                {isOpen && (
+                                                    <motion.div
+                                                        className="overflow-hidden bg-white"
+                                                        initial="closed"
+                                                        animate="open"
+                                                        exit="closed"
+                                                        variants={yearSectionVariants}
+                                                    >
+                                                        <div className="space-y-4 p-6 xs:p-2">
+                                                            {yearFiles.map((item) => (
+                                                                <div
+                                                                    key={item._id}
+                                                                    className="rounded-lg border border-gray-200 p-5 transition-all duration-200 hover:bg-blue-50"
+                                                                >
+                                                                    <h3 className="mb-2 text-lg font-bold text-gray-800 xs:text-[12px] xs-max:text-[12px] xs:leading-4 2xs:leading-4 xs-max:leading-4">{item?.title}</h3>
+                                                                    <p className="mb-3 line-clamp-2 text-gray-600 xs:text-[12px] xs-max:text-[15px]">{item?.summary}</p>
+                                                                    <div className="mb-3 flex flex-wrap gap-4 text-sm text-gray-700 xs:text-[12px] xs-max:text-[12px]">
+                                                                        <span>Author: {item?.author || "N/A"}</span>
+                                                                        <span>Category: {item?.category || "Uncategorized"}</span>
+                                                                        <span>Created: {formatDate(item?.createdAt)}</span>
+                                                                    </div>
+                                                                    <button
+                                                                        onClick={() => onViewFile(item._id, item)}
+                                                                        className="rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-800 xs:text-[12px] xs-max:text-[12px]"
+                                                                    >
+                                                                        View Document
+                                                                    </button>
                                                                 </div>
-                                                                <button
-                                                                    onClick={() => onViewFile(item._id, item)}
-                                                                    className="rounded-lg bg-blue-700 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-800 xs:text-[12px] xs-max:text-[12px]"
-                                                                >
-                                                                    View Document
-                                                                </button>
-                                                            </div>
-                                                        ))}
+                                                            ))}
 
-                                                        {totalPages > 1 && (
-                                                            <div className="mt-6 flex items-center justify-center gap-4">
-                                                                <button
-                                                                    onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
-                                                                    disabled={currentPage === 1}
-                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
-                                                                >
-                                                                    Previous
-                                                                </button>
-                                                                <span className="font-medium text-gray-700 xs-max:text-[12px] xs:text-[12px]">
-                                                                    Page {currentPage} of {totalPages}
-                                                                </span>
-                                                                <button
-                                                                    onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
-                                                                    disabled={currentPage === totalPages}
-                                                                    className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
-                                                                >
-                                                                    Next
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </motion.div>
-                                );
-                            })}
-                    </div>
-                ) : (
-                    <div className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center">
-                        <FileText
-                            size={48}
-                            className="mx-auto text-blue-500"
-                        />
-                                    <h3 className="mt-4 text-xl font-semibold text-blue-800">No documents found</h3>           {" "}
-                        <p className="mt-2 text-blue-700">Try adjusting your search criteria</p>         {" "}
-                    </div>
-                )}
-            </motion.div>
-        </>
+                                                            {totalPages > 1 && (
+                                                                <div className="mt-6 flex items-center justify-center gap-4">
+                                                                    <button
+                                                                        onClick={() => handlePageChange(year, Math.max(1, currentPage - 1))}
+                                                                        disabled={currentPage === 1}
+                                                                        className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
+                                                                    >
+                                                                        Previous
+                                                                    </button>
+                                                                    <span className="font-medium text-gray-700 xs-max:text-[12px] xs:text-[12px]">
+                                                                        Page {currentPage} of {totalPages}
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => handlePageChange(year, Math.min(totalPages, currentPage + 1))}
+                                                                        disabled={currentPage === totalPages}
+                                                                        className="rounded-lg border border-gray-300 px-4 py-2 transition-colors duration-200 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 xs-max:text-[12px] xs:text-[12px]"
+                                                                    >
+                                                                        Next
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.div>
+                                    );
+                                })}
+                        </div>
+                    ) : (
+                        <div className="rounded-lg border border-blue-100 bg-blue-50 py-12 text-center">
+                            <FileText
+                                size={48}
+                                className="mx-auto text-blue-500"
+                            />
+                                        <h3 className="mt-4 text-xl font-semibold text-blue-800">No documents found</h3>           {" "}
+                            <p className="mt-2 text-blue-700">Try adjusting your search criteria</p>         {" "}
+                        </div>
+                    )}
+                </motion.div>
+            </div>
+        </div>
     );
 };
 

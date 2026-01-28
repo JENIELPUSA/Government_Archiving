@@ -1,34 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { FaUserAlt, FaTimes, FaChevronRight } from "react-icons/fa";
+import React, { useEffect, useState, useCallback } from "react";
+import {
+    FaTimes,
+    FaInfoCircle,
+    FaUserCircle,
+} from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
-import FileTableModal from "./FileTableModal";
-
-// Animation variants
-const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-        opacity: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: "easeOut" },
-    },
-    hover: { y: -4, transition: { duration: 0.2, ease: "easeOut" } },
-};
-
-const modalBackdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { duration: 0.3 } },
-};
-
-const modalContentVariants = {
-    hidden: { opacity: 0, scale: 0.9, y: 20 },
-    visible: {
-        opacity: 1,
-        scale: 1,
-        y: 0,
-        transition: { duration: 0.4, ease: [0.175, 0.885, 0.32, 1.1] },
-    },
-    exit: { opacity: 0, scale: 0.9, transition: { duration: 0.2 } },
-};
+import UnifiedFileTable from "./SBMemberModal/UnifiedFileTable";
+import MemberCard from "./SBMemberModal/MemberCard";
 
 const termLabels = {
     "1st_term": "1st Term",
@@ -36,211 +14,137 @@ const termLabels = {
     "3rd_term": "3rd Term",
 };
 
-// ✅ Member Card
-export const MemberCard = ({ member, openModal }) => (
-    <motion.div
-        className="flex flex-col items-start rounded-lg border border-gray-100 bg-white p-3 shadow-sm hover:border-blue-100 sm:flex-row z-[999]"
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-        whileHover="hover"
-        layout
-    >
-        {/* Avatar */}
-        <div className="mb-3 flex w-full justify-center sm:mb-0 sm:mr-3 sm:block sm:w-24">
-            <motion.img
-                src={member.memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg"}
-                alt="Profile Picture"
-                className="h-28 w-20 rounded-lg object-cover shadow-sm xs:h-24 xs:w-16 2xs:h-20 2xs:w-14"
-                whileHover={{ scale: 1.03 }}
-                transition={{ duration: 0.2 }}
-            />
-        </div>
+// --- COMPONENT: MEMBER MODAL ---
+export const MemberModal = ({
+    member,
+    closeModal,
+    FilesByPosition = [],
+    fetchFilesByPosition,
+    PositioncurentPage = 1,
+    PositiontotalPage = 1,
+    Totaldata = 0,
+}) => {
+    const [activeFilter, setActiveFilter] = useState("Chairperson");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
 
-        {/* Info */}
-        <div className="flex-grow text-center sm:text-left">
-            <h2 className="mb-1 flex items-center justify-center sm:justify-start text-sm font-bold text-gray-900 xs:text-xs 2xs:text-[11px]">
-                <FaUserAlt className="mr-1 text-xs text-blue-600" />
-                {member.memberInfo?.first_name} {member.memberInfo?.last_name}
-            </h2>
-
-            {(member.district || member.memberInfo?.district) && (
-                <p className="mb-1 flex items-center justify-center sm:justify-start text-xs text-gray-600 xs:text-[11px] 2xs:text-[10px]">
-                    <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                    {member.district || member.memberInfo?.district}
-                </p>
-            )}
-
-            <p className="mb-2 flex items-center justify-center sm:justify-start text-xs capitalize text-gray-600 xs:text-[11px] 2xs:text-[10px]">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                {member.memberInfo?.Position || member.memberInfo?.position || "No position specified"}
-            </p>
-
-            <p className="mb-1 flex items-center justify-center sm:justify-start text-xs text-gray-600 xs:text-[11px] 2xs:text-[10px]">
-                <span className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
-                {termLabels[member.term || member.memberInfo?.term] || "No term specified"}
-            </p>
-
-            <motion.button
-                onClick={() => openModal(member)}
-                className="mt-1 flex items-center justify-center sm:justify-start text-xs font-medium text-blue-600 transition-colors duration-200 hover:text-blue-800 focus:outline-none xs:text-[11px] 2xs:text-[10px]"
-                whileHover={{ x: 3 }}
-                transition={{ type: "spring", stiffness: 500 }}
-            >
-                <span className="mr-1 border-b border-dotted border-blue-600 hover:border-blue-800">View Full Profile</span>
-                <FaChevronRight className="text-xs" />
-            </motion.button>
-        </div>
-    </motion.div>
-);
-
-export const MemberModal = ({ member, closeModal }) => {
-    const [showFileTable, setShowFileTable] = useState(null);
+    const fetchData = useCallback((page = 1, search = "") => {
+        if (member?._id && fetchFilesByPosition) {
+            setIsLoading(true);
+            fetchFilesByPosition(member._id, activeFilter, page, search)
+                .finally(() => setIsLoading(false));
+        }
+    }, [member?._id, activeFilter, fetchFilesByPosition]);
 
     useEffect(() => {
         document.body.style.overflow = "hidden";
+        fetchData(1, ""); 
+        setSearchTerm("");
         return () => { document.body.style.overflow = "unset"; };
-    }, []);
+    }, [member?._id, activeFilter]); 
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => fetchData(1, searchTerm), 600); 
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
 
     if (!member) return null;
-    const district = member.district || member.memberInfo?.district;
 
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-[888] flex items-start justify-center pt-6 xs:pt-20  2xs:pt-20  xs-max:pt-20 pb-4 bg-black/40 p-4 backdrop-blur-sm sm:items-center"
-                variants={modalBackdropVariants}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[1000] flex items-center justify-center bg-blue-900/40 p-2 backdrop-blur-[2px]"
                 onClick={closeModal}
             >
                 <motion.div
-                    // ✅ Reduced max height: from max-h-screen to max-h-[80vh]
-                    className="w-11/12 max-w-4xl max-h-[80vh] overflow-y-auto rounded-xl bg-white shadow-2xl xs:w-full xs:rounded-lg 2xs:w-full"
-                    variants={modalContentVariants}
+                    initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    className="relative max-h-[95vh] w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl"
                     onClick={(e) => e.stopPropagation()}
-                    layout
                 >
-                    {/* Header */}
-                    <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white p-3 xs:p-2">
-                        <h2 className="text-lg font-bold text-gray-800 xs:text-base 2xs:text-sm">Member Profile</h2>
-                        <motion.button
-                            onClick={closeModal}
-                            className="rounded-full p-1 text-xl font-bold text-gray-500 transition-colors duration-200 hover:bg-gray-100 hover:text-gray-900"
-                            whileHover={{ scale: 1.1, rotate: 90 }}
-                            whileTap={{ scale: 0.9 }}
-                        >
-                            <FaTimes />
-                        </motion.button>
+                    {/* Integrated Header: Profile is now part of the Header Background */}
+                    <div className="relative bg-gradient-to-r from-blue-950 via-blue-800 to-indigo-900 px-6 py-8">
+                        <button onClick={closeModal} className="absolute right-4 top-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
+                            <FaTimes size={14} />
+                        </button>
+                        
+                        <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end">
+                            {member.avatar?.url ? (
+                                <img src={member.avatar.url} alt="Official" className="h-32 w-28 rounded-xl border-4 border-white/20 object-cover shadow-2xl transition-transform hover:scale-105" />
+                            ) : (
+                                <div className="flex h-32 w-28 items-center justify-center rounded-xl border-4 border-white/20 bg-white/10 text-white/50 shadow-2xl">
+                                    <FaUserCircle size={60} />
+                                </div>
+                            )}
+                            <div className="text-center sm:text-left">
+                                <h2 className="text-2xl font-black uppercase tracking-tight text-white drop-shadow-md">Hon. {member.first_name} {member.last_name}</h2>
+                                <div className="mt-2 flex flex-wrap justify-center gap-2 sm:justify-start">
+                                    <span className="rounded-md bg-blue-500/30 px-2 py-1 text-[10px] font-bold uppercase text-blue-100 backdrop-blur-sm">{member.Position}</span>
+                                    <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-bold uppercase text-white/80 backdrop-blur-sm">{termLabels[member.term] || "Active"}</span>
+                                    <span className="rounded-md bg-emerald-500/30 px-2 py-1 text-[10px] font-bold uppercase text-emerald-100 backdrop-blur-sm">{member.district}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Body - Reduced padding */}
-                    <div className="p-3 xs:p-2 2xs:p-1">
-                        <div className="flex flex-col items-start space-y-4 md:flex-row md:space-x-6 md:space-y-0">
-                            {/* Profile Picture */}
-                            <motion.div className="flex w-full flex-col items-center md:w-1/3">
-                                <img
-                                    src={member.memberInfo?.avatar?.url || "https://randomuser.me/api/portraits/men/64.jpg"}
-                                    alt="Member Profile Picture"
-                                    className="h-auto w-full max-w-[160px] rounded-lg object-cover shadow-md xs:max-w-[110px] 2xs:max-w-[90px]"
+                    <div className="p-6">
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+                            <div className="space-y-5 lg:col-span-4">
+                                <div className="rounded-xl border border-gray-100 bg-gray-50/30 p-4">
+                                    <h4 className="mb-2 flex items-center gap-1 text-[9px] font-bold uppercase text-gray-400"><FaInfoCircle /> About</h4>
+                                    <p className="text-[11px] leading-relaxed text-gray-600 line-clamp-[8]">{member.detailInfo || "No biography available."}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <p className="mb-2 text-[9px] font-bold uppercase text-gray-400">Position Filters</p>
+                                    <FilterBtn label="Chairperson" count={member.isChairperson} active={activeFilter === "Chairperson"} onClick={() => setActiveFilter("Chairperson")} color="blue" />
+                                    <FilterBtn label="Vice-Chair" count={member.isViceChairperson} active={activeFilter === "Vice-Chairperson"} onClick={() => setActiveFilter("Vice-Chairperson")} color="emerald" />
+                                    <FilterBtn label="Member" count={member.isMember} active={activeFilter === "Member"} onClick={() => setActiveFilter("Member")} color="amber" />
+                                </div>
+                            </div>
+
+                            <div className="lg:col-span-8">
+                                <UnifiedFileTable
+                                    FilesByPosition={FilesByPosition}
+                                    PositioncurentPage={PositioncurentPage}
+                                    PositiontotalPage={PositiontotalPage}
+                                    Totaldata={Totaldata}
+                                    onPageChange={(p) => fetchData(p, searchTerm)}
+                                    onSearchChange={setSearchTerm}
+                                    searchTerm={searchTerm}
                                 />
-                                <div className="mt-2 w-full text-center">
-                                    <h2 className="text-base font-bold text-gray-900 xs:text-sm 2xs:text-xs">
-                                        Hon. {member.memberInfo?.first_name} {member.memberInfo?.last_name}
-                                    </h2>
-                                    <p className="mt-1 text-sm capitalize text-gray-600 xs:text-xs 2xs:text-[10px]">
-                                        {member.memberInfo?.Position || member.memberInfo?.position}
-                                    </p>
-                                    {district && <p className="mt-1 text-sm text-gray-600 xs:text-xs 2xs:text-[10px]">{district}</p>}
-                                </div>
-                            </motion.div>
-
-                            {/* Details */}
-                            <motion.div className="w-full md:w-2/3">
-                                <div className="mb-3">
-                                    <h3 className="mb-1 border-b pb-1 text-sm font-semibold text-gray-800 xs:text-xs">About</h3>
-                                    <p className="text-gray-700 text-sm xs:text-xs 2xs:text-[11px]">
-                                        {member.memberInfo?.detailInfo || "No additional information available."}
-                                    </p>
-                                </div>
-
-                                {/* Counters - compact */}
-                                <motion.div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                                    <button
-                                        onClick={() => setShowFileTable("totalLaws")}
-                                        className="rounded-lg border border-blue-100 bg-blue-50 p-2 text-center transition-colors hover:bg-blue-100"
-                                    >
-                                        <p className="text-lg font-bold text-blue-700 xs:text-base">{member.count || 0}</p>
-                                        <p className="mt-1 text-xs text-blue-600">Total Laws</p>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowFileTable("Resolution")}
-                                        className="rounded-lg border border-green-100 bg-green-50 p-2 text-center transition-colors hover:bg-green-100"
-                                    >
-                                        <p className="text-lg font-bold text-green-700 xs:text-base">{member.resolutionCount || 0}</p>
-                                        <p className="mt-1 text-xs text-green-600">Total Resolutions</p>
-                                    </button>
-                                    <button
-                                        onClick={() => setShowFileTable("Ordinance")}
-                                        className="rounded-lg border border-purple-100 bg-purple-50 p-2 text-center transition-colors hover:bg-purple-100"
-                                    >
-                                        <p className="text-lg font-bold text-purple-700 xs:text-base">{member.ordinanceCount || 0}</p>
-                                        <p className="mt-1 text-xs text-purple-600">Total Ordinances</p>
-                                    </button>
-                                </motion.div>
-                            </motion.div>
+                                {isLoading && <p className="mt-2 text-center text-[10px] text-blue-500 font-bold animate-pulse tracking-widest">SYNCHRONIZING DOCUMENTS...</p>}
+                            </div>
                         </div>
                     </div>
                 </motion.div>
             </motion.div>
-
-            {/* Nested Modal */}
-            <AnimatePresence>
-                {showFileTable && (
-                    <FileTableModal
-                        files={member.files}
-                        category={showFileTable}
-                        onClose={() => setShowFileTable(null)}
-                    />
-                )}
-            </AnimatePresence>
         </AnimatePresence>
     );
 };
 
-export const SkeletonCard = () => (
-    <motion.div
-        className="flex items-start rounded-lg border border-gray-100 bg-white p-3 shadow-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-    >
-        <div className="mr-3 h-32 w-20 animate-pulse rounded-lg bg-gradient-to-r from-gray-100 to-gray-200 xs:h-24 xs:w-16 2xs:h-20 2xs:w-14"></div>
-        <div className="flex-grow">
-            <div className="mb-2 h-4 w-3/4 animate-pulse rounded bg-gradient-to-r from-gray-100 to-gray-200"></div>
-            <div className="mb-1 h-3 w-1/2 animate-pulse rounded bg-gradient-to-r from-gray-100 to-gray-200"></div>
-            <div className="mb-1 h-3 w-2/3 animate-pulse rounded bg-gradient-to-r from-gray-100 to-gray-200"></div>
-            <div className="mt-3 h-3 w-1/3 animate-pulse rounded bg-gradient-to-r from-gray-100 to-gray-200"></div>
-        </div>
-    </motion.div>
-);
-
-export const SkeletonFilter = () => (
-    <motion.div
-        className="animate-pulse"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-    >
-        <div className="mb-2 h-4 w-1/3 rounded bg-gradient-to-r from-gray-100 to-gray-200"></div>
-        <div className="h-12 w-full rounded-md bg-gradient-to-r from-gray-100 to-gray-200"></div>
-    </motion.div>
-);
-
-export default {
-    MemberCard,
-    MemberModal,
-    SkeletonCard,
-    SkeletonFilter,
+const FilterBtn = ({ label, count, active, onClick, color }) => {
+    const colorMap = {
+        blue: active ? "bg-blue-600 text-white shadow-md scale-[1.02]" : "text-blue-600 bg-white hover:bg-blue-50 border-blue-100",
+        emerald: active ? "bg-emerald-600 text-white shadow-md scale-[1.02]" : "text-emerald-600 bg-white hover:bg-emerald-50 border-emerald-100",
+        amber: active ? "bg-amber-600 text-white shadow-md scale-[1.02]" : "text-amber-600 bg-white hover:bg-amber-50 border-amber-100",
+    };
+    return (
+        <button onClick={onClick} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-[10px] font-bold transition-all ${colorMap[color]}`}>
+            <span className="uppercase">{label}</span>
+            <span className={`rounded-md px-1.5 py-0.5 text-[8px] ${active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"}`}>{count || 0}</span>
+        </button>
+    );
 };
+
+export const SkeletonCard = () => (
+    <div className="animate-pulse rounded-xl border border-gray-100 bg-white p-4">
+        <div className="flex items-center gap-3">
+            <div className="h-12 w-10 rounded-lg bg-gray-200" />
+            <div className="flex-1 space-y-2"><div className="h-3 w-3/4 rounded bg-gray-200" /><div className="h-2 w-1/2 rounded bg-gray-100" /></div>
+        </div>
+        <div className="mt-4 h-8 w-full rounded-lg bg-gray-50" />
+    </div>
+);
+
+const CommitteeUI = { MemberCard, MemberModal, UnifiedFileTable, SkeletonCard };
+export default CommitteeUI;

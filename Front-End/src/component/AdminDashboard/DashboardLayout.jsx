@@ -111,12 +111,17 @@ const AnimatedStorage = ({ totalBytes, duration = 1500 }) => {
 // Main Dashboard Component
 function DashboardLayout() {
     const navigate = useNavigate();
-    const { isFile, isTotaDocuments, isTodayDocuments, isMonthlyFile, categorySummary,MonthlyUploads } = useContext(FilesDisplayContext);
+    const { isFile, isTotaDocuments, isTodayDocuments, isMonthlyFile, categorySummary, MonthlyUploads, fetchCategorySummary } =
+        useContext(FilesDisplayContext);
     const { isTotalAdmin } = useContext(AdminDisplayContext);
     const { isTotalOfficer } = useContext(OfficerDisplayContext);
     const documents = isFile;
     const totalDocuments = isTotaDocuments;
     const activeUsers = isTotalAdmin + (isTotalOfficer || 0); // Kasama ang officers sa active users
+
+    // Gamitin ang useRef para i-track kung initial render na ba
+    const hasFetchedRef = useRef(false);
+    const isMountedRef = useRef(true);
 
     useAutoLogout(() => {
         localStorage.removeItem("token");
@@ -130,19 +135,61 @@ function DashboardLayout() {
         return isMonthlyFile.reduce((sum, month) => sum + (typeof month.totalFileSize === "number" ? month.totalFileSize : 0), 0);
     };
 
-    // Optional: Function para sa formatted storage display (without animation)
-    const getFormattedStorage = (bytes) => {
-        if (!bytes || bytes === 0) return "0 MB";
+    // Eto ang useEffect para sa fetchCategorySummary na may useRef
+    useEffect(() => {
+        // Set isMountedRef to true sa component mount
+        isMountedRef.current = true;
 
-        const totalMB = bytes / (1024 * 1024);
-
-        if (totalMB >= 1024) {
-            const totalGB = totalMB / 1024;
-            return `${totalGB.toFixed(2)} GB`;
+        // Tawagin ang fetchCategorySummary sa initial render lang
+        if (isMountedRef.current && !hasFetchedRef.current && fetchCategorySummary) {
+            fetchCategorySummary();
+            hasFetchedRef.current = true; // Mark as fetched
         }
 
-        return `${totalMB.toFixed(2)} MB`;
-    };
+        // Cleanup function
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, [fetchCategorySummary]); // May dependencies pero safe na
+
+    // Optional: Maaari ring gumamit ng interval para mag-refresh ng data periodically
+    const refreshIntervalRef = useRef(null);
+    
+    useEffect(() => {
+        // Setup para sa periodic refresh (every 30 seconds)
+        const setupRefresh = () => {
+            if (refreshIntervalRef.current) {
+                clearInterval(refreshIntervalRef.current);
+            }
+
+            refreshIntervalRef.current = setInterval(() => {
+                if (isMountedRef.current && fetchCategorySummary) {
+                    console.log("Refreshing category summary data...");
+                    fetchCategorySummary();
+                }
+            }, 30000); // 30 seconds
+        };
+
+        setupRefresh();
+
+        // Cleanup function
+        return () => {
+            if (refreshIntervalRef.current) {
+                clearInterval(refreshIntervalRef.current);
+            }
+        };
+    }, [fetchCategorySummary]);
+
+    // Alternative approach: Gamit ang useRef para i-track ang previous values
+    const prevCategorySummaryRef = useRef(categorySummary);
+    
+    useEffect(() => {
+        // Compare current at previous categorySummary
+        if (JSON.stringify(categorySummary) !== JSON.stringify(prevCategorySummaryRef.current)) {
+            console.log("Category summary updated");
+            prevCategorySummaryRef.current = categorySummary;
+        }
+    }, [categorySummary]);
 
     const statisticsData = [
         {
@@ -182,6 +229,46 @@ function DashboardLayout() {
     const [currentPageDocuments, setCurrentPageDocuments] = useState(1);
     const [documentsPerPage] = useState(5);
 
+    // Gamit ang useRef para sa debouncing ng search
+    const searchTimeoutRef = useRef(null);
+    
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchQuery(value);
+        
+        // Debouncing: hintayin muna mag-stop ang user bago i-filter
+        if (searchTimeoutRef.current) {
+            clearTimeout(searchTimeoutRef.current);
+        }
+        
+        searchTimeoutRef.current = setTimeout(() => {
+            if (isMountedRef.current) {
+                let currentDocs = isFile || [];
+
+                if (value) {
+                    currentDocs = currentDocs.filter(
+                        (doc) =>
+                            doc.title?.toLowerCase().includes(value.toLowerCase()) ||
+                            doc.summary?.toLowerCase().includes(value.toLowerCase()) ||
+                            doc.author?.toLowerCase().includes(value.toLowerCase()) ||
+                            doc.fileName?.toLowerCase().includes(value.toLowerCase()) ||
+                            doc.tags?.some((tag) => tag.toLowerCase().includes(value.toLowerCase())) ||
+                            doc.category?.toLowerCase().includes(value.toLowerCase()) ||
+                            doc.department?.toLowerCase().includes(value.toLowerCase()),
+                    );
+                }
+
+                if (selectedType !== "All Types") {
+                    currentDocs = currentDocs.filter((doc) => doc.fullText === selectedType);
+                }
+
+                setFilteredDocuments(currentDocs);
+                setCurrentPageDocuments(1);
+            }
+        }, 300); // 300ms delay
+    };
+
+    // Original useEffect para sa search (pwede mo pa ring gamitin ito)
     useEffect(() => {
         let currentDocs = isFile || [];
 
@@ -206,11 +293,26 @@ function DashboardLayout() {
         setCurrentPageDocuments(1);
     }, [searchQuery, selectedType, isFile]);
 
+    // Gamit ang useRef para i-track kung naka-mount pa ang component bago mag-setState
     const generateReport = () => {
+        if (!isMountedRef.current) return;
+        
         setReportMessage("Generating comprehensive archive report... (Simulated)");
-        setTimeout(() => {
-            setReportMessage("Report generated successfully! (Simulated)");
+        
+        const timeoutId = setTimeout(() => {
+            if (isMountedRef.current) {
+                setReportMessage("Report generated successfully! (Simulated)");
+            }
         }, 2000);
+        
+        // Store timeout ID sa ref para ma-clear sa cleanup
+        const reportTimeoutRef = useRef(timeoutId);
+        
+        return () => {
+            if (reportTimeoutRef.current) {
+                clearTimeout(reportTimeoutRef.current);
+            }
+        };
     };
 
     return (

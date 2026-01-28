@@ -115,6 +115,7 @@ const FilesView = ({
     const [isEditing, setIsEditing] = useState(false);
     const [currentDocument, setCurrentDocument] = useState(null);
     const [searchTimer, setSearchTimer] = useState(null);
+    
     const handleEditSave = (updatedDocument) => {
         setIsEditing(false);
         setCurrentDocument(null);
@@ -215,11 +216,71 @@ const FilesView = ({
         resetFileFilters();
     };
 
+    // Function to check if document is a resolution or ordinance and show committee members
+    const renderResolutionOrdinanceInfo = (file) => {
+        // Check if the file is a resolution or ordinance based on category or tags
+        const isResolutionOrOrdinance = 
+            file.category?.toLowerCase().includes('resolution') || 
+            file.category?.toLowerCase().includes('ordinance') ||
+            file.tags?.some(tag => 
+                tag.toLowerCase().includes('resolution') || 
+                tag.toLowerCase().includes('ordinance')
+            );
+
+        if (!isResolutionOrOrdinance) {
+            return null;
+        }
+
+        return (
+            <div className="mt-3 border-t border-gray-200 pt-3 dark:border-gray-600">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">Document Information:</p>
+                
+                {/* Ang chairperson ay ang author ng Resolution o Ordinance */}
+                {file.author && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Chairperson/Author:</span> {file.author}
+                    </p>
+                )}
+                
+                {file.viceChairperson && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Vice Chairperson:</span> {file.viceChairperson}
+                    </p>
+                )}
+                
+                {file.members && file.members.length > 0 && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Committee Members:</span> {file.members.join(', ')}
+                    </p>
+                )}
+                
+                {/* Additional resolution/ordinance information */}
+                {file.dateApproved && (
+                    <p className="text-xs text-gray-700 dark:text-gray-300">
+                        <span className="font-medium">Date Approved:</span> {new Date(file.dateApproved).toLocaleDateString()}
+                    </p>
+                )}
+            </div>
+        );
+    };
+
     const filteredFiles = useMemo(() => {
         return isfolderFiles?.filter((file) => {
+            // Extended search to include resolution/ordinance information
+            const searchInMembers = file.members && file.members.some(member => 
+                member.toLowerCase().includes(fileSearchTerm.toLowerCase())
+            );
+            
+            const searchInViceChairperson = file.viceChairperson?.toLowerCase().includes(fileSearchTerm.toLowerCase());
+            
             const matchesSearch =
                 file.title?.toLowerCase().includes(fileSearchTerm.toLowerCase()) ||
-                file.fileName?.toLowerCase().includes(fileSearchTerm.toLowerCase());
+                file.fileName?.toLowerCase().includes(fileSearchTerm.toLowerCase()) ||
+                file.author?.toLowerCase().includes(fileSearchTerm.toLowerCase()) || // Author is now Chairperson
+                searchInViceChairperson ||
+                searchInMembers ||
+                file.resolutionNumber?.toLowerCase().includes(fileSearchTerm.toLowerCase()) ||
+                file.ordinanceNumber?.toLowerCase().includes(fileSearchTerm.toLowerCase());
 
             const fileDate = new Date(file.createdAt);
             const fromDate = fileDateFrom ? new Date(fileDateFrom) : null;
@@ -257,7 +318,7 @@ const FilesView = ({
                                     <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 transform text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Search files or tags..."
+                                        placeholder="Search files, tags, chairperson, committee members, or resolution numbers..."
                                         value={fileSearchTerm}
                                         onChange={handleFileSearch}
                                         className="w-full rounded-xl border border-gray-300 py-2 pl-12 pr-4 text-sm shadow-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
@@ -527,6 +588,18 @@ const FilesView = ({
                                 const fileType = file.category || fileExtension;
                                 const IconComponent = getFileIcon(fileType);
 
+                                // Display resolution/ordinance number if available
+                                const documentNumber = file.resolutionNumber || file.ordinanceNumber;
+                                
+                                // Check if this is a resolution or ordinance
+                                const isResolutionOrOrdinance = 
+                                    file.category?.toLowerCase().includes('resolution') || 
+                                    file.category?.toLowerCase().includes('ordinance') ||
+                                    file.tags?.some(tag => 
+                                        tag.toLowerCase().includes('resolution') || 
+                                        tag.toLowerCase().includes('ordinance')
+                                    );
+
                                 return (
                                     <div
                                         key={file._id}
@@ -538,12 +611,34 @@ const FilesView = ({
                                                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                                     <IconComponent className="h-6 w-6" />
                                                 </div>
-                                                <div>
-                                                    <h3 className="mb-1 text-lg font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
-                                                        {file.title || file.fileName}
-                                                    </h3>
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h3 className="text-lg font-semibold text-gray-900 transition-colors group-hover:text-blue-600 dark:text-white">
+                                                            {file.title || file.fileName}
+                                                        </h3>
+                                                        {documentNumber && (
+                                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                {documentNumber}
+                                                            </span>
+                                                        )}
+                                                        {isResolutionOrOrdinance && (
+                                                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-200">
+                                                                {file.category}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                        {file.author} • {file.category} • {file.fileSize} bytes • {new Date(file.createdAt).toLocaleDateString()}
+                                                        {/* Ang author ay ipapakita bilang "Chairperson" para sa mga resolution/ordinance */}
+                                                        {isResolutionOrOrdinance ? (
+                                                            <>
+                                                                <span className="font-medium">Chairperson:</span> {file.chairpersons || 'Not specified'} • 
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {file.author && <>{file.author} • </>}
+                                                            </>
+                                                        )}
+                                                        {file.category} • {file.fileSize} bytes • {new Date(file.createdAt).toLocaleDateString()}
                                                     </p>
                                                     {file.tags && file.tags.length > 0 && (
                                                         <div className="mt-2 flex flex-wrap gap-1">
@@ -557,6 +652,8 @@ const FilesView = ({
                                                             ))}
                                                         </div>
                                                     )}
+                                                    {/* Render committee members for resolutions and ordinances */}
+                                                    {renderResolutionOrdinanceInfo(file)}
                                                 </div>
                                             </div>
                                             <div className="relative">

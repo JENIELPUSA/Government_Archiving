@@ -5,13 +5,6 @@ import MayorLayout from "../LandingComponents/MayorLayout";
 import { User } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
 const TrackedMayorLayout = (props) => {
-    useEffect(() => {
-        console.log("MayorLayout mounted", props);
-        return () => {
-            console.log("MayorLayout unmounted", props);
-        };
-    }, []);
-
     return <MayorLayout {...props} />;
 };
 
@@ -28,7 +21,6 @@ const BoardMemberLayout = ({ Position, onBack }) => {
     const [activePosition, setActivePosition] = useState(Position || "Board_Member");
     const [localLoading, setLocalLoading] = useState(false);
     const [selectedMember, setSelectedMember] = useState(null);
-
     const isLoading = contextLoading || localLoading;
 
     useEffect(() => {

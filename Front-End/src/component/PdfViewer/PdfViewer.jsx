@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useContext } from "react";
+import React, { useEffect, useState, useRef, useContext, useCallback } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import axios from "axios";
 import { PDFDocument } from "pdf-lib";
@@ -22,6 +22,23 @@ import approvedImage from "../../assets/logobond.png";
 import { X, FileText, Shield, Lock, Loader2, Clock, Database, ShieldCheck, Cloud, Key, CheckCircle } from "lucide-react";
 
 pdfjs.GlobalWorkerOptions.workerPort = new pdfWorker();
+
+/**
+ * DEBOUNCE UTILITY HOOK
+ */
+const useDebounce = (callback, delay) => {
+  const timeoutRef = useRef(null);
+
+  return (...args) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      callback(...args);
+    }, delay);
+  };
+};
 
 /**
  * PROFESSIONAL LOADING SCREEN COMPONENT - COMPACT VERSION
@@ -235,14 +252,30 @@ const PageTransitionLoader = ({ isLoading }) => {
 };
 
 /**
- * POPUP MODAL WRAPPER
+ * POPUP MODAL WRAPPER - IMPROVED VERSION
  */
-const PopupModal = ({ isVisible, onClose, children }) => {
+const PopupModal = ({ isVisible, onClose, children, disableBackdropClose = false }) => {
+  const modalRef = useRef(null);
+  
   if (!isVisible) return null;
   
+  const handleBackdropClick = (e) => {
+    // Only close if clicking on the backdrop, not the modal content
+    if (modalRef.current && !modalRef.current.contains(e.target) && !disableBackdropClose) {
+      onClose();
+    }
+  };
+  
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 dark:bg-slate-900/80 p-4 backdrop-blur-md transition-all duration-300">
-      <div className="animate-in fade-in zoom-in relative flex h-full max-h-[97vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/20 dark:border-white/10 bg-gray-50 dark:bg-gray-900 shadow-2xl dark:shadow-2xl dark:shadow-black/50 duration-200">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 dark:bg-slate-900/80 p-4 backdrop-blur-md transition-all duration-300"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        ref={modalRef}
+        className="animate-in fade-in zoom-in relative flex h-full max-h-[97vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/20 dark:border-white/10 bg-gray-50 dark:bg-gray-900 shadow-2xl dark:shadow-2xl dark:shadow-black/50 duration-200"
+        onClick={(e) => e.stopPropagation()} // Prevent backdrop click inside modal
+      >
         {/* Global Close Button */}
         <button
           onClick={onClose}
@@ -269,7 +302,7 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
   const [fileUrl, setFileUrl] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
-  const [scale, setScale] = useState(1.1);
+  const [scale, setScale] = useState(0.7); // Default zoom 70%
   const [isApproved, setApproved] = useState(false);
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteData, setNoteData] = useState(null);
@@ -278,7 +311,32 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
   const [modalStatus, setModalStatus] = useState("success");
   const [customError, setCustomError] = useState("");
   const [isLoadingPage, setIsLoadingPage] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const originalPdfBytesRef = useRef(null);
+  const printIframeRef = useRef(null);
+
+  // Debounce hooks
+  const debouncedSetPageNumber = useDebounce((page) => {
+    setPageNumber(page);
+    setIsLoadingPage(false);
+  }, 1000); // 300ms debounce delay para sa page change
+
+  const debouncedNextPage = useDebounce(() => {
+    if (pageNumber < numPages) {
+      setPageNumber(prev => prev + 1);
+      setIsLoadingPage(false);
+    }
+  }, 1000);
+
+  const debouncedPrevPage = useDebounce(() => {
+    if (pageNumber > 1) {
+      setPageNumber(prev => prev - 1);
+      setIsLoadingPage(false);
+    }
+  }, 1000);
+
+  // Debounced close handler
+  const debouncedCloseRef = useRef(null);
 
   // Loading States
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -312,6 +370,45 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
     },
   ]);
 
+  // DEBOUNCED onClose handler
+  const handleClose = useCallback(() => {
+    // Gumamit ng debounce para sa pag-close
+    if (debouncedCloseRef.current) {
+      clearTimeout(debouncedCloseRef.current);
+    }
+
+    debouncedCloseRef.current = setTimeout(() => {
+      // Clean up print iframe if exists
+      if (printIframeRef.current && document.body.contains(printIframeRef.current)) {
+        document.body.removeChild(printIframeRef.current);
+        printIframeRef.current = null;
+      }
+      
+      // Reset states
+      setFileUrl(null);
+      setScale(0.7);
+      setIsPrinting(false);
+      setPageNumber(1); // Reset to first page
+      
+      // Call the original onClose
+      onClose();
+    }, 200); // 200ms debounce para sa pag-close
+  }, [onClose]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (printIframeRef.current && document.body.contains(printIframeRef.current)) {
+        document.body.removeChild(printIframeRef.current);
+      }
+      
+      // Clear debounced timeouts
+      if (debouncedCloseRef.current) {
+        clearTimeout(debouncedCloseRef.current);
+      }
+    };
+  }, []);
+
   // Update loading progress
   const updateLoadingStep = (stepIndex, completed = true, active = false, details = null) => {
     setLoadingSteps(prev => prev.map((step, index) => ({
@@ -336,16 +433,180 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
     }
   };
 
-  // Handler for page change with loading state
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= numPages) {
+  // Debounced page change handler
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage >= 1 && newPage <= numPages && newPage !== pageNumber) {
+      // Mag-set ng loading state
       setIsLoadingPage(true);
       
-      // Simulate loading delay for better UX
+      // Gamitin ang debounced setPageNumber
+      debouncedSetPageNumber(newPage);
+    }
+  }, [numPages, pageNumber, debouncedSetPageNumber]);
+
+  // Debounced next page handler
+  const handleNextPage = useCallback(() => {
+    if (pageNumber < numPages) {
+      setIsLoadingPage(true);
+      debouncedNextPage();
+    }
+  }, [pageNumber, numPages, debouncedNextPage]);
+
+  // Debounced previous page handler
+  const handlePrevPage = useCallback(() => {
+    if (pageNumber > 1) {
+      setIsLoadingPage(true);
+      debouncedPrevPage();
+    }
+  }, [pageNumber, debouncedPrevPage]);
+
+  // Enhanced download handler
+  const handleDownload = async () => {
+    if (!originalPdfBytesRef.current) {
+      console.error("No PDF data available for download");
+      return;
+    }
+
+    try {
+      setIsLoadingPage(true);
+      
+      // Create blob from original PDF bytes
+      const blob = new Blob([originalPdfBytesRef.current], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${fileData?.fileName || "document"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up
       setTimeout(() => {
-        setPageNumber(newPage);
+        URL.revokeObjectURL(url);
         setIsLoadingPage(false);
-      }, 300); // 300ms loading delay
+      }, 100);
+      
+    } catch (error) {
+      console.error("Download error:", error);
+      setIsLoadingPage(false);
+      setModalStatus("failed");
+      setCustomError("Failed to download document");
+      setShowModal(true);
+    }
+  };
+
+  // FIXED Print handler - DOES NOT AUTO-CLOSE MODAL
+  const handlePrint = async () => {
+    if (!originalPdfBytesRef.current) {
+      console.error("No PDF data available for printing");
+      return;
+    }
+
+    try {
+      setIsPrinting(true);
+      
+      // Create blob from original PDF bytes
+      const blob = new Blob([originalPdfBytesRef.current], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      
+      // OPTION 1: Try to open in new tab (most reliable)
+      const printWindow = window.open(url, '_blank');
+      
+      if (printWindow) {
+        // Successfully opened new window
+        // Wait for PDF to load then trigger print
+        setTimeout(() => {
+          try {
+            printWindow.focus();
+            printWindow.print();
+          } catch (printError) {
+            console.log("Print may require user interaction:", printError);
+            // If print fails, at least PDF is open for manual printing
+          }
+          
+          // Don't auto-close the window, let user decide
+          setIsPrinting(false);
+          
+          // Clean up URL after some time
+          setTimeout(() => URL.revokeObjectURL(url), 10000);
+          
+        }, 1000);
+        
+      } else {
+        // OPTION 2: Popup blocked, use iframe method
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.style.zIndex = '9999';
+        iframe.style.background = 'white';
+        iframe.style.display = 'block';
+        
+        // Add to document body (not inside modal)
+        document.body.appendChild(iframe);
+        printIframeRef.current = iframe;
+        
+        // Set PDF source
+        iframe.src = url;
+        
+        // Handle load
+        iframe.onload = () => {
+          // Small delay to ensure PDF is rendered
+          setTimeout(() => {
+            try {
+              iframe.contentWindow.focus();
+              iframe.contentWindow.print();
+            } catch (e) {
+              console.error("Iframe print failed:", e);
+            }
+            
+            // Remove iframe after print dialog
+            setTimeout(() => {
+              if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+                printIframeRef.current = null;
+              }
+              URL.revokeObjectURL(url);
+              setIsPrinting(false);
+            }, 3000);
+          }, 1000);
+        };
+        
+        // Error handling
+        iframe.onerror = () => {
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+            printIframeRef.current = null;
+          }
+          URL.revokeObjectURL(url);
+          setIsPrinting(false);
+          setModalStatus("failed");
+          setCustomError("Failed to load PDF for printing");
+          setShowModal(true);
+        };
+        
+        // Fallback timeout
+        setTimeout(() => {
+          if (printIframeRef.current && document.body.contains(printIframeRef.current)) {
+            document.body.removeChild(printIframeRef.current);
+            printIframeRef.current = null;
+          }
+          URL.revokeObjectURL(url);
+          setIsPrinting(false);
+        }, 15000);
+      }
+      
+    } catch (error) {
+      console.error("Print setup error:", error);
+      setIsPrinting(false);
+      setModalStatus("failed");
+      setCustomError("Failed to prepare document for printing");
+      setShowModal(true);
     }
   };
 
@@ -461,6 +722,8 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
       setFileUrl(null);
       setLoadingProgress(0);
       setLoadingSteps(loadingSteps.map(step => ({ ...step, completed: false, active: false })));
+      setScale(0.7); // Reset zoom to 70% when closing
+      setPageNumber(1); // Reset page number
     };
   }, [fileId, isVisible]);
 
@@ -500,7 +763,7 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
     setApproved(false);
     setShowNoteModal(false);
     setShowModal(false);
-    onClose();
+    handleClose();
   };
 
   // Document loading handler
@@ -511,7 +774,8 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
   return (
     <PopupModal
       isVisible={isVisible}
-      onClose={onClose}
+      onClose={handleClose}
+      disableBackdropClose={isPrinting} // Prevent closing while printing
     >
       {/* Show Professional Loading Screen while loading */}
       {(!fileUrl || loadingProgress < 100) && (
@@ -526,6 +790,28 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
 
       {/* Show Page Transition Loader when changing pages */}
       <PageTransitionLoader isLoading={isLoadingPage} />
+
+      {/* Show Printing Overlay */}
+      {isPrinting && (
+        <div className="fixed inset-0 z-[195] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl">
+            <div className="relative">
+              <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
+              <div className="absolute inset-0 animate-ping rounded-full bg-blue-100"></div>
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-medium text-gray-800 dark:text-white">Opening Print Dialog...</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Preparing document for printing...
+                <br />
+                <span className="text-xs text-gray-500">
+                  (This modal will remain open. Print dialog will open separately)
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- TOP NAVIGATION BAR --- */}
       <div className="z-20 flex h-16 shrink-0 items-center justify-between border-b bg-white dark:bg-gray-900 dark:border-gray-700 px-6 shadow-sm">
@@ -558,18 +844,18 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
         {/* Quick Actions */}
         <div className="flex items-center gap-2">
           {fileUrl && (
-            <a
-              href={fileUrl}
-              download={`${fileData?.fileName || "document"}.pdf`}
+            <button
+              onClick={handleDownload}
               className="rounded-lg p-2 text-gray-600 dark:text-gray-400 transition-all hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400"
               title="Download"
+              disabled={isLoadingPage || isPrinting}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="7 10 12 15 17 10"></polyline>
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
-            </a>
+            </button>
           )}
         </div>
       </div>
@@ -626,18 +912,22 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
         {/* INTEGRATED SIDEBAR */}
         <div className="hidden w-[320px] flex-col border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 xl:flex">
           <Sidebar
-            onPrint={() => window.print()}
-            onZoomIn={() => setScale((s) => s + 0.2)}
-            onZoomOut={() => setScale((s) => Math.max(s - 0.2, 0.5))}
+            onPrint={handlePrint} // Pass the enhanced print function
+            onZoomIn={() => setScale((s) => s + 0.1)} // Reduced zoom increment for better control
+            onZoomOut={() => setScale((s) => Math.max(s - 0.1, 0.3))} // Minimum zoom 30%
             onSave={handleSave}
+            onDownload={handleDownload} // Pass download function to sidebar
+            onNextPage={handleNextPage} // Pass debounced next page function
+            onPrevPage={handlePrevPage} // Pass debounced previous page function
             scale={scale}
             numPages={numPages}
             pageNumber={pageNumber}
-            setPageNumber={handlePageChange} // Updated to use handlePageChange
+            setPageNumber={handlePageChange}
             fileUrl={fileUrl}
             fileData={fileData}
-            onPreview={() => setRecieveForm(true)}
             ApprovedReview={() => setApproved(true)}
+            isLoading={!fileUrl || loadingProgress < 100 || isPrinting}
+            isPageLoading={isLoadingPage} // Pass loading state to sidebar
           />
         </div>
       </div>

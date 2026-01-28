@@ -196,6 +196,7 @@ exports.getFilesByFolderId = async (req, res) => {
           as: "categoryInfo",
         },
       },
+      // AUTHOR (single)
       {
         $lookup: {
           from: "sbmembers",
@@ -204,6 +205,38 @@ exports.getFilesByFolderId = async (req, res) => {
           as: "authorInfo",
         },
       },
+      { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
+
+      // CHAIRPERSONS (array)
+      {
+        $lookup: {
+          from: "sbmembers",
+          localField: "chairpersons",
+          foreignField: "_id",
+          as: "chairpersonsInfo",
+        },
+      },
+
+      // VICE CHAIRPERSONS (array)
+      {
+        $lookup: {
+          from: "sbmembers",
+          localField: "viceChairpersons",
+          foreignField: "_id",
+          as: "viceChairpersonsInfo",
+        },
+      },
+
+      // MEMBERS (array)
+      {
+        $lookup: {
+          from: "sbmembers",
+          localField: "members",
+          foreignField: "_id",
+          as: "membersInfo",
+        },
+      },
+
       { $unwind: { path: "$authorInfo", preserveNullAndEmptyArrays: true } },
       { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
       {
@@ -219,16 +252,76 @@ exports.getFilesByFolderId = async (req, res) => {
           fileSize: 1,
           createdAt: 1,
           updatedAt: 1,
+
           category: "$categoryInfo.category",
           categoryID: "$categoryInfo._id",
+
+          // AUTHOR (string)
           author: {
-            $concat: [
-              "$authorInfo.first_name",
-              " ",
-              "$authorInfo.middle_name",
-              " ",
-              "$authorInfo.last_name",
+            $cond: [
+              { $ifNull: ["$authorInfo", false] },
+              {
+                $concat: [
+                  "$authorInfo.first_name",
+                  " ",
+                  { $ifNull: ["$authorInfo.middle_name", ""] },
+                  " ",
+                  "$authorInfo.last_name",
+                ],
+              },
+              null,
             ],
+          },
+
+          // CHAIRPERSONS (array of strings)
+          chairpersons: {
+            $map: {
+              input: "$chairpersonsInfo",
+              as: "cp",
+              in: {
+                $concat: [
+                  "$$cp.first_name",
+                  " ",
+                  { $ifNull: ["$$cp.middle_name", ""] },
+                  " ",
+                  "$$cp.last_name",
+                ],
+              },
+            },
+          },
+
+          // VICE CHAIRPERSONS
+          viceChairpersons: {
+            $map: {
+              input: "$viceChairpersonsInfo",
+              as: "vcp",
+              in: {
+                $concat: [
+                  "$$vcp.first_name",
+                  " ",
+                  { $ifNull: ["$$vcp.middle_name", ""] },
+                  " ",
+                  "$$vcp.last_name",
+                ],
+              },
+            },
+          },
+
+          // MEMBERS
+          members: {
+            $map: {
+              input: "$membersInfo",
+              as: "m",
+              in: {
+                $concat: [
+                  "$$m.first_name",
+                  " ",
+                  { $ifNull: ["$$m.middle_name", ""] },
+                  " ",
+                  "$$m.last_name",
+                ],
+              },
+            },
           },
         },
       },

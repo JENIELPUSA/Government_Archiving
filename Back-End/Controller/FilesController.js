@@ -60,20 +60,41 @@ setInterval(cleanupTempFiles, 60 * 60 * 1000);
 exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
   try {
     const updateData = { ...req.body };
+
+    console.log("Update payload:", updateData);
+    
+    // Process simple fields
     if (updateData.category && typeof updateData.category === "object") {
       updateData.category = updateData.category._id;
     }
-    if (
-      !updateData.category ||
-      (typeof updateData.category === "string" &&
-        updateData.category.trim() === "")
-    ) {
+    
+    if (!updateData.category || updateData.category.trim() === "") {
       delete updateData.category;
     }
-    if (updateData.author === null) {
-      delete updateData.author; // huwag galawin kapag null
-    }
-
+    
+    if (updateData.admin === null) delete updateData.admin;
+    
+    // FORCE REPLACE ALL PERSONNEL ARRAYS
+    // Kung may array sa payload, palitan lahat ng laman
+    // Kung wala, huwag galawin
+    const arrayFields = ['chairpersons', 'viceChairpersons', 'members'];
+    
+    arrayFields.forEach(field => {
+      if (updateData[field] !== undefined) {
+        // Gawing array kung hindi
+        if (!Array.isArray(updateData[field])) {
+          updateData[field] = [updateData[field]];
+        }
+        
+        // Linisin ang array - tanggalin invalid IDs
+        updateData[field] = updateData[field]
+          .filter(id => id && /^[0-9a-fA-F]{24}$/.test(id.toString()));
+          
+        console.log(`${field} will be set to:`, updateData[field]);
+      }
+    });
+    
+    // Handle archive/delete status
     const newStatus = req.body.ArchivedStatus;
     const admin = req.user.linkId;
 
@@ -83,46 +104,41 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
         archivedBy: admin,
         notes: "Archived due to delete",
       };
+      updateData.ArchivedStatus = "Deleted";
+    } else if (newStatus === "For Restore") {
+      updateData.ArchivedStatus = "Active";
+      delete updateData.archivedMetadata;
     }
 
+    // Find and update
     const oldFile = await Files.findById(req.params.id);
     if (!oldFile) {
-      return res
-        .status(404)
-        .json({ status: "fail", message: "File not found" });
+      return res.status(404).json({ status: "fail", message: "File not found" });
     }
 
     const updatedFile = await Files.findByIdAndUpdate(
       req.params.id,
       updateData,
-      {
-        new: true,
-        runValidators: true,
-      },
+      { new: true, runValidators: true }
     );
+
+    // Check permissions and log
     const allowedRoles = ["admin", "officer"];
     const role = req.user?.role?.toLowerCase();
 
     if (allowedRoles.includes(role)) {
       const capitalizedRole = role.charAt(0).toUpperCase() + role.slice(1);
-
       let logType = "UPDATE";
       let logAction = "Updated a DocumentFile";
-      let logMessage = `${capitalizedRole} updated file '${updatedFile.title}'`;
       let logLevel = "info";
 
       if (newStatus === "Deleted") {
         logType = "DELETE";
         logAction = "Deleted a DocumentFile";
-        logMessage = `${capitalizedRole} deleted file '${updatedFile.title}'`;
         logLevel = "warning";
-      }
-
-      if (newStatus === "For Restore") {
+      } else if (newStatus === "For Restore") {
         logType = "RESTORE";
-        logAction = "Restore a DocumentFile";
-        logMessage = `${capitalizedRole} restored file '${updatedFile.title}'`;
-        logLevel = "info";
+        logAction = "Restored a DocumentFile";
       }
 
       await ActivityLog.create({
@@ -133,22 +149,44 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
         file: updatedFile._id,
         beforeChange: oldFile,
         afterChange: updatedFile,
-        message: logMessage,
+        message: `${capitalizedRole} updated file '${updatedFile.title}'`,
         level: logLevel,
         ipAddress: req.ip,
         userAgent: req.headers["user-agent"],
+        timestamp: new Date()
       });
     }
 
+    // Real-time update
     const io = req.app.get("io");
-    io.emit("UpdateFileDocuData", updatedFile);
+    if (io) {
+      io.emit("UpdateFileDocuData", updatedFile);
+    }
 
-    res.status(200).json({ status: "success", data: updatedFile });
+    res.status(200).json({ 
+      status: "success", 
+      data: updatedFile,
+      message: `File updated successfully - All personnel arrays replaced`
+    });
   } catch (err) {
     console.error("Update Error:", err);
-    res.status(500).json({ status: "error", message: err.message });
+    
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        status: "error", 
+        message: "Validation Error",
+        errors: Object.values(err.errors).map(e => e.message)
+      });
+    }
+    
+    res.status(500).json({ 
+      status: "error", 
+      message: "Internal server error",
+      details: err.message
+    });
   }
 });
+
 
 exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
   try {
@@ -399,6 +437,9 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       summary,
       author,
       admin,
+      chairpersons,
+      members,
+      viceChairpersons,
       resolutionNumber,
       dateOfResolution,
       approverID,
@@ -406,6 +447,8 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       folderID,
       status = "Approved",
     } = req.body;
+
+    console.log("req.body", req.body);
 
     if (!title) {
       return res.status(400).json({ error: "Please Enter Title!" });
@@ -422,6 +465,101 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       return res.status(400).json({ error: "Invalid admin ID" });
     if (approverID && !mongoose.Types.ObjectId.isValid(approverID))
       return res.status(400).json({ error: "Invalid approver ID" });
+
+    // Parse at convert array fields mula sa JSON string to ObjectIds
+    let parsedChairpersons = [];
+    let parsedViceChairpersons = [];
+    let parsedMembers = [];
+
+    if (chairpersons) {
+      try {
+        let tempArray = [];
+        if (typeof chairpersons === 'string' && chairpersons.startsWith('[')) {
+          tempArray = JSON.parse(chairpersons);
+        } else if (Array.isArray(chairpersons)) {
+          tempArray = chairpersons;
+        }
+        
+        // Convert each string ID to ObjectId string (not ObjectId instance)
+        parsedChairpersons = tempArray.map(id => {
+          if (mongoose.Types.ObjectId.isValid(id)) {
+            return id; // Keep as string, Mongoose will auto-convert
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        console.log("Parsed chairpersons:", parsedChairpersons);
+      } catch (err) {
+        console.error("Error parsing chairpersons:", err);
+        return res.status(400).json({ error: "Invalid chairpersons format" });
+      }
+    }
+
+    if (viceChairpersons) {
+      try {
+        let tempArray = [];
+        if (typeof viceChairpersons === 'string' && viceChairpersons.startsWith('[')) {
+          tempArray = JSON.parse(viceChairpersons);
+        } else if (Array.isArray(viceChairpersons)) {
+          tempArray = viceChairpersons;
+        }
+        
+        // Convert each string ID to ObjectId string (not ObjectId instance)
+        parsedViceChairpersons = tempArray.map(id => {
+          if (mongoose.Types.ObjectId.isValid(id)) {
+            return id; // Keep as string, Mongoose will auto-convert
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        console.log("Parsed viceChairpersons:", parsedViceChairpersons);
+      } catch (err) {
+        console.error("Error parsing viceChairpersons:", err);
+        return res.status(400).json({ error: "Invalid viceChairpersons format" });
+      }
+    }
+
+    if (members) {
+      try {
+        let tempArray = [];
+        if (typeof members === 'string' && members.startsWith('[')) {
+          tempArray = JSON.parse(members);
+        } else if (Array.isArray(members)) {
+          tempArray = members;
+        }
+        
+        // Convert each string ID to ObjectId string (not ObjectId instance)
+        parsedMembers = tempArray.map(id => {
+          if (mongoose.Types.ObjectId.isValid(id)) {
+            return id; // Keep as string, Mongoose will auto-convert
+          }
+          return null;
+        }).filter(id => id !== null);
+        
+        console.log("Parsed members:", parsedMembers);
+      } catch (err) {
+        console.error("Error parsing members:", err);
+        return res.status(400).json({ error: "Invalid members format" });
+      }
+    }
+
+    // Validate ObjectIds
+    const isValidObjectIdArray = (arr) => {
+      if (!Array.isArray(arr)) return false;
+      return arr.every(id => mongoose.Types.ObjectId.isValid(id));
+    };
+
+    if (parsedChairpersons.length > 0 && !isValidObjectIdArray(parsedChairpersons)) {
+      return res.status(400).json({ error: "Invalid chairperson ID(s)" });
+    }
+
+    if (parsedViceChairpersons.length > 0 && !isValidObjectIdArray(parsedViceChairpersons)) {
+      return res.status(400).json({ error: "Invalid vice chairperson ID(s)" });
+    }
+
+    if (parsedMembers.length > 0 && !isValidObjectIdArray(parsedMembers)) {
+      return res.status(400).json({ error: "Invalid member ID(s)" });
+    }
 
     // --- Sanitize server filename ---
     const originalName = req.file.originalname; // original name for display
@@ -480,30 +618,35 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
     // --- Prepare DB entry ---
     const fileData = {
       title,
-      resolutionNumber,
+      resolutionNumber: resolutionNumber || null,
       category,
-      summary,
-      author,
+      summary: summary || "",
+      author: author || null,
       fileSize,
       admin,
-      approverID,
+      approverID: approverID || null,
       status,
-      dateOfResolution,
+      dateOfResolution: dateOfResolution || null,
       fileName: safeServerFileName + ".gz", // safe name in server
       originalFileName: originalName, // preserve original name for display
       fileUrl: remotePath,
-      oldFile,
+      oldFile: oldFile === 'true' || oldFile === true,
       folderID,
       folderPath: process.env.UPLOAD_FOLDER,
       fullText: fullTextType,
+      // Dagdag na fields - ilagay bilang strings, Mongoose ang bahala mag-convert
+      chairpersons: parsedChairpersons,
+      viceChairpersons: parsedViceChairpersons,
+      members: parsedMembers,
     };
+    
     let categoryName = null;
     if (mongoose.Types.ObjectId.isValid(category)) {
       const categoryDoc = await Category.findById(category).lean();
       categoryName = categoryDoc?.category;
     }
 
-    if (oldFile === true || oldFile === "true") {
+    if (fileData.oldFile) {
       fileData.ArchivedStatus =
         categoryName === "Resolution" || categoryName === "Ordinance"
           ? "Active"
@@ -518,6 +661,13 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
           ? "Active"
           : "Archived";
     }
+
+    console.log("File data to save:", {
+      title: fileData.title,
+      chairpersons: fileData.chairpersons,
+      viceChairpersons: fileData.viceChairpersons,
+      members: fileData.members
+    });
 
     const savedFile = await new Files(fileData).save();
 
@@ -539,6 +689,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       });
     }
     const io = req.app.get("io");
+    
     // --- Notification for pending ---
     if (savedFile.status === "Pending") {
       const targetViewer = approverID || author;
@@ -562,11 +713,25 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
         }
       }
     }
+    
     io.emit("AddOldFile", savedFile);
-    res.status(201).json({ status: "success", data: savedFile });
+    res.status(201).json({ 
+      status: "success", 
+      data: savedFile,
+      message: "File created successfully with committee members"
+    });
   } catch (err) {
-    console.error("Upload error:", err.message);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Upload error details:", {
+      message: err.message,
+      name: err.name,
+      errors: err.errors,
+      stack: err.stack
+    });
+    res.status(500).json({ 
+      error: "Internal server error", 
+      details: err.message,
+      fieldErrors: err.errors 
+    });
   }
 });
 
@@ -689,6 +854,9 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
               fileSize: 1,
               oldFile: 1,
               tags: 1,
+              viceChairpersons:1,
+              members:1,
+              chairpersons:1,
               createdAt: 1,
               dateOfResolution: 1,
               resolutionNumber: 1,
@@ -2690,17 +2858,13 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   // --- Filters ---
   if (district) matchStage.district = district;
   if (detailInfo) matchStage.detailInfo = detailInfo;
-
   if (Position) {
-    // Case-insensitive match sa Position
     matchStage.Position = { $regex: new RegExp(`^${Position}$`, "i") };
   }
-
   if (term && term.trim() !== "") {
     matchStage.term = { $regex: new RegExp(`^\\s*${term.trim()}\\s*$`, "i") };
   }
 
-  // Push match stage kung may filter
   if (Object.keys(matchStage).length > 0) {
     aggregationPipeline.push({ $match: matchStage });
   }
@@ -2709,9 +2873,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   if (term_from || term_to) {
     const exprConditions = [];
     if (term_from)
-      exprConditions.push({
-        $gte: [{ $year: "$term_from" }, parseInt(term_from)],
-      });
+      exprConditions.push({ $gte: [{ $year: "$term_from" }, parseInt(term_from)] });
     if (term_to)
       exprConditions.push({ $lte: [{ $year: "$term_to" }, parseInt(term_to)] });
 
@@ -2728,73 +2890,87 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   }
 
   // --- Lookup files ---
-  aggregationPipeline.push(
-    {
-      $lookup: {
-        from: "files",
-        let: { authorId: "$_id" },
-        pipeline: [
-          {
-            $match: {
-              $expr: {
-                $and: [
-                  { $eq: ["$author", "$$authorId"] },
-                  { $eq: ["$status", "Approved"] },
-                  {
-                    $or: [
-                      { $eq: ["$ArchivedStatus", "Archived"] },
-                      { $eq: ["$ArchivedStatus", "Active"] },
-                    ],
-                  },
-                ],
-              },
+  aggregationPipeline.push({
+    $lookup: {
+      from: "files",
+      let: { memberId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            $expr: {
+              $and: [
+                { $eq: ["$status", "Approved"] },
+                {
+                  $or: [
+                    { $eq: ["$ArchivedStatus", "Archived"] },
+                    { $eq: ["$ArchivedStatus", "Active"] },
+                  ],
+                },
+              ],
             },
           },
-        ],
-        as: "files",
-      },
-    },
-    { $unwind: { path: "$files", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "categories",
-        localField: "files.category",
-        foreignField: "_id",
-        as: "categoryInfo",
-      },
-    },
-    { $unwind: { path: "$categoryInfo", preserveNullAndEmptyArrays: true } },
-    {
-      $addFields: {
-        fullName: {
-          $concat: [
-            "$first_name",
-            " ",
-            { $ifNull: ["$middle_name", ""] },
-            " ",
-            "$last_name",
-          ],
         },
-        "files.categoryName": "$categoryInfo.category",
-        // --- Override Position for display ---
-        Position: {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ["$Position", "Board_Member"] },
-                then: "Board Member",
-              },
-              {
-                case: { $eq: ["$Position", "Vice_Governor"] },
-                then: "Vice Governor",
-              },
-            ],
-            default: "$Position",
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            category: 1,
+            createdAt: 1,
+            chairpersons: 1,
+            viceChairpersons: 1,
+            members: 1,
+            resolutionNumber: 1,
+            dateOfResolution: 1,
+            status: 1,
+          },
+        },
+      ],
+      as: "files",
+    },
+  });
+
+  // --- Add fullName field ---
+  aggregationPipeline.push({
+    $addFields: {
+      fullName: {
+        $concat: [
+          "$first_name",
+          " ",
+          { $ifNull: ["$middle_name", ""] },
+          " ",
+          "$last_name",
+        ],
+      },
+      // --- Role check per file ---
+      isChairperson: {
+        $size: {
+          $filter: {
+            input: "$files",
+            as: "f",
+            cond: { $in: ["$_id", { $ifNull: ["$$f.chairpersons", []] }] },
+          },
+        },
+      },
+      isViceChairperson: {
+        $size: {
+          $filter: {
+            input: "$files",
+            as: "f",
+            cond: { $in: ["$_id", { $ifNull: ["$$f.viceChairpersons", []] }] },
+          },
+        },
+      },
+      isMember: {
+        $size: {
+          $filter: {
+            input: "$files",
+            as: "f",
+            cond: { $in: ["$_id", { $ifNull: ["$$f.members", []] }] },
           },
         },
       },
     },
-  );
+  });
 
   // --- Search filter ---
   if (search) {
@@ -2806,74 +2982,70 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           { last_name: { $regex: search, $options: "i" } },
           { fullName: { $regex: search, $options: "i" } },
           { "files.title": { $regex: search, $options: "i" } },
-          { files: { $exists: false } },
-          { files: { $eq: [] } },
         ],
       },
     });
   }
 
-  // --- Group by fullName (same name members combined) ---
-  aggregationPipeline.push(
-    {
-      $group: {
-        _id: "$fullName", // group by name
-        fullName: { $first: "$fullName" },
-        district: { $first: "$district" },
-        detailInfo: { $first: "$detailInfo" },
-        Position: { $first: "$Position" }, // already display-friendly
-        term: { $first: "$term" },
-        term_from: { $first: "$term_from" },
-        term_to: { $first: "$term_to" },
-        memberInfo: { $first: "$$ROOT" },
-        files: {
-          $push: {
+  // --- Group by same fullName to merge duplicate names ---
+  aggregationPipeline.push({
+    $group: {
+      _id: "$fullName",
+      // Keep the first document's structure exactly
+      originalDoc: { $first: "$$ROOT" },
+      // Collect all files from all duplicates
+      allFiles: { $push: "$files" },
+    }
+  });
+
+  // --- Merge files from all duplicates ---
+  aggregationPipeline.push({
+    $addFields: {
+      // Flatten the files array
+      "originalDoc.files": {
+        $reduce: {
+          input: "$allFiles",
+          initialValue: [],
+          in: { $concatArrays: ["$$value", "$$this"] }
+        }
+      }
+    }
+  });
+
+  // --- Remove duplicate files within the merged array ---
+  aggregationPipeline.push({
+    $addFields: {
+      "originalDoc.files": {
+        $reduce: {
+          input: "$originalDoc.files",
+          initialValue: [],
+          in: {
             $cond: [
-              {
-                $and: [
-                  { $ne: ["$files", null] },
-                  { $ne: ["$files._id", null] },
-                ],
-              },
-              {
-                _id: "$files._id",
-                title: "$files.title",
-                summary: "$files.summary",
-                category: "$categoryInfo.category",
-                createdAt: "$files.createdAt",
-                status: "$files.status",
-                filePath: "$files.filePath",
-                resolutionNo: "$files.ResolutionNo",
-                dateOfResolution: "$files.dateOfResolution",
-                resolutionNumber: "$files.resolutionNumber",
-              },
-              "$$REMOVE",
-            ],
-          },
-        },
-        count: {
-          $sum: { $cond: [{ $ifNull: ["$files._id", false] }, 1, 0] },
-        },
-        resolutionCount: {
-          $sum: {
-            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
-          },
-        },
-        ordinanceCount: {
-          $sum: {
-            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
-          },
-        },
-      },
-    },
-    { $sort: { fullName: 1 } },
-  );
+              { $in: ["$$this._id", "$$value._id"] },
+              "$$value",
+              { $concatArrays: ["$$value", ["$$this"]] }
+            ]
+          }
+        }
+      }
+    }
+  });
 
-  // --- Execute aggregation ---
-  const AuthorsWithFiles =
-    await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+  // --- Replace root with the original document structure ---
+  aggregationPipeline.push({
+    $replaceRoot: {
+      newRoot: "$originalDoc"
+    }
+  });
 
-  // --- Pagination ---
+  // --- Sort by fullName (or any other field you prefer) ---
+  aggregationPipeline.push({
+    $sort: { "first_name": 1, "last_name": 1 }
+  });
+
+  // --- Pagination after aggregation ---
+  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
+
   const totalCount = AuthorsWithFiles.length;
   const limitNumber = parseInt(limit) || 20;
   const currentPage = parseInt(page) || 1;
@@ -3276,7 +3448,132 @@ exports.CategorySummaryWithSize = AsyncErrorHandler(async (req, res) => {
 
   res.status(200).json({
     status: "success",
-    data: summary,   
-    MonthlyUploads,    
+    data: summary,
+    MonthlyUploads,
+  });
+});
+
+
+exports.DisplayByPositionInFile = AsyncErrorHandler(async (req, res) => {
+  const {
+    _id: filterId,
+    positionFile,
+    search = "",
+    page = 1,
+    limit = 5
+  } = req.query;
+
+  if (!filterId || !positionFile) {
+    return res.status(400).json({
+      status: "fail",
+      message: "_id and positionFile are required",
+    });
+  }
+
+  const currentPage = Math.max(parseInt(page), 1);
+  const perPage = Math.max(parseInt(limit), 1);
+  const skip = (currentPage - 1) * perPage;
+
+  const filterObjectId = new mongoose.Types.ObjectId(filterId);
+
+  const positionMap = {
+    chairperson: "chairpersons",
+    member: "members",
+    "vice-chairperson": "viceChairpersons",
+    vicechairperson: "viceChairPersons",
+  };
+
+  const field = positionMap[positionFile.toLowerCase()];
+  if (!field) {
+    return res.status(400).json({
+      status: "fail",
+      message: "Invalid positionFile value",
+    });
+  }
+
+  /** ⬇️ DAGDAG LANG DITO */
+  const matchStage = {
+    [field]: { $elemMatch: { $eq: filterObjectId } },
+    ArchivedStatus: { $nin: ["Deleted", "For Restore"] },
+  };
+
+  if (search.trim()) {
+    matchStage.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { fileNumber: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  /** ⬇️ TOTAL COUNT (HIWALAY, WALANG GALAW SA MAIN PIPELINE) */
+  const totalData = await Files.countDocuments(matchStage);
+  const totalPage = Math.ceil(totalData / perPage);
+
+  const files = await Files.aggregate([
+    { $match: matchStage },
+
+    {
+      $lookup: {
+        from: "sbmembers",
+        localField: "chairpersons",
+        foreignField: "_id",
+        as: "chairpersonInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "sbmembers",
+        localField: "members",
+        foreignField: "_id",
+        as: "membersInfo",
+      },
+    },
+    {
+      $lookup: {
+        from: "sbmembers",
+        localField: "viceChairPersons",
+        foreignField: "_id",
+        as: "viceChairpersonInfo",
+      },
+    },
+
+    {
+      $addFields: {
+        chairpersons: {
+          $cond: [
+            { $eq: [field, "chairpersons"] },
+            { $filter: { input: "$chairpersons", as: "c", cond: { $eq: ["$$c", filterObjectId] } } },
+            "$chairpersons",
+          ],
+        },
+        members: {
+          $cond: [
+            { $eq: [field, "members"] },
+            { $filter: { input: "$members", as: "m", cond: { $eq: ["$$m", filterObjectId] } } },
+            "$members",
+          ],
+        },
+        viceChairPersons: {
+          $cond: [
+            { $eq: [field, "viceChairPersons"] },
+            { $filter: { input: "$viceChairPersons", as: "v", cond: { $eq: ["$$v", filterObjectId] } } },
+            "$viceChairPersons",
+          ],
+        },
+      },
+    },
+
+    /** ⬇️ DAGDAG LANG ITO */
+    { $skip: skip },
+    { $limit: perPage },
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    totalData,
+    currentPage,
+    totalPage,
+    limit: perPage,
+    results: files.length,
+    data: files,
   });
 });

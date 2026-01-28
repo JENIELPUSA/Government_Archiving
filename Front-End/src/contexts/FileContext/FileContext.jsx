@@ -24,6 +24,7 @@ export const FilesDisplayProvider = ({ children }) => {
     const [filters, setFilters] = useState({});
     const [isArchived, setArchived] = useState([]);
     const [CountAll, setCountAll] = useState(0);
+    const [FilesByPosition, setFilesByPosition] = useState([]);
 
     const [isDeletedData, setDeletedData] = useState([]);
     const [isForRestoreData, setForRestoreData] = useState([]);
@@ -42,7 +43,11 @@ export const FilesDisplayProvider = ({ children }) => {
     const [isPubliccurrentpage, setPubliccurrentpage] = useState({});
     const [isMonthlyFile, setMonthlyFile] = useState(0);
     const [categorySummary, setCategorySummary] = useState([]);
-    const [MonthlyUploads,setMonthlyUploads]=useState([])
+    const [MonthlyUploads, setMonthlyUploads] = useState([]);
+
+    const [PositioncurentPage, setPositioncurentPage] = useState();
+    const [PositiontotalPage, setPositiontotalPage] = useState();
+    const [Totaldata, setTotaldata] = useState();
     useEffect(() => {
         if (!authToken) return;
 
@@ -252,6 +257,7 @@ export const FilesDisplayProvider = ({ children }) => {
     };
 
     const UpdateFiles = async (bornID, values) => {
+        console.log("values", values);
         try {
             // sanitize category at author
             let categoryValue = values.categoryID;
@@ -265,12 +271,15 @@ export const FilesDisplayProvider = ({ children }) => {
             }
 
             const dataToSend = {
-                category: categoryValue || "",
+                category: values.category || "",
                 fullText: values.fullText || "",
                 summary: values.summary || "",
                 title: values.title || "",
                 dateOfResolution: values.dateOfResolution || "",
                 author: authorValue || null,
+                chairpersons: values.chairpersons,
+                members: values.members,
+                viceChairpersons: values.viceChairpersons,
             };
 
             const response = await axiosInstance.patch(
@@ -496,6 +505,63 @@ export const FilesDisplayProvider = ({ children }) => {
         [authToken],
     );
 
+    const fetchFilesByPosition = useCallback(
+        async (memberId, position, page = "", search = "", limit = 5) => {
+            // Tanggalin ang authToken check
+            if (!memberId || !position) {
+                console.error("❌ Missing required parameters:", {
+                    memberId,
+                    position,
+                });
+                return;
+            }
+
+            try {
+                setLoading(true);
+
+                // Gumawa ng headers object na may conditional
+                const headers = {};
+                if (authToken) {
+                    headers.Authorization = `Bearer ${authToken}`;
+                }
+
+                const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Files/DisplayByPositionInFile`, {
+                    params: {
+                        _id: memberId,
+                        positionFile: position,
+                        search,
+                        page,
+                        limit,
+                    },
+                    headers, // Dynamic headers
+                    withCredentials: true,
+                });
+
+                if (res.data.status === "success") {
+                    setFilesByPosition(res.data.data || []);
+                    setTotaldata(res.data.totalData || 0);
+                    setPositioncurentPage(res.data.currentPage || 1);
+                    setPositiontotalPage(res.data.totalPage || 1);
+                } else {
+                    console.error("❌ API returned error:", res.data.message);
+                    return {
+                        success: false,
+                        error: res.data.message || "Failed to fetch files by position.",
+                    };
+                }
+            } catch (error) {
+                console.error("❌ Error fetching files by position:", error);
+                return {
+                    success: false,
+                    error: error.message || "Unexpected error",
+                };
+            } finally {
+                setLoading(false);
+            }
+        },
+        [authToken],
+    );
+
     const fetchCategorySummary = useCallback(async () => {
         if (!authToken) return;
         try {
@@ -555,7 +621,14 @@ export const FilesDisplayProvider = ({ children }) => {
                 isTags,
                 isLoading,
                 isMonthlyFile,
-                categorySummary,MonthlyUploads
+                categorySummary,
+                MonthlyUploads,
+                fetchCategorySummary,
+                FilesByPosition,
+                fetchFilesByPosition,
+                PositioncurentPage,
+                PositiontotalPage,
+                Totaldata,
             }}
         >
             {children}
