@@ -130,9 +130,9 @@ const BoardMemberLayout = ({ Position, onBack }) => {
                                             key={key}
                                             className="rounded-lg bg-white p-4 text-center shadow-sm"
                                         >
-                                            {member.memberInfo?.avatar?.url ? (
+                                            {member.avatar?.url ? (
                                                 <img
-                                                    src={member.memberInfo.avatar.url}
+                                                    src={member.avatar.url}
                                                     alt={member.fullName || "Board Member"}
                                                     className="max-sm:h-40 mb-4 h-64 w-full cursor-pointer rounded-md object-cover"
                                                     onError={(e) => {

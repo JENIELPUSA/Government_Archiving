@@ -2889,6 +2889,134 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   }
 
+  // --- Add fullName field EARLY for search (UPDATED FOR MIDDLE INITIAL) ---
+  aggregationPipeline.push({
+    $addFields: {
+      fullName: {
+        $concat: [
+          "$first_name",
+          " ",
+          {
+            $cond: [
+              { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
+              {
+                $concat: [
+                  // Kunin ang unang character ng middle name at lagyan ng period
+                  { $substrCP: ["$middle_name", 0, 1] },
+                  ". ", // Lagyan ng period at space
+                  "$last_name"
+                ]
+              },
+              // Kung walang middle name, diretso last name
+              "$last_name"
+            ]
+          }
+        ]
+      },
+      // Alternative format: middle initial without period
+      fullNameNoPeriod: {
+        $concat: [
+          "$first_name",
+          " ",
+          {
+            $cond: [
+              { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
+              {
+                $concat: [
+                  // Kunin ang unang character ng middle name TAPOS WALANG PERIOD
+                  { $substrCP: ["$middle_name", 0, 1] },
+                  " ", // Space lang, walang period
+                  "$last_name"
+                ]
+              },
+              "$last_name"
+            ]
+          }
+        ]
+      },
+      // For search purposes - includes all name parts
+      searchableFullName: {
+        $concat: [
+          { $ifNull: ["$first_name", ""] },
+          " ",
+          { $ifNull: ["$middle_name", ""] },
+          " ",
+          { $ifNull: ["$last_name", ""] }
+        ]
+      }
+    },
+  });
+
+  // --- Search filter (should come BEFORE grouping) ---
+  if (search) {
+    // Clean and prepare search term
+    const searchTerm = search.trim();
+    
+    aggregationPipeline.push({
+      $match: {
+        $or: [
+          // Basic field searches (case-insensitive)
+          { first_name: { $regex: searchTerm, $options: "i" } },
+          { middle_name: { $regex: searchTerm, $options: "i" } },
+          { last_name: { $regex: searchTerm, $options: "i" } },
+          
+          // Search in formatted full names (case-insensitive)
+          { fullName: { $regex: searchTerm, $options: "i" } },
+          { fullNameNoPeriod: { $regex: searchTerm, $options: "i" } },
+          { searchableFullName: { $regex: searchTerm, $options: "i" } },
+          
+          // Special handling for middle initial with optional period
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $concat: [
+                    "$first_name",
+                    " ",
+                    {
+                      $cond: [
+                        { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
+                        {
+                          $concat: [
+                            { $substrCP: ["$middle_name", 0, 1] },
+                            "\\.?\\s*", // Optional period followed by optional spaces
+                            "$last_name"
+                          ]
+                        },
+                        "$last_name"
+                      ]
+                    }
+                  ]
+                },
+                regex: searchTerm.replace(/\s+/g, "\\s*"),
+                options: "i" // CASE-INSENSITIVE
+              }
+            }
+          },
+          
+          // Handle search for "first middle last" format
+          {
+            $expr: {
+              $regexMatch: {
+                input: {
+                  $concat: [
+                    { $ifNull: ["$first_name", ""] },
+                    "\\s+",
+                    { $ifNull: ["$middle_name", ""] },
+                    "\\s+",
+                    { $ifNull: ["$last_name", ""] }
+                  ]
+                },
+                regex: searchTerm.replace(/\s+/g, "\\s+"),
+                options: "i" // CASE-INSENSITIVE
+              }
+            }
+          }
+        ],
+      },
+    });
+  }
+
   // --- Lookup files ---
   aggregationPipeline.push({
     $lookup: {
@@ -2929,19 +3057,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     },
   });
 
-  // --- Add fullName field ---
+  // --- Add role checks ---
   aggregationPipeline.push({
     $addFields: {
-      fullName: {
-        $concat: [
-          "$first_name",
-          " ",
-          { $ifNull: ["$middle_name", ""] },
-          " ",
-          "$last_name",
-        ],
-      },
-      // --- Role check per file ---
       isChairperson: {
         $size: {
           $filter: {
@@ -2972,16 +3090,22 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     },
   });
 
-  // --- Search filter ---
+  // --- Search in files (separate from name search) ---
   if (search) {
+    const searchTerm = search.trim();
+    
+    // Add file search as a separate stage after lookup
     aggregationPipeline.push({
       $match: {
         $or: [
-          { first_name: { $regex: search, $options: "i" } },
-          { middle_name: { $regex: search, $options: "i" } },
-          { last_name: { $regex: search, $options: "i" } },
-          { fullName: { $regex: search, $options: "i" } },
-          { "files.title": { $regex: search, $options: "i" } },
+          { "files.title": { $regex: searchTerm, $options: "i" } },
+          // Keep the existing name matches to include authors without matching files
+          { first_name: { $regex: searchTerm, $options: "i" } },
+          { middle_name: { $regex: searchTerm, $options: "i" } },
+          { last_name: { $regex: searchTerm, $options: "i" } },
+          { fullName: { $regex: searchTerm, $options: "i" } },
+          { fullNameNoPeriod: { $regex: searchTerm, $options: "i" } },
+          { searchableFullName: { $regex: searchTerm, $options: "i" } },
         ],
       },
     });
@@ -2991,9 +3115,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   aggregationPipeline.push({
     $group: {
       _id: "$fullName",
-      // Keep the first document's structure exactly
       originalDoc: { $first: "$$ROOT" },
-      // Collect all files from all duplicates
       allFiles: { $push: "$files" },
     }
   });
@@ -3001,7 +3123,6 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   // --- Merge files from all duplicates ---
   aggregationPipeline.push({
     $addFields: {
-      // Flatten the files array
       "originalDoc.files": {
         $reduce: {
           input: "$allFiles",
@@ -3031,6 +3152,20 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   });
 
+  // --- Filter documents that have matching files after grouping ---
+  if (search) {
+    const searchTerm = search.trim();
+    
+    aggregationPipeline.push({
+      $match: {
+        $or: [
+          { "originalDoc.files.title": { $regex: searchTerm, $options: "i" } },
+          { "_id": { $regex: searchTerm, $options: "i" } } // fullName is now _id
+        ]
+      }
+    });
+  }
+
   // --- Replace root with the original document structure ---
   aggregationPipeline.push({
     $replaceRoot: {
@@ -3038,12 +3173,12 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   });
 
-  // --- Sort by fullName (or any other field you prefer) ---
+  // --- Sort by fullName ---
   aggregationPipeline.push({
     $sort: { "first_name": 1, "last_name": 1 }
   });
 
-  // --- Pagination after aggregation ---
+  // --- Pagination ---
   const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
   const totalCount = AuthorsWithFiles.length;

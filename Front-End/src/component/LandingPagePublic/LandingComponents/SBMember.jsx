@@ -13,15 +13,6 @@ const MemberModal = MemberProfile?.MemberModal;
 const SkeletonCard = MemberProfile?.SkeletonCard;
 const SkeletonFilter = MemberProfile?.SkeletonFilter;
 
-// Debug logging (remove in production)
-console.log("MemberProfile debug:", {
-  MemberProfile,
-  hasMemberCard: !!MemberProfile?.MemberCard,
-  hasMemberModal: !!MemberProfile?.MemberModal,
-  hasSkeletonCard: !!MemberProfile?.SkeletonCard,
-  hasSkeletonFilter: !!MemberProfile?.SkeletonFilter
-});
-
 const normalizePosition = (str) => {
     if (!str || typeof str !== "string") return "";
     return str.toLowerCase().replace(/[^a-z0-9]/g, "");

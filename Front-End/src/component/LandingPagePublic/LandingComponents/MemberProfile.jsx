@@ -95,7 +95,7 @@ export const MemberModal = ({
                                     <p className="text-[11px] leading-relaxed text-gray-600 line-clamp-[8]">{member.detailInfo || "No biography available."}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="mb-2 text-[9px] font-bold uppercase text-gray-400">Position Filters</p>
+                                    <p className="mb-2 text-[9px] font-bold uppercase text-gray-400">Ordinance Committee Role</p>
                                     <FilterBtn label="Chairperson" count={member.isChairperson} active={activeFilter === "Chairperson"} onClick={() => setActiveFilter("Chairperson")} color="blue" />
                                     <FilterBtn label="Vice-Chair" count={member.isViceChairperson} active={activeFilter === "Vice-Chairperson"} onClick={() => setActiveFilter("Vice-Chairperson")} color="emerald" />
                                     <FilterBtn label="Member" count={member.isMember} active={activeFilter === "Member"} onClick={() => setActiveFilter("Member")} color="amber" />
