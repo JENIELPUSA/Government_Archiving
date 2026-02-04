@@ -3,12 +3,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CategoryContext } from "../../../contexts/CategoryContext/CategoryContext";
 import { FilesDisplayContext } from "../../../contexts/FileContext/FileContext";
 import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
-import { 
-  FileText, Folder, File, Users, X, Save, ChevronDown, 
-  Check, UserPlus, Calendar
-} from "lucide-react";
+import { FileText, Folder, File, Users, X, Save, ChevronDown, Check, UserPlus, Calendar } from "lucide-react";
+import { FolderContext } from "../../../contexts/FolderContext/FolderContext.jsx";
 
 const EditDocumentModal = ({ show, document, onClose }) => {
+    const { fetchSpecificData } = useContext(FolderContext);
     const { isDropdown } = useContext(SbMemberDisplayContext);
     const { UpdateFiles } = useContext(FilesDisplayContext);
     const { isCategory } = useContext(CategoryContext);
@@ -20,21 +19,21 @@ const EditDocumentModal = ({ show, document, onClose }) => {
     const [chairpersons, setChairpersons] = useState([]);
     const [viceChairpersons, setViceChairpersons] = useState([]);
     const [members, setMembers] = useState([]);
-    
+
     // Custom entries
     const [customChairperson, setCustomChairperson] = useState("");
     const [customViceChairperson, setCustomViceChairperson] = useState("");
-    
+
     // Checkbox states
     const [includeChairperson, setIncludeChairperson] = useState(false);
     const [includeViceChairperson, setIncludeViceChairperson] = useState(false);
     const [includeMembers, setIncludeMembers] = useState(false);
-    
+
     // Dropdown visibility
     const [isChairpersonDropdownOpen, setIsChairpersonDropdownOpen] = useState(false);
     const [isViceChairpersonDropdownOpen, setIsViceChairpersonDropdownOpen] = useState(false);
     const [isMembersDropdownOpen, setIsMembersDropdownOpen] = useState(false);
-    
+
     // Refs for dropdown click outside
     const chairpersonDropdownRef = useRef(null);
     const viceChairpersonDropdownRef = useRef(null);
@@ -56,15 +55,15 @@ const EditDocumentModal = ({ show, document, onClose }) => {
         };
 
         // Safely add event listener
-        if (typeof window !== 'undefined' && document && document.addEventListener) {
-            document.addEventListener('mousedown', handleClickOutside);
-            
+        if (typeof window !== "undefined" && document && document.addEventListener) {
+            document.addEventListener("mousedown", handleClickOutside);
+
             // Cleanup function
             return () => {
-                document.removeEventListener('mousedown', handleClickOutside);
+                document.removeEventListener("mousedown", handleClickOutside);
             };
         }
-        
+
         // Return empty cleanup if not in browser
         return () => {};
     }, []);
@@ -87,9 +86,9 @@ const EditDocumentModal = ({ show, document, onClose }) => {
             if (doc.chairpersons.length > 0) {
                 includeChairpersonFlag = true;
                 // Check if first item is a string name
-                if (typeof doc.chairpersons[0] === 'string') {
+                if (typeof doc.chairpersons[0] === "string") {
                     customChairpersonValue = doc.chairpersons[0];
-                } else if (doc.chairpersons[0] && typeof doc.chairpersons[0] === 'object') {
+                } else if (doc.chairpersons[0] && typeof doc.chairpersons[0] === "object") {
                     if (doc.chairpersons[0].custom) {
                         customChairpersonValue = doc.chairpersons[0].full_name || doc.chairpersons[0].name || "";
                     } else {
@@ -103,9 +102,9 @@ const EditDocumentModal = ({ show, document, onClose }) => {
         if (doc.viceChairpersons && Array.isArray(doc.viceChairpersons)) {
             if (doc.viceChairpersons.length > 0) {
                 includeViceChairpersonFlag = true;
-                if (typeof doc.viceChairpersons[0] === 'string') {
+                if (typeof doc.viceChairpersons[0] === "string") {
                     customViceChairpersonValue = doc.viceChairpersons[0];
-                } else if (doc.viceChairpersons[0] && typeof doc.viceChairpersons[0] === 'object') {
+                } else if (doc.viceChairpersons[0] && typeof doc.viceChairpersons[0] === "object") {
                     if (doc.viceChairpersons[0].custom) {
                         customViceChairpersonValue = doc.viceChairpersons[0].full_name || doc.viceChairpersons[0].name || "";
                     } else {
@@ -119,19 +118,19 @@ const EditDocumentModal = ({ show, document, onClose }) => {
         if (doc.members && Array.isArray(doc.members)) {
             if (doc.members.length > 0) {
                 includeMembersFlag = true;
-                doc.members.forEach(member => {
-                    if (typeof member === 'string') {
+                doc.members.forEach((member) => {
+                    if (typeof member === "string") {
                         // String name - treat as custom
                         // We'll need to match with dropdown or store as custom
                         membersArray.push({
                             custom: true,
-                            full_name: member
+                            full_name: member,
                         });
-                    } else if (member && typeof member === 'object') {
+                    } else if (member && typeof member === "object") {
                         if (member.custom) {
                             membersArray.push({
                                 custom: true,
-                                full_name: member.full_name || member.name || String(member)
+                                full_name: member.full_name || member.name || String(member),
                             });
                         } else {
                             membersArray.push(member._id || member.id || member);
@@ -160,7 +159,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
             customViceChairperson: customViceChairpersonValue,
             includeChairperson: includeChairpersonFlag,
             includeViceChairperson: includeViceChairpersonFlag,
-            includeMembers: includeMembersFlag
+            includeMembers: includeMembersFlag,
         };
     }, []);
 
@@ -168,7 +167,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
         if (document && show) {
             const normalized = normalizeDoc(document);
             setEditedDoc(normalized);
-            
+
             if (normalized.customChairperson) {
                 setCustomChairperson(normalized.customChairperson);
                 setChairpersons([]);
@@ -176,7 +175,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                 setChairpersons(normalized.chairpersons || []);
                 setCustomChairperson("");
             }
-            
+
             if (normalized.customViceChairperson) {
                 setCustomViceChairperson(normalized.customViceChairperson);
                 setViceChairpersons([]);
@@ -184,12 +183,10 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                 setViceChairpersons(normalized.viceChairpersons || []);
                 setCustomViceChairperson("");
             }
-            
-            const memberIds = normalized.members
-                .filter(member => !member.custom)
-                .map(member => member._id || member.id || member);
+
+            const memberIds = normalized.members.filter((member) => !member.custom).map((member) => member._id || member.id || member);
             setMembers(memberIds);
-            
+
             setIncludeChairperson(normalized.includeChairperson || false);
             setIncludeViceChairperson(normalized.includeViceChairperson || false);
             setIncludeMembers(normalized.includeMembers || false);
@@ -244,29 +241,17 @@ const EditDocumentModal = ({ show, document, onClose }) => {
     };
 
     const handleChairpersonToggle = (memberId) => {
-        setChairpersons(prev => 
-            prev.includes(memberId) 
-                ? prev.filter(id => id !== memberId)
-                : [...prev, memberId]
-        );
+        setChairpersons((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]));
         setCustomChairperson("");
     };
 
     const handleViceChairpersonToggle = (memberId) => {
-        setViceChairpersons(prev => 
-            prev.includes(memberId) 
-                ? prev.filter(id => id !== memberId)
-                : [...prev, memberId]
-        );
+        setViceChairpersons((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]));
         setCustomViceChairperson("");
     };
 
     const handleMemberToggle = (memberId) => {
-        setMembers(prev => 
-            prev.includes(memberId) 
-                ? prev.filter(id => id !== memberId)
-                : [...prev, memberId]
-        );
+        setMembers((prev) => (prev.includes(memberId) ? prev.filter((id) => id !== memberId) : [...prev, memberId]));
     };
 
     const addCustomChairperson = () => {
@@ -305,13 +290,9 @@ const EditDocumentModal = ({ show, document, onClose }) => {
 
         try {
             // Simple arrays for IDs - NO JSON.stringify with complex objects
-            const chairpersonsPayload = includeChairperson ? (
-                customChairperson ? customChairperson : chairpersons
-            ) : null;
+            const chairpersonsPayload = includeChairperson ? (customChairperson ? customChairperson : chairpersons) : null;
 
-            const viceChairpersonsPayload = includeViceChairperson ? (
-                customViceChairperson ? customViceChairperson : viceChairpersons
-            ) : null;
+            const viceChairpersonsPayload = includeViceChairperson ? (customViceChairperson ? customViceChairperson : viceChairpersons) : null;
 
             const membersPayload = includeMembers ? members : null;
 
@@ -345,17 +326,25 @@ const EditDocumentModal = ({ show, document, onClose }) => {
             }
 
             // Remove empty fields from payload
-            Object.keys(payload).forEach(key => {
-                if (payload[key] === null || payload[key] === undefined || 
+            Object.keys(payload).forEach((key) => {
+                if (
+                    payload[key] === null ||
+                    payload[key] === undefined ||
                     (Array.isArray(payload[key]) && payload[key].length === 0) ||
-                    payload[key] === "") {
+                    payload[key] === ""
+                ) {
                     delete payload[key];
                 }
             });
 
             // Directly send the payload to context
-            await UpdateFiles(editedDoc._id, payload);
-            onClose();
+            const result = await UpdateFiles(editedDoc._id, payload);
+            console.log("result", result);
+            if (result.success) {
+                console.log("TRIGGER");
+                fetchSpecificData(result.data.folderID, { categoryId: result.data.category });
+                onClose();
+            }
         } catch (error) {
             alert("Failed to update document. Please try again.");
         } finally {
@@ -365,18 +354,15 @@ const EditDocumentModal = ({ show, document, onClose }) => {
 
     const getMemberName = (memberId) => {
         if (!memberId || !isDropdown) return memberId;
-        const member = isDropdown.find(m => 
-            m._id === memberId || 
-            String(m._id) === String(memberId)
-        );
+        const member = isDropdown.find((m) => m._id === memberId || String(m._id) === String(memberId));
         return member?.full_name || memberId;
     };
 
-    const CommitteeMemberDropdown = ({ 
-        label, 
-        selectedItems, 
+    const CommitteeMemberDropdown = ({
+        label,
+        selectedItems,
         customValue,
-        onToggle, 
+        onToggle,
         onClearAll,
         onAddCustom,
         isOpen,
@@ -388,9 +374,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
 
         return (
             <div className="flex flex-col">
-                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    {label}
-                </label>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
 
                 {hasSelections && (
                     <div className="mb-3 flex flex-wrap gap-2">
@@ -409,7 +393,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                 </button>
                             </div>
                         ))}
-                        
+
                         {customValue && (
                             <div className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1.5 text-xs dark:bg-green-900/30">
                                 <span className="max-w-[200px] truncate">{customValue}</span>
@@ -422,7 +406,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                 </button>
                             </div>
                         )}
-                        
+
                         {hasSelections && (
                             <button
                                 type="button"
@@ -435,16 +419,21 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                     </div>
                 )}
 
-                <div className="relative" ref={dropdownRef}>
+                <div
+                    className="relative"
+                    ref={dropdownRef}
+                >
                     <button
                         type="button"
                         onClick={() => setIsOpen(!isOpen)}
-                        className={`flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition-all focus:outline-none focus:ring-2 border-gray-300 focus:border-blue-500 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200`}
+                        className={`flex w-full items-center justify-between rounded-lg border border-gray-300 px-4 py-2.5 text-left text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200`}
                     >
                         <div className="truncate">
                             {hasSelections ? (
                                 <span className="font-medium">
-                                    {selectedItems.length > 0 ? `${selectedItems.length} ${label.toLowerCase()}${selectedItems.length > 1 ? "s" : ""} selected` : `Custom ${label}`}
+                                    {selectedItems.length > 0
+                                        ? `${selectedItems.length} ${label.toLowerCase()}${selectedItems.length > 1 ? "s" : ""} selected`
+                                        : `Custom ${label}`}
                                 </span>
                             ) : (
                                 <span className="text-gray-500 dark:text-gray-400">
@@ -461,9 +450,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                 <>
                                     <div className="sticky top-0 border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-600 dark:bg-gray-700">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Select {label}
-                                            </span>
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Select {label}</span>
                                             {hasSelections && (
                                                 <button
                                                     type="button"
@@ -490,9 +477,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                     })}
                                 </>
                             ) : (
-                                <div className="px-4 py-3 text-sm text-gray-500">
-                                    No members available
-                                </div>
+                                <div className="px-4 py-3 text-sm text-gray-500">No members available</div>
                             )}
                         </div>
                     )}
@@ -526,13 +511,16 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                             <button
                                 onClick={onClose}
                                 disabled={isSubmitting}
-                                className={`rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 ${isSubmitting ? 'cursor-not-allowed opacity-50' : ''}`}
+                                className={`rounded-full p-1 text-gray-500 hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200 ${isSubmitting ? "cursor-not-allowed opacity-50" : ""}`}
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                        <form
+                            onSubmit={handleSubmit}
+                            className="max-h-[70vh] space-y-4 overflow-y-auto pr-2"
+                        >
                             <div className="space-y-1">
                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                                     <FileText className="h-4 w-4" /> Document Title
@@ -564,7 +552,10 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                     >
                                         <option value="">Select a category</option>
                                         {isCategory?.map((categoryItem) => (
-                                            <option key={categoryItem._id} value={categoryItem._id}>
+                                            <option
+                                                key={categoryItem._id}
+                                                value={categoryItem._id}
+                                            >
                                                 {categoryItem.category}
                                             </option>
                                         ))}
@@ -582,7 +573,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                         type="text"
                                         value={editedDoc.resolutionNumber || ""}
                                         onChange={(e) => setEditedDoc({ ...editedDoc, resolutionNumber: e.target.value })}
-                                        className="w-full rounded-lg border border-gray-300 py-2 px-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
                                         placeholder="e.g., 2024-001"
                                         disabled={isSubmitting}
                                     />
@@ -710,25 +701,36 @@ const EditDocumentModal = ({ show, document, onClose }) => {
                                     type="button"
                                     onClick={onClose}
                                     disabled={isSubmitting}
-                                    className={`flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 transition-colors duration-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 ${isSubmitting ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    className={`flex items-center gap-2 rounded-lg bg-gray-200 px-4 py-2 text-gray-800 transition-colors duration-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 ${isSubmitting ? "cursor-not-allowed opacity-50" : ""}`}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={isSubmitting}
-                                    className={`flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-700 ${isSubmitting ? 'cursor-not-allowed opacity-50' : ''}`}
+                                    className={`flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors duration-200 hover:bg-blue-700 ${isSubmitting ? "cursor-not-allowed opacity-50" : ""}`}
                                 >
                                     {isSubmitting ? (
                                         <span className="flex items-center gap-2">
                                             <svg
-                                                className="animate-spin h-4 w-4 text-white"
+                                                className="h-4 w-4 animate-spin text-white"
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
                                             >
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                                                <circle
+                                                    className="opacity-25"
+                                                    cx="12"
+                                                    cy="12"
+                                                    r="10"
+                                                    stroke="currentColor"
+                                                    strokeWidth="4"
+                                                ></circle>
+                                                <path
+                                                    className="opacity-75"
+                                                    fill="currentColor"
+                                                    d="M4 12a8 8 0 018-8v8H4z"
+                                                ></path>
                                             </svg>
                                             Saving...
                                         </span>

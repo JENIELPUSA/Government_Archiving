@@ -6,6 +6,7 @@ import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
 import { FiUploadCloud, FiFileText, FiBook, FiTag, FiCalendar, FiX, FiCheckSquare, FiPlus, FiHash, FiChevronDown } from "react-icons/fi";
 import PdfPreviewModal from "./PDFReview";
 import AuthorModal from "./AuthorComponents";
+import { FolderContext } from "../../../contexts/FolderContext/FolderContext";
 
 const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
     const [showModal, setShowModal] = useState(false);
@@ -32,6 +33,7 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
     const [showPdfModal, setShowPdfModal] = useState(false);
     const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
     const [isPdfLoading, setIsPdfLoading] = useState(false);
+    const { fetchSpecificData, fetchSpecifiCategory } = useContext(FolderContext);
 
     // ARRAY STRUCTURE - Changed from single values to arrays
     const [chairpersons, setChairpersons] = useState([]); // Array para sa chairpersons
@@ -322,16 +324,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             formData.append("members", JSON.stringify(members));
         }
 
-        // Console log the payload with arrays
-        console.log("=== UPLOAD PAYLOAD ===");
-        console.log("Title:", title);
-        console.log("Category:", category);
-        console.log("Summary:", summary);
-        console.log("Admin ID:", linkId);
-        console.log("Folder ID:", folderId);
-        console.log("Date of Resolution:", dateOfResolution);
-        console.log("File Name:", selectedFile?.name);
-
         if (isResolution) {
             console.log("Resolution Number:", resolutionNumber);
         }
@@ -354,7 +346,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
         for (let [key, value] of formData.entries()) {
             console.log(`${key}:`, value);
         }
-        console.log("=== END PAYLOAD ===");
 
         try {
             setLoading(true);
@@ -362,6 +353,8 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
 
             const result = await AddFiles(formData);
             if (result.success) {
+                fetchSpecifiCategory(result.data.folderID, {});
+                fetchSpecificData(result.data.folderID, { categoryId: result.data.category });
                 setUploadMessage("File uploaded successfully.");
                 isSuccess();
                 setSelectedFile(null);
@@ -759,8 +752,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
                                         </div>
                                     )}
                                 </div>
-
-
 
                                 {/* Category and Resolution Number */}
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

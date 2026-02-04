@@ -210,7 +210,8 @@ const FolderCreationUI = () => {
         try {
             const result = await MOveArchived(isDeleteID, "Deleted");
             if (result.success) {
-                fetchSpecificData();
+                fetchSpecifiCategory(result.data.folderID, {});
+                fetchSpecificData(result.data.folderID, { categoryId: result.data.categoryID });
             }
         } catch (error) {
             console.error("Delete failed:", error);

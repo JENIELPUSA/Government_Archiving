@@ -291,10 +291,11 @@ export const FilesDisplayProvider = ({ children }) => {
             );
 
             if (response.data && response.data.status === "success") {
+                const newFile = response.data.data;
                 FetchFiles();
                 setModalStatus("success");
                 setShowModal(true);
-                return { success: true };
+                return { success: true, data: newFile };
             } else {
                 setModalStatus("failed");
                 setShowModal(true);

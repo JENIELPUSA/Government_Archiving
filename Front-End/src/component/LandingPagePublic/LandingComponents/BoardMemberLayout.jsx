@@ -4,6 +4,7 @@ import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
 import MayorLayout from "../LandingComponents/MayorLayout";
 import { User } from "lucide-react";
 import Breadcrumb from "./Breadcrumb";
+
 const TrackedMayorLayout = (props) => {
     return <MayorLayout {...props} />;
 };
@@ -134,20 +135,14 @@ const BoardMemberLayout = ({ Position, onBack }) => {
                                                 <img
                                                     src={member.avatar.url}
                                                     alt={member.fullName || "Board Member"}
-                                                    className="max-sm:h-40 mb-4 h-64 w-full cursor-pointer rounded-md object-cover"
+                                                    className="max-sm:h-40 mb-4 h-64 w-full rounded-md object-cover"
                                                     onError={(e) => {
                                                         e.target.style.display = "none";
-                                                    }}
-                                                    onClick={() => {
-                                                        setSelectedMember(member);
                                                     }}
                                                 />
                                             ) : (
                                                 <div
-                                                    className="max-sm:h-40 mb-4 flex h-64 w-full cursor-pointer items-center justify-center rounded-md bg-gray-100"
-                                                    onClick={() => {
-                                                        setSelectedMember(member);
-                                                    }}
+                                                    className="max-sm:h-40 mb-4 flex h-64 w-full items-center justify-center rounded-md bg-gray-100"
                                                 >
                                                     <User className="h-16 w-16 text-gray-400" />
                                                 </div>

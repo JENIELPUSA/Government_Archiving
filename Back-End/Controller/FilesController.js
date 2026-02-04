@@ -157,14 +157,9 @@ exports.updateFiles = AsyncErrorHandler(async (req, res, next) => {
       });
     }
 
-    // Real-time update
-    const io = req.app.get("io");
-    if (io) {
-      io.emit("UpdateFileDocuData", updatedFile);
-    }
 
     res.status(200).json({ 
-      status: "success", 
+      status: "success",
       data: updatedFile,
       message: `File updated successfully - All personnel arrays replaced`
     });
@@ -411,7 +406,7 @@ exports.updateStatus = AsyncErrorHandler(async (req, res, next) => {
       });
     }
     const io = req.app.get("io");
-    io.emit("DeleteDocument", updatedFile);
+    //io.emit("DeleteDocument", updatedFile);
 
     res.status(200).json({ status: "success", data: updatedFile });
   } catch (err) {
@@ -689,32 +684,7 @@ exports.createFiles = AsyncErrorHandler(async (req, res) => {
       });
     }
     const io = req.app.get("io");
-    
-    // --- Notification for pending ---
-    if (savedFile.status === "Pending") {
-      const targetViewer = approverID || author;
-      if (mongoose.Types.ObjectId.isValid(targetViewer)) {
-        const notificationDoc = await Notification.create({
-          message: `New document pending your approval: "${title}"`,
-          viewers: [
-            { user: targetViewer, isRead: false, isApprover: !!approverID },
-          ],
-          FileId: savedFile._id,
-          relatedApprover: approverID,
-        });
-
-        const receiver = global.connectedUsers?.[targetViewer];
-        if (io && receiver) {
-          io.to(receiver.socketId).emit("SentDocumentNotification", {
-            message: `New document pending your approval: "${title}"`,
-            data: savedFile,
-            notificationId: notificationDoc._id,
-          });
-        }
-      }
-    }
-    
-    io.emit("AddOldFile", savedFile);
+    //io.emit("AddOldFile", savedFile);
     res.status(201).json({ 
       status: "success", 
       data: savedFile,
