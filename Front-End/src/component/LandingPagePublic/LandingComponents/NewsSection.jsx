@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useContext, useCallback, useMemo } from "react";
-import { FaSpinner } from "react-icons/fa";
 import axios from "axios";
 import { NewsDisplayContext } from "../../../contexts/NewsContext/NewsContext";
 
@@ -165,40 +164,112 @@ const NewsSection = ({ onNewsView }) => {
       ? "https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?auto=format&fit=crop&q=80&w=800"
       : "https://images.unsplash.com/photo-1476242906366-d8eb64c2f661?auto=format&fit=crop&q=80&w=800";
 
+  // Skeleton card component (inline)
+  const SkeletonCard = ({ isFeatured = false }) => (
+    <div className={`group relative flex flex-col overflow-hidden rounded-3xl ${isFeatured ? "md:col-span-2 lg:col-span-2" : ""}`}>
+      {/* Glassmorphic background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/5 to-transparent backdrop-blur-xl border border-white/10 rounded-3xl"></div>
+      
+      {/* Image skeleton */}
+      <div className={`relative overflow-hidden ${isFeatured ? "h-64 sm:h-72 md:h-80" : "h-56 sm:h-64"}`}>
+        <div className="h-full w-full bg-gray-700/50 animate-pulse"></div>
+        
+        {/* Source badge skeleton */}
+        <div className="absolute right-4 top-4">
+          <div className="h-8 w-20 rounded-2xl bg-gray-600/50 animate-pulse"></div>
+        </div>
+        
+        {/* Title overlay skeleton */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="h-6 w-16 rounded-full bg-gray-600/50 animate-pulse"></div>
+          </div>
+          <div className={`${isFeatured ? "h-8 w-3/4 mb-3" : "h-6 w-full mb-2"} bg-gray-600/50 animate-pulse rounded-lg`}></div>
+          <div className={`${isFeatured ? "h-6 w-1/2" : "h-4 w-2/3"} bg-gray-600/50 animate-pulse rounded-lg`}></div>
+        </div>
+      </div>
+
+      {/* Content area skeleton */}
+      <div className="relative flex flex-1 flex-col p-6 sm:p-8">
+        {/* Category badge */}
+        <div className="mb-4">
+          <div className="h-8 w-24 rounded-2xl bg-gray-600/50 animate-pulse"></div>
+        </div>
+        
+        {/* Summary lines */}
+        <div className="space-y-2 mb-6">
+          <div className="h-4 w-full bg-gray-600/50 animate-pulse rounded"></div>
+          <div className="h-4 w-5/6 bg-gray-600/50 animate-pulse rounded"></div>
+          <div className="h-4 w-4/6 bg-gray-600/50 animate-pulse rounded"></div>
+        </div>
+        
+        {/* Footer */}
+        <div className="mt-auto flex items-center justify-between gap-4">
+          <div className="h-5 w-20 bg-gray-600/50 animate-pulse rounded"></div>
+          <div className="h-10 w-28 rounded-2xl bg-gray-600/50 animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Loading state with skeleton grid
   if (loading && !hasFetched) {
     return (
-      <section id="news" className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 py-20 flex items-center justify-center">
-        {/* Enhanced animated background */}
+      <section id="news" className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 py-24">
+        {/* Enhanced Animated Background */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_60%)]"></div>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.15),transparent_60%)]"></div>
-          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-ping"></div>
-          <div className="absolute top-1/3 right-1/3 w-2 h-2 bg-purple-400 rounded-full animate-ping" style={{animationDelay: '1s'}}></div>
-          <div className="absolute bottom-1/4 right-1/4 w-2 h-2 bg-cyan-400 rounded-full animate-ping" style={{animationDelay: '2s'}}></div>
+          <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '1s'}}></div>
+          <div className="absolute top-1/2 left-1/2 w-[400px] h-[400px] bg-cyan-500/5 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]"></div>
         </div>
-        
-        <div className="text-center text-white relative z-10">
-          <div className="relative inline-block mb-6">
-            <div className="absolute inset-0 animate-ping opacity-40">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500"></div>
+
+        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          {/* Ultra Modern Header */}
+          <div className="mb-20 text-center">
+            <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-cyan-500/10 backdrop-blur-md border border-white/10">
+              <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-400 to-cyan-400 animate-pulse"></div>
+              <span className="text-sm font-medium bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent tracking-wide">
+                LIVE UPDATES
+              </span>
             </div>
-            <div className="relative w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center">
-              <FaSpinner className="text-2xl text-white animate-spin" />
-            </div>
+            
+            <h2 className="mb-6 text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight">
+              <span className="inline-block bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
+                News & Updates
+              </span>
+            </h2>
+            
+            <p className="mx-auto max-w-2xl text-lg sm:text-xl text-gray-400 font-light leading-relaxed">
+              Your trusted source for <span className="text-blue-400 font-medium">provincial</span> and <span className="text-red-400 font-medium">national</span> news
+            </p>
           </div>
-          <p className="text-2xl font-light tracking-wider bg-gradient-to-r from-blue-300 via-purple-300 to-blue-300 bg-clip-text text-transparent">
-            Loading Latest News
-          </p>
-          <div className="mt-4 flex justify-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-blue-400 animate-bounce"></div>
-            <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{animationDelay: '0.2s'}}></div>
-            <div className="w-2 h-2 rounded-full bg-cyan-400 animate-bounce" style={{animationDelay: '0.4s'}}></div>
+
+          {/* Modern Section Divider */}
+          <div className="mb-16 flex items-center justify-center gap-6">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent"></div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 animate-pulse"></div>
+              <h3 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Latest Stories</h3>
+              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 animate-pulse"></div>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-purple-500/30 to-transparent"></div>
+          </div>
+
+          {/* Skeleton Grid - mimics bento layout */}
+          <div className="grid grid-cols-1 gap-6 sm:gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <SkeletonCard isFeatured={true} />
+            <SkeletonCard />
+            <SkeletonCard />
           </div>
         </div>
       </section>
     );
   }
 
+  // Main content render when not loading
   return (
     <section id="news" className="min-h-screen relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 py-24" ref={sectionRef}>
       {/* Enhanced Animated Background with Grid */}

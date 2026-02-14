@@ -8,8 +8,6 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A28DFF', '#FF6B6B'
 function PieGraph({ categorySummary }) { // Bagong prop name
   const [chartData, setChartData] = useState([]);
 
-  console.log("categorySummary",categorySummary)
-
   useEffect(() => {
     if (categorySummary && categorySummary.length > 0) {
       const processedData = processCategoryData(categorySummary);

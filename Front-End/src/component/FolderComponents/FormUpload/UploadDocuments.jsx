@@ -272,7 +272,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             setPdfPreviewUrl(url);
             setShowPdfModal(true);
         } catch (error) {
-            console.error("Error creating PDF preview:", error);
             setUploadMessage("Failed to generate preview. Please try again.");
         } finally {
             setIsPdfLoading(false);
@@ -324,29 +323,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             formData.append("members", JSON.stringify(members));
         }
 
-        if (isResolution) {
-            console.log("Resolution Number:", resolutionNumber);
-        }
-
-        if (includeChairperson) {
-            console.log("Chairpersons:", chairpersons);
-            if (customChairperson) console.log("Custom Chairperson:", customChairperson);
-        }
-
-        if (includeViceChairperson) {
-            console.log("Vice Chairpersons:", viceChairpersons);
-            if (customViceChairperson) console.log("Custom Vice Chairperson:", customViceChairperson);
-        }
-
-        if (includeMembers) {
-            console.log("Members:", members);
-        }
-
-        // Log FormData content
-        for (let [key, value] of formData.entries()) {
-            console.log(`${key}:`, value);
-        }
-
         try {
             setLoading(true);
             setUploadMessage(`Uploading "${selectedFile.name}"...`);
@@ -376,7 +352,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
                 onClose();
             }
         } catch (err) {
-            console.error("Upload error:", err);
             setUploadMessage("Upload failed. Try again.");
         } finally {
             setLoading(false);
@@ -415,10 +390,6 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
             email: email,
             Position: position,
         };
-
-        console.log("=== ADDING NEW PERSON ===");
-        console.log("Person Data:", personData);
-        console.log("Modal Type:", currentModalType);
 
         const result = await AddSbData(personData);
 
@@ -909,11 +880,13 @@ const UploadDocumentModal = ({ isOpen, onClose, folderId, isSuccess }) => {
                                     ) : (
                                         <div className="relative">
                                             <input
-                                                type="date"
-                                                value={dateOfResolution}
-                                                onChange={(e) => setDateOfResolution(e.target.value)}
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
-                                            />
+    type="date"
+    value={dateOfResolution}
+    onChange={(e) => setDateOfResolution(e.target.value)}
+    // Pinipigilan ang anumang key press para hindi makapag-type
+    onKeyDown={(e) => e.preventDefault()} 
+    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-700/50 dark:text-gray-200"
+/>
                                         </div>
                                     )}
                                 </div>

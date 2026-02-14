@@ -7,8 +7,6 @@ import {
     ChevronLeft,
     ChevronRight,
     Folder,
-    File,
-    FileText,
     MoreVertical,
     Eye,
     Edit,

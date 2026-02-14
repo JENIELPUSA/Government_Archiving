@@ -2810,185 +2810,50 @@ exports.DisplayDocumentPerYear = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
-  const {
-    search,
-    district,
-    detailInfo,
-    Position,
-    term_from,
-    term_to,
-    term,
-    page,
-    limit,
-  } = req.query;
+  const { search, district, detailInfo, Position, term_from, term_to, term, page, limit } = req.query;
 
-  const aggregationPipeline = [];
+  const limitNumber = parseInt(limit) || 20;
+  const currentPage = parseInt(page) || 1;
+  const skip = (currentPage - 1) * limitNumber;
+
   const matchStage = {};
 
-  // --- Filters ---
   if (district) matchStage.district = district;
   if (detailInfo) matchStage.detailInfo = detailInfo;
-  if (Position) {
-    matchStage.Position = { $regex: new RegExp(`^${Position}$`, "i") };
-  }
-  if (term && term.trim() !== "") {
-    matchStage.term = { $regex: new RegExp(`^\\s*${term.trim()}\\s*$`, "i") };
-  }
+  if (Position) matchStage.Position = { $regex: `^${Position}$`, $options: "i" };
+  if (term?.trim()) matchStage.term = { $regex: `^\\s*${term.trim()}\\s*$`, $options: "i" };
 
-  if (Object.keys(matchStage).length > 0) {
-    aggregationPipeline.push({ $match: matchStage });
-  }
-
-  // --- Year-based filtering ---
   if (term_from || term_to) {
-    const exprConditions = [];
-    if (term_from)
-      exprConditions.push({ $gte: [{ $year: "$term_from" }, parseInt(term_from)] });
-    if (term_to)
-      exprConditions.push({ $lte: [{ $year: "$term_to" }, parseInt(term_to)] });
-
-    if (exprConditions.length > 0) {
-      aggregationPipeline.push({
-        $match: {
-          $expr:
-            exprConditions.length === 1
-              ? exprConditions[0]
-              : { $and: exprConditions },
-        },
-      });
-    }
+    matchStage.term_from = {};
+    matchStage.term_to = {};
+    if (term_from) matchStage.term_from.$gte = new Date(`${term_from}-01-01`);
+    if (term_to) matchStage.term_to.$lte = new Date(`${term_to}-12-31`);
+    if (Object.keys(matchStage.term_from).length === 0) delete matchStage.term_from;
+    if (Object.keys(matchStage.term_to).length === 0) delete matchStage.term_to;
   }
 
-  // --- Add fullName field EARLY for search (UPDATED FOR MIDDLE INITIAL) ---
-  aggregationPipeline.push({
-    $addFields: {
-      fullName: {
-        $concat: [
-          "$first_name",
-          " ",
-          {
-            $cond: [
-              { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
-              {
-                $concat: [
-                  // Kunin ang unang character ng middle name at lagyan ng period
-                  { $substrCP: ["$middle_name", 0, 1] },
-                  ". ", // Lagyan ng period at space
-                  "$last_name"
-                ]
-              },
-              // Kung walang middle name, diretso last name
-              "$last_name"
-            ]
-          }
-        ]
-      },
-      // Alternative format: middle initial without period
-      fullNameNoPeriod: {
-        $concat: [
-          "$first_name",
-          " ",
-          {
-            $cond: [
-              { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
-              {
-                $concat: [
-                  // Kunin ang unang character ng middle name TAPOS WALANG PERIOD
-                  { $substrCP: ["$middle_name", 0, 1] },
-                  " ", // Space lang, walang period
-                  "$last_name"
-                ]
-              },
-              "$last_name"
-            ]
-          }
-        ]
-      },
-      // For search purposes - includes all name parts
-      searchableFullName: {
-        $concat: [
-          { $ifNull: ["$first_name", ""] },
-          " ",
-          { $ifNull: ["$middle_name", ""] },
-          " ",
-          { $ifNull: ["$last_name", ""] }
-        ]
-      }
-    },
-  });
-
-  // --- Search filter (should come BEFORE grouping) ---
   if (search) {
-    // Clean and prepare search term
-    const searchTerm = search.trim();
-    
-    aggregationPipeline.push({
-      $match: {
-        $or: [
-          // Basic field searches (case-insensitive)
-          { first_name: { $regex: searchTerm, $options: "i" } },
-          { middle_name: { $regex: searchTerm, $options: "i" } },
-          { last_name: { $regex: searchTerm, $options: "i" } },
-          
-          // Search in formatted full names (case-insensitive)
-          { fullName: { $regex: searchTerm, $options: "i" } },
-          { fullNameNoPeriod: { $regex: searchTerm, $options: "i" } },
-          { searchableFullName: { $regex: searchTerm, $options: "i" } },
-          
-          // Special handling for middle initial with optional period
-          {
-            $expr: {
-              $regexMatch: {
-                input: {
-                  $concat: [
-                    "$first_name",
-                    " ",
-                    {
-                      $cond: [
-                        { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
-                        {
-                          $concat: [
-                            { $substrCP: ["$middle_name", 0, 1] },
-                            "\\.?\\s*", // Optional period followed by optional spaces
-                            "$last_name"
-                          ]
-                        },
-                        "$last_name"
-                      ]
-                    }
-                  ]
-                },
-                regex: searchTerm.replace(/\s+/g, "\\s*"),
-                options: "i" // CASE-INSENSITIVE
-              }
-            }
-          },
-          
-          // Handle search for "first middle last" format
-          {
-            $expr: {
-              $regexMatch: {
-                input: {
-                  $concat: [
-                    { $ifNull: ["$first_name", ""] },
-                    "\\s+",
-                    { $ifNull: ["$middle_name", ""] },
-                    "\\s+",
-                    { $ifNull: ["$last_name", ""] }
-                  ]
-                },
-                regex: searchTerm.replace(/\s+/g, "\\s+"),
-                options: "i" // CASE-INSENSITIVE
-              }
-            }
-          }
-        ],
-      },
-    });
+    const s = search.trim();
+    matchStage.$or = [
+      { first_name: { $regex: `^${s}`, $options: "i" } },
+      { middle_name: { $regex: `^${s}`, $options: "i" } },
+      { last_name: { $regex: `^${s}`, $options: "i" } },
+    ];
   }
 
-  // --- Lookup files ---
-  aggregationPipeline.push({
+  const pipeline = [];
+
+  if (Object.keys(matchStage).length > 0) pipeline.push({ $match: matchStage });
+
+  // Sort and paginate first
+  pipeline.push(
+    { $sort: { first_name: 1, last_name: 1 } },
+    { $skip: skip },
+    { $limit: limitNumber }
+  );
+
+  // Lookup files per member
+  pipeline.push({
     $lookup: {
       from: "files",
       let: { memberId: "$_id" },
@@ -2997,176 +2862,80 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           $match: {
             $expr: {
               $and: [
+                { $eq: ["$memberId", "$$memberId"] },
                 { $eq: ["$status", "Approved"] },
-                {
-                  $or: [
-                    { $eq: ["$ArchivedStatus", "Archived"] },
-                    { $eq: ["$ArchivedStatus", "Active"] },
-                  ],
-                },
-              ],
-            },
-          },
+                { $in: ["$ArchivedStatus", ["Archived", "Active"]] }
+              ]
+            }
+          }
         },
-        {
-          $project: {
-            _id: 1,
-            title: 1,
-            category: 1,
-            createdAt: 1,
-            chairpersons: 1,
-            viceChairpersons: 1,
-            members: 1,
-            resolutionNumber: 1,
-            dateOfResolution: 1,
-            status: 1,
-          },
-        },
+        { $project: { _id: 1, title: 1, chairpersons: 1, viceChairpersons: 1, members: 1 } }
       ],
-      as: "files",
-    },
-  });
-
-  // --- Add role checks ---
-  aggregationPipeline.push({
-    $addFields: {
-      isChairperson: {
-        $size: {
-          $filter: {
-            input: "$files",
-            as: "f",
-            cond: { $in: ["$_id", { $ifNull: ["$$f.chairpersons", []] }] },
-          },
-        },
-      },
-      isViceChairperson: {
-        $size: {
-          $filter: {
-            input: "$files",
-            as: "f",
-            cond: { $in: ["$_id", { $ifNull: ["$$f.viceChairpersons", []] }] },
-          },
-        },
-      },
-      isMember: {
-        $size: {
-          $filter: {
-            input: "$files",
-            as: "f",
-            cond: { $in: ["$_id", { $ifNull: ["$$f.members", []] }] },
-          },
-        },
-      },
-    },
-  });
-
-  // --- Search in files (separate from name search) ---
-  if (search) {
-    const searchTerm = search.trim();
-    
-    // Add file search as a separate stage after lookup
-    aggregationPipeline.push({
-      $match: {
-        $or: [
-          { "files.title": { $regex: searchTerm, $options: "i" } },
-          // Keep the existing name matches to include authors without matching files
-          { first_name: { $regex: searchTerm, $options: "i" } },
-          { middle_name: { $regex: searchTerm, $options: "i" } },
-          { last_name: { $regex: searchTerm, $options: "i" } },
-          { fullName: { $regex: searchTerm, $options: "i" } },
-          { fullNameNoPeriod: { $regex: searchTerm, $options: "i" } },
-          { searchableFullName: { $regex: searchTerm, $options: "i" } },
-        ],
-      },
-    });
-  }
-
-  // --- Group by same fullName to merge duplicate names ---
-  aggregationPipeline.push({
-    $group: {
-      _id: "$fullName",
-      originalDoc: { $first: "$$ROOT" },
-      allFiles: { $push: "$files" },
+      as: "files"
     }
   });
 
-  // --- Merge files from all duplicates ---
-  aggregationPipeline.push({
+  // Add fullName
+  pipeline.push({
     $addFields: {
-      "originalDoc.files": {
-        $reduce: {
-          input: "$allFiles",
-          initialValue: [],
-          in: { $concatArrays: ["$$value", "$$this"] }
-        }
+      fullName: {
+        $concat: [
+          "$first_name",
+          " ",
+          {
+            $cond: [
+              { $and: [{ $ne: ["$middle_name", null] }, { $ne: ["$middle_name", ""] }] },
+              { $concat: [{ $substrCP: ["$middle_name", 0, 1] }, ". ", "$last_name"] },
+              "$last_name"
+            ]
+          }
+        ]
       }
     }
   });
 
-  // --- Remove duplicate files within the merged array ---
-  aggregationPipeline.push({
-    $addFields: {
-      "originalDoc.files": {
-        $reduce: {
-          input: "$originalDoc.files",
-          initialValue: [],
-          in: {
-            $cond: [
-              { $in: ["$$this._id", "$$value._id"] },
-              "$$value",
-              { $concatArrays: ["$$value", ["$$this"]] }
-            ]
+  // Group by fullName (combine files)
+  pipeline.push(
+    {
+      $group: {
+        _id: "$fullName",
+        originalDoc: { $first: "$$ROOT" },
+        allFiles: { $push: "$files" }
+      }
+    },
+    {
+      $addFields: {
+        "originalDoc.files": {
+          $reduce: {
+            input: "$allFiles",
+            initialValue: [],
+            in: { $concatArrays: ["$$value", "$$this"] }
           }
         }
       }
-    }
-  });
+    },
+    { $replaceRoot: { newRoot: "$originalDoc" } }
+  );
 
-  // --- Filter documents that have matching files after grouping ---
-  if (search) {
-    const searchTerm = search.trim();
-    
-    aggregationPipeline.push({
-      $match: {
-        $or: [
-          { "originalDoc.files.title": { $regex: searchTerm, $options: "i" } },
-          { "_id": { $regex: searchTerm, $options: "i" } } // fullName is now _id
-        ]
-      }
-    });
-  }
+  // Total count (paginated after group)
+  const countPipeline = [...pipeline];
+  countPipeline.push({ $count: "total" });
 
-  // --- Replace root with the original document structure ---
-  aggregationPipeline.push({
-    $replaceRoot: {
-      newRoot: "$originalDoc"
-    }
-  });
+  const [paginatedResult, countResult] = await Promise.all([
+    SBmember.aggregate(pipeline).allowDiskUse(true),
+    SBmember.aggregate(countPipeline).allowDiskUse(true)
+  ]);
 
-  // --- Sort by fullName ---
-  aggregationPipeline.push({
-    $sort: { "first_name": 1, "last_name": 1 }
-  });
-
-  // --- Pagination ---
-  const AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
-
-  const totalCount = AuthorsWithFiles.length;
-  const limitNumber = parseInt(limit) || 20;
-  const currentPage = parseInt(page) || 1;
-  const totalPages = Math.ceil(totalCount / limitNumber);
-  const startIndex = (currentPage - 1) * limitNumber;
-  const endIndex = currentPage * limitNumber;
-  const paginatedData = AuthorsWithFiles.slice(startIndex, endIndex);
+  const totalCount = countResult[0]?.total || 0;
 
   res.status(200).json({
     status: "success",
     currentPage,
-    totalPages,
-    data: paginatedData,
+    totalPages: Math.ceil(totalCount / limitNumber),
+    totalCount,
+    data: paginatedResult
   });
 });
-
 exports.PublicSummaryTerm = AsyncErrorHandler(async (req, res, next) => {
   const { first_name, middle_name, last_name } = req.query;
 

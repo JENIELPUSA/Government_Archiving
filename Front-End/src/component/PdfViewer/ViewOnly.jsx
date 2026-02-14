@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useCallback, useContext } from "rea
 import { Document, Page, pdfjs } from "react-pdf";
 import axios from "axios";
 import { AuthContext } from "../../contexts/AuthContext";
-import { ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Menu, X } from "lucide-react";
+import { ZoomIn, ZoomOut, Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
@@ -10,7 +10,7 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
     const { authToken } = useContext(AuthContext);
     const [fileUrl, setFileUrl] = useState(null);
     const [numPages, setNumPages] = useState(null);
-    const [currentPage, setCurrentPage] = useState(1);
+    const [pageNumber, setPageNumber] = useState(1); // for navigation
     const [scale, setScale] = useState(1.0);
     const [isLoading, setIsLoading] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -19,63 +19,42 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
     const cachedPdfRef = useRef({ fileId: null, url: null, bytes: null });
     const menuRef = useRef(null);
 
-    // Check screen size and set initial scale
+    // Screen size detection
     useEffect(() => {
         const checkScreenSize = () => {
             const width = window.innerWidth;
-            // Check if screen is xs or max-xs (typically < 768px)
             if (width < 768) {
                 setScale(0.6);
                 setIsMobile(true);
             } else {
                 setScale(1.0);
                 setIsMobile(false);
-                setMobileMenuOpen(false); // Close mobile menu when switching to desktop
+                setMobileMenuOpen(false);
             }
         };
-
-        // Check on initial load
         checkScreenSize();
-
-        // Add event listener for window resize
         window.addEventListener("resize", checkScreenSize);
-
-        // Clean up
         return () => window.removeEventListener("resize", checkScreenSize);
     }, []);
 
-    // Close menu when clicking outside
+    // Click outside to close mobile menu
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
                 setMobileMenuOpen(false);
             }
         };
-
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    useEffect(() => {
-        return () => {
-            if (fileUrl) {
-                URL.revokeObjectURL(fileUrl);
-            }
-        };
-    }, [fileUrl]);
-
+    // Fetch PDF
     const fetchPDF = useCallback(async () => {
-        if (abortControllerRef.current) {
-            abortControllerRef.current.abort();
-        }
+        if (abortControllerRef.current) abortControllerRef.current.abort();
         abortControllerRef.current = new AbortController();
         const signal = abortControllerRef.current.signal;
 
         setIsLoading(true);
-        setNumPages(null);
-        setCurrentPage(1);
 
         try {
             if (cachedPdfRef.current.fileId === fileId && cachedPdfRef.current.url) {
@@ -90,74 +69,36 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                 signal,
             });
 
-            const originalBlob = res.data;
-            const currentPdfBytes = await originalBlob.arrayBuffer();
+            const currentPdfBytes = await res.data.arrayBuffer();
             const newUrl = URL.createObjectURL(new Blob([currentPdfBytes], { type: "application/pdf" }));
 
-            cachedPdfRef.current = {
-                fileId,
-                url: newUrl,
-                bytes: currentPdfBytes,
-            };
-
+            cachedPdfRef.current = { fileId, url: newUrl, bytes: currentPdfBytes };
             setFileUrl(newUrl);
         } catch (error) {
-            if (error.name !== "CanceledError") {
-                console.error("Failed to load PDF:", error);
-            }
+            if (error.name !== "CanceledError") console.error("Failed to load PDF:", error);
         } finally {
             setIsLoading(false);
             if (onLoadComplete) onLoadComplete();
         }
-    }, [fileId, authToken, onLoadComplete]);
+    }, [fileId, onLoadComplete]);
 
     useEffect(() => {
         if (fileId) fetchPDF();
-        return () => {
-            if (abortControllerRef.current) {
-                abortControllerRef.current.abort();
-            }
-        };
     }, [fileId, fetchPDF]);
 
-    const onDocumentLoadSuccess = useCallback(({ numPages }) => {
+    // Document load success
+    const onDocumentLoadSuccess = ({ numPages }) => {
         setNumPages(numPages);
-    }, []);
+        setPageNumber(1);
+    };
 
+    // Navigation
+    const goToPrevPage = () => setPageNumber((prev) => Math.max(prev - 1, 1));
+    const goToNextPage = () => setPageNumber((prev) => Math.min(prev + 1, numPages));
+
+    // Zoom
     const handleZoomIn = useCallback(() => setScale((prev) => Math.min(prev + 0.2, 2.0)), []);
     const handleZoomOut = useCallback(() => setScale((prev) => Math.max(prev - 0.2, 0.5)), []);
-
-    const goToPrevPage = useCallback(() => {
-        setCurrentPage((prev) => Math.max(prev - 1, 1));
-    }, []);
-
-    const goToNextPage = useCallback(() => {
-        setCurrentPage((prev) => Math.min(prev + 1, numPages || 1));
-    }, [numPages]);
-
-    const goToPage = useCallback(
-        (pageNum) => {
-            const page = parseInt(pageNum);
-            if (page >= 1 && page <= (numPages || 1)) {
-                setCurrentPage(page);
-            }
-        },
-        [numPages],
-    );
-
-    // Keyboard navigation
-    useEffect(() => {
-        const handleKeyPress = (e) => {
-            if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-                goToPrevPage();
-            } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-                goToNextPage();
-            }
-        };
-
-        document.addEventListener("keydown", handleKeyPress);
-        return () => document.removeEventListener("keydown", handleKeyPress);
-    }, [goToPrevPage, goToNextPage]);
 
     return (
         <>
@@ -169,143 +110,68 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                     align-items: center;
                     width: 100%;
                     height: 100%;
-                    overflow-y: auto;
+                    overflow: auto;
                     position: relative;
                     background-color: #f0f0f0;
                     padding: 10px;
+                }
+
+                @media (max-width: 768px) {
+                    .pdf-viewer-container {
+                        overflow: hidden !important;
+                        touch-action: none;
+                    }
                 }
 
                 .pdf-content {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
-                    flex: 1;
-                }
-
-                .react-pdf__Document {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    max-width: fit-content;
-                }
-
-                .page-wrapper {
-                    display: flex;
-                    justify-content: center;
-                    margin-bottom: 20px;
+                    width: 100%;
                 }
 
                 .pdf-page-container {
-                    position: relative;
                     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     background: white;
                     border: 1px solid #eaeaea;
+                    margin-bottom: 10px; /* space between pages */
                 }
 
+                /* Toolbar with blur */
                 .toolbar {
                     position: sticky;
                     top: 15px;
                     display: flex;
                     gap: 12px;
                     padding: 12px 16px;
-                    background: white;
+                    background: rgba(255, 255, 255, 0.7);
+                    backdrop-filter: blur(20px);
                     border-radius: 10px;
                     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
                     z-index: 20;
                     margin-bottom: 20px;
-                    flex-wrap: wrap;
-                    align-items: center;
                 }
 
                 .toolbar button {
                     background-color: #f8fafc;
                     border: 1px solid #cbd5e0;
                     border-radius: 6px;
-                    padding: 8px 12px;
+                    width: 40px;
+                    height: 40px;
                     cursor: pointer;
-                    transition: all 0.2s ease;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-                    min-width: 40px;
-                    height: 40px;
-                }
-
-                .toolbar button:hover:not(:disabled) {
-                    background-color: #e2e8f0;
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-                }
-
-                .toolbar button:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                    background-color: #f1f5f9;
-                }
-
-                .page-navigation {
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    margin-left: 8px;
-                    padding-left: 8px;
-                    border-left: 1px solid #cbd5e0;
                 }
 
                 .page-info {
-                    font-size: 14px;
-                    color: #64748b;
-                    font-weight: 500;
-                    margin: 0 8px;
-                    white-space: nowrap;
-                }
-
-                .page-input {
-                    width: 50px;
-                    padding: 4px 8px;
-                    border: 1px solid #cbd5e0;
-                    border-radius: 4px;
-                    text-align: center;
-                    font-size: 14px;
-                }
-
-                .page-input:focus {
-                    outline: none;
-                    border-color: #3b82f6;
-                    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-                }
-
-                .loading-overlay {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background-color: rgba(255, 255, 255, 0.9);
                     display: flex;
-                    justify-content: center;
                     align-items: center;
-                    z-index: 10;
-                    flex-direction: column;
+                    gap: 8px;
+                    font-size: 14px;
+                    margin-left: 8px;
                 }
 
-                .loading-spinner {
-                    border: 4px solid rgba(0, 0, 0, 0.1);
-                    border-radius: 50%;
-                    border-top: 4px solid #3b82f6;
-                    width: 40px;
-                    height: 40px;
-                    animation: spin 1s linear infinite;
-                    margin-bottom: 10px;
-                }
-
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-
-                /* Mobile floating button styles */
                 .mobile-floating-button {
                     position: fixed;
                     bottom: 20px;
@@ -318,17 +184,16 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
                     z-index: 1000;
                     border: none;
-                    cursor: pointer;
                 }
 
                 .mobile-menu {
                     position: fixed;
                     bottom: 90px;
                     right: 20px;
-                    background: white;
+                    background: rgba(255, 255, 255, 0.85);
+                    backdrop-filter: blur(20px);
                     border-radius: 12px;
                     padding: 16px;
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
@@ -336,241 +201,62 @@ const ViewOnly = React.memo(({ fileData, fileId, onLoadComplete }) => {
                     display: flex;
                     flex-direction: column;
                     gap: 12px;
-                    min-width: 200px;
                 }
 
                 .mobile-menu button {
                     display: flex;
                     align-items: center;
-                    gap: 12px;
-                    padding: 12px;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.2s;
-                }
-
-                .mobile-menu button:hover {
-                    background: #e2e8f0;
-                    transform: translateY(-2px);
-                }
-
-                .mobile-menu button:disabled {
-                    opacity: 0.5;
-                    cursor: not-allowed;
-                }
-
-                .mobile-page-nav {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    margin-top: 8px;
-                }
-
-                .mobile-page-info {
-                    text-align: center;
-                    font-size: 14px;
-                    color: #64748b;
-                    margin: 0 12px;
-                }
-
-                @media print {
-                    .print-hidden {
-                        display: none !important;
-                    }
-                    .print-pdf-container {
-                        box-shadow: none !important;
-                        border: none !important;
-                        margin-bottom: 0 !important;
-                    }
-                    .react-pdf__Page canvas {
-                        width: 100% !important;
-                        height: auto !important;
-                    }
-                }
-
-                @media (max-width: 768px) {
-                    .toolbar {
-                        display: none;
                     gap: 8px;
-                        padding: 8px 12px;
-                    }
-                    
-                    .page-info {
-                        font-size: 12px;
-                        margin: 0 4px;
-                    }
-                    
-                    .page-input {
-                        width: 40px;
-                        font-size: 12px;
-                    }
-                    
-                    /* Mobile-specific styles for PDF display */
-                    .pdf-page-container {
-                        transform: scale(0.6);
-                        transform-origin: top center;
-                        width: 166.67%;
-                        margin: -20px 0;
-                    }
-                    
-                    .react-pdf__Page {
-                        display: flex;
-                        justify-content: center;
-                    }
-                }
-                
-                /* For very small screens (max-xs) */
-                @media (max-width: 480px) {
-                    .mobile-floating-button {
-                        bottom: 15px;
-                        right: 15px;
-                        width: 50px;
-                        height: 50px;
-                    }
-                    
-                    .mobile-menu {
-                        bottom: 75px;
-                        right: 15px;
-                        min-width: 180px;
-                    }
                 }
                 `}
             </style>
 
             <div className="pdf-viewer-container">
-                {/* Standard toolbar for desktop */}
+                {/* Desktop toolbar */}
                 {!isMobile && (
                     <div className="toolbar print-hidden">
-                        <button
-                            onClick={handleZoomIn}
-                            title="Zoom In (Ctrl + +)"
-                        >
-                            <ZoomIn size={20} />
-                        </button>
-                        <button
-                            onClick={handleZoomOut}
-                            title="Zoom Out (Ctrl + -)"
-                        >
-                            <ZoomOut size={20} />
-                        </button>
-
-                        {numPages && (
-                            <div className="page-navigation">
-                                <button
-                                    onClick={goToPrevPage}
-                                    disabled={currentPage <= 1}
-                                    title="Previous Page (←)"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={numPages}
-                                    value={currentPage}
-                                    onChange={(e) => goToPage(e.target.value)}
-                                    className="page-input"
-                                    title="Go to page"
-                                />
-
-                                <span className="page-info">of {numPages}</span>
-
-                                <button
-                                    onClick={goToNextPage}
-                                    disabled={currentPage >= numPages}
-                                    title="Next Page (→)"
-                                >
-                                    <ChevronRight size={20} />
-                                </button>
-                            </div>
-                        )}
+                        <button onClick={handleZoomIn} title="Zoom In"><ZoomIn size={20} /></button>
+                        <button onClick={handleZoomOut} title="Zoom Out"><ZoomOut size={20} /></button>
+    
                     </div>
                 )}
 
                 {/* Mobile floating button and menu */}
                 {isMobile && (
                     <>
-                        <button
-                            className="mobile-floating-button print-hidden"
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        >
+                        <button className="mobile-floating-button print-hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                         </button>
-
                         {mobileMenuOpen && (
-                            <div
-                                className="mobile-menu print-hidden"
-                                ref={menuRef}
-                            >
-                                <button onClick={handleZoomIn}>
-                                    <ZoomIn size={20} />
-                                    <span>Zoom In</span>
-                                </button>
-
-                                <button onClick={handleZoomOut}>
-                                    <ZoomOut size={20} />
-                                    <span>Zoom Out</span>
-                                </button>
-
-                                {numPages && (
-                                    <div className="mobile-page-nav">
-                                        <button
-                                            onClick={goToPrevPage}
-                                            disabled={currentPage <= 1}
-                                            title="Previous Page"
-                                        >
-                                            <ChevronLeft size={20} />
-                                        </button>
-
-                                        <div className="mobile-page-info">
-                                            {currentPage} of {numPages}
-                                        </div>
-
-                                        <button
-                                            onClick={goToNextPage}
-                                            disabled={currentPage >= numPages}
-                                            title="Next Page"
-                                        >
-                                            <ChevronRight size={20} />
-                                        </button>
-                                    </div>
-                                )}
+                            <div className="mobile-menu print-hidden" ref={menuRef}>
+                                <button onClick={handleZoomIn}><ZoomIn size={20} /> Zoom In</button>
+                                <button onClick={handleZoomOut}><ZoomOut size={20} /> Zoom Out</button>
                             </div>
                         )}
                     </>
                 )}
 
                 <div className="pdf-content">
-                    {isLoading && (
-                        <div className="loading-overlay">
-                            <div className="loading-spinner"></div>
-                            <p className="text-gray-600">Loading PDF...</p>
-                        </div>
-                    )}
+                    {isLoading && <p>Loading...</p>}
 
                     {fileUrl ? (
                         <Document
                             file={fileUrl}
                             onLoadSuccess={onDocumentLoadSuccess}
-                            onLoadError={console.error}
-                            key={fileUrl}
+                            key={fileId}
                         >
-                            <div className="page-wrapper">
-                                <div className="pdf-page-container print-pdf-container">
-                                    <Page
-                                        pageNumber={currentPage}
-                                        scale={isMobile ? 1.0 : scale} // Use 1.0 scale on mobile since we're using CSS transform
-                                        renderAnnotationLayer={false}
-                                        renderTextLayer={false}
-                                    />
-                                </div>
+                            {/* Render only the current page (for navigation) */}
+                            <div className="pdf-page-container">
+                                <Page
+                                    pageNumber={pageNumber}
+                                    scale={scale}
+                                    renderAnnotationLayer={false}
+                                    renderTextLayer={false}
+                                />
                             </div>
                         </Document>
                     ) : (
-                        !isLoading && <p>Select a PDF to view.</p>
+                        !isLoading && <p>No file selected.</p>
                     )}
                 </div>
             </div>

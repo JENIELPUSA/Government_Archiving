@@ -258,29 +258,18 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
   const [modalStatus, setModalStatus] = useState("success");
   const [customError, setCustomError] = useState("");
   const [isLoadingPage, setIsLoadingPage] = useState(false);
+  const [nextPageLoading, setNextPageLoading] = useState(false);
+  const [prevPageLoading, setPrevPageLoading] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const originalPdfBytesRef = useRef(null);
   const printIframeRef = useRef(null);
 
-  const debouncedSetPageNumber = useDebounce((page) => {
-    setPageNumber(page);
-    setIsLoadingPage(false);
-  }, 1000);
-
-  const debouncedNextPage = useDebounce(() => {
-    if (pageNumber < numPages) {
-      setPageNumber(prev => prev + 1);
-      setIsLoadingPage(false);
-    }
-  }, 1000);
-
-  const debouncedPrevPage = useDebounce(() => {
-    if (pageNumber > 1) {
-      setPageNumber(prev => prev - 1);
-      setIsLoadingPage(false);
-    }
-  }, 1000);
-
+  // DEBOUNCE STATES AND REFS
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
+  const [navigationDebounce, setNavigationDebounce] = useState(true);
+  const nextPageTimeoutRef = useRef(null);
+  const prevPageTimeoutRef = useRef(null);
+  const initialLoadTimeoutRef = useRef(null);
   const debouncedCloseRef = useRef(null);
 
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -329,6 +318,8 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
       setScale(0.7);
       setIsPrinting(false);
       setPageNumber(1);
+      setIsInitialLoadComplete(false);
+      setNavigationDebounce(true);
       
       onClose();
     }, 200);
@@ -336,12 +327,14 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
 
   useEffect(() => {
     return () => {
+      // Clean up all timeouts
+      if (nextPageTimeoutRef.current) clearTimeout(nextPageTimeoutRef.current);
+      if (prevPageTimeoutRef.current) clearTimeout(prevPageTimeoutRef.current);
+      if (initialLoadTimeoutRef.current) clearTimeout(initialLoadTimeoutRef.current);
+      if (debouncedCloseRef.current) clearTimeout(debouncedCloseRef.current);
+      
       if (printIframeRef.current && document.body.contains(printIframeRef.current)) {
         document.body.removeChild(printIframeRef.current);
-      }
-      
-      if (debouncedCloseRef.current) {
-        clearTimeout(debouncedCloseRef.current);
       }
     };
   }, []);
@@ -368,26 +361,116 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
     }
   };
 
-  const handlePageChange = useCallback((newPage) => {
-    if (newPage >= 1 && newPage <= numPages && newPage !== pageNumber) {
-      setIsLoadingPage(true);
-      debouncedSetPageNumber(newPage);
+  // DEBOUNCE FOR INITIAL PDF OPEN (2 SECONDS)
+  useEffect(() => {
+    if (fileUrl && numPages && !isInitialLoadComplete) {
+      // Clear any existing timeout
+      if (initialLoadTimeoutRef.current) {
+        clearTimeout(initialLoadTimeoutRef.current);
+      }
+      
+      // Set 2 second debounce for initial load
+      initialLoadTimeoutRef.current = setTimeout(() => {
+        setIsInitialLoadComplete(true);
+        setNavigationDebounce(false);
+        console.log('Navigation enabled after 2 second debounce');
+      }, 2000);
     }
-  }, [numPages, pageNumber, debouncedSetPageNumber]);
+    
+    return () => {
+      if (initialLoadTimeoutRef.current) {
+        clearTimeout(initialLoadTimeoutRef.current);
+      }
+    };
+  }, [fileUrl, numPages, isInitialLoadComplete]);
 
+  // DEBOUNCED PAGE NAVIGATION FUNCTIONS
   const handleNextPage = useCallback(() => {
-    if (pageNumber < numPages) {
-      setIsLoadingPage(true);
-      debouncedNextPage();
+    // Check if navigation is allowed
+    if (pageNumber < numPages && !isLoadingPage && !nextPageLoading && isInitialLoadComplete && !navigationDebounce) {
+      // Set debounce state
+      setNavigationDebounce(true);
+      setNextPageLoading(true);
+      
+      // Clear any existing timeout
+      if (nextPageTimeoutRef.current) {
+        clearTimeout(nextPageTimeoutRef.current);
+      }
+      
+      // Set 2 second debounce before actual navigation
+      nextPageTimeoutRef.current = setTimeout(() => {
+        setIsLoadingPage(true);
+        setPageNumber(prev => prev + 1);
+        
+        // Reset debounce after navigation
+        setTimeout(() => {
+          setNavigationDebounce(false);
+          setNextPageLoading(false);
+        }, 100);
+      }, 2000);
     }
-  }, [pageNumber, numPages, debouncedNextPage]);
+  }, [pageNumber, numPages, isLoadingPage, nextPageLoading, isInitialLoadComplete, navigationDebounce]);
 
   const handlePrevPage = useCallback(() => {
-    if (pageNumber > 1) {
-      setIsLoadingPage(true);
-      debouncedPrevPage();
+    // Check if navigation is allowed
+    if (pageNumber > 1 && !isLoadingPage && !prevPageLoading && isInitialLoadComplete && !navigationDebounce) {
+      // Set debounce state
+      setNavigationDebounce(true);
+      setPrevPageLoading(true);
+      
+      // Clear any existing timeout
+      if (prevPageTimeoutRef.current) {
+        clearTimeout(prevPageTimeoutRef.current);
+      }
+      
+      // Set 2 second debounce before actual navigation
+      prevPageTimeoutRef.current = setTimeout(() => {
+        setIsLoadingPage(true);
+        setPageNumber(prev => prev - 1);
+        
+        // Reset debounce after navigation
+        setTimeout(() => {
+          setNavigationDebounce(false);
+          setPrevPageLoading(false);
+        }, 100);
+      }, 2000);
     }
-  }, [pageNumber, debouncedPrevPage]);
+  }, [pageNumber, isLoadingPage, prevPageLoading, isInitialLoadComplete, navigationDebounce]);
+
+  // SIMPLE PAGE NAVIGATION WITH SPECIFIC LOADING STATES
+  const handlePageChange = useCallback((newPage) => {
+    if (newPage >= 1 && newPage <= numPages && newPage !== pageNumber && !isLoadingPage && isInitialLoadComplete && !navigationDebounce) {
+      setIsLoadingPage(true);
+      
+      // Determine if it's next or previous page
+      if (newPage > pageNumber) {
+        setNextPageLoading(true);
+      } else if (newPage < pageNumber) {
+        setPrevPageLoading(true);
+      }
+      
+      setPageNumber(newPage);
+    }
+  }, [numPages, pageNumber, isLoadingPage, isInitialLoadComplete, navigationDebounce]);
+
+  // Auto-reset loading state with timeout
+  useEffect(() => {
+    let timer;
+    
+    if (isLoadingPage) {
+      // Fallback: Auto-reset after 5 seconds if page doesn't load
+      timer = setTimeout(() => {
+        setIsLoadingPage(false);
+        setNextPageLoading(false);
+        setPrevPageLoading(false);
+        console.log('Page loading timeout - auto-resetting loading states');
+      }, 5000);
+    }
+    
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [isLoadingPage]);
 
   const handleDownload = async () => {
     if (!originalPdfBytesRef.current) {
@@ -527,8 +610,12 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
 
     const fetchPDF = async () => {
       try {
+        // Reset states
         setLoadingProgress(0);
         setLoadingSteps(prev => prev.map(step => ({ ...step, completed: false, active: false })));
+        setIsInitialLoadComplete(false);
+        setNavigationDebounce(true);
+        
         updateLoadingStep(0, false, true, "Starting...");
 
         setCurrentStep("Fetching document metadata...");
@@ -627,6 +714,11 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
       setLoadingSteps(loadingSteps.map(step => ({ ...step, completed: false, active: false })));
       setScale(0.7);
       setPageNumber(1);
+      setIsLoadingPage(false);
+      setNextPageLoading(false);
+      setPrevPageLoading(false);
+      setIsInitialLoadComplete(false);
+      setNavigationDebounce(true);
     };
   }, [fileId, isVisible]);
 
@@ -671,6 +763,20 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
 
   const onDocumentLoadSuccess = ({ numPages }) => {
     setNumPages(numPages);
+  };
+
+  // Handler for when page successfully loads
+  const handlePageLoadSuccess = () => {
+    setIsLoadingPage(false);
+    setNextPageLoading(false);
+    setPrevPageLoading(false);
+  };
+
+  // Handler for when page fails to load
+  const handlePageLoadError = () => {
+    setIsLoadingPage(false);
+    setNextPageLoading(false);
+    setPrevPageLoading(false);
   };
 
   return (
@@ -779,6 +885,8 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
                       <Loader2 className="h-8 w-8 animate-spin text-gray-400 dark:text-gray-600" />
                     </div>
                   }
+                  onLoadSuccess={handlePageLoadSuccess}
+                  onLoadError={handlePageLoadError}
                 />
               </Document>
             </div>
@@ -807,8 +915,12 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
             fileUrl={fileUrl}
             fileData={fileData}
             ApprovedReview={() => setApproved(true)}
-            isLoading={!fileUrl || loadingProgress < 100 || isPrinting}
+            isLoading={!fileUrl || loadingProgress < 100 || isPrinting || !isInitialLoadComplete}
             isPageLoading={isLoadingPage}
+            isNextPageLoading={nextPageLoading}
+            isPrevPageLoading={prevPageLoading}
+            isInitialLoadComplete={isInitialLoadComplete}
+            navigationDebounce={navigationDebounce}
           />
         </div>
       </div>
@@ -902,5 +1014,4 @@ const PdfViewer = ({ isVisible, onClose, file, item }) => {
     </PopupModal>
   );
 };
-
 export default PdfViewer;

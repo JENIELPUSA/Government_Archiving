@@ -186,7 +186,6 @@ function DashboardLayout() {
     useEffect(() => {
         // Compare current at previous categorySummary
         if (JSON.stringify(categorySummary) !== JSON.stringify(prevCategorySummaryRef.current)) {
-            console.log("Category summary updated");
             prevCategorySummaryRef.current = categorySummary;
         }
     }, [categorySummary]);

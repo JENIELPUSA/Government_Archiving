@@ -13,7 +13,7 @@ export const DocumentCard = ({ doc, onSelect }) => (
             </div>
             <div className="ml-3 flex-1 overflow-hidden">
                 <h3 className="truncate text-base font-medium text-gray-800 dark:text-gray-200">
-                    {doc.fileName || doc.title || "Untitled Document"}
+                    {doc.title || "Untitled Document"}
                 </h3>
                 <p className="truncate text-sm text-gray-500 dark:text-gray-400">
                     {doc.author || "Unknown Author"}

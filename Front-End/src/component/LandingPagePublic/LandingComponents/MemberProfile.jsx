@@ -131,7 +131,7 @@ const FilterBtn = ({ label, count, active, onClick, color }) => {
     return (
         <button onClick={onClick} className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-[10px] font-bold transition-all ${colorMap[color]}`}>
             <span className="uppercase">{label}</span>
-            <span className={`rounded-md px-1.5 py-0.5 text-[8px] ${active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"}`}>{count || 0}</span>
+            <span className={`rounded-md px-1.5 py-0.5 text-[8px] ${active ? "bg-white/20 text-white" : "bg-gray-100 text-gray-400"}`}></span>
         </button>
     );
 };

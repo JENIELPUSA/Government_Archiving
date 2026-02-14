@@ -339,9 +339,7 @@ const EditDocumentModal = ({ show, document, onClose }) => {
 
             // Directly send the payload to context
             const result = await UpdateFiles(editedDoc._id, payload);
-            console.log("result", result);
             if (result.success) {
-                console.log("TRIGGER");
                 fetchSpecificData(result.data.folderID, { categoryId: result.data.category });
                 onClose();
             }
