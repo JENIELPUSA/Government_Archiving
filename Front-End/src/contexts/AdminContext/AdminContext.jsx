@@ -96,6 +96,8 @@ export const AdminDisplayProvider = ({ children }) => {
     };
 
     const UpdateAdmin = async (dataID, values) => {
+
+        console.log("values",values)
         try {
             const formData = new FormData();
             formData.append("first_name", values.first_name || "");

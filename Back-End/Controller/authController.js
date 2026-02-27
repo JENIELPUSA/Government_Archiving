@@ -18,24 +18,27 @@ const signToken = (id, role, linkId) => {
   });
 };
 
-const createSendResponse = (user, statusCode, res) => {
-  const token = signToken(user._id);
+exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
+  const loggedInUserId = req.user.linkId;
 
-  const options = {
-    maxAge: process.env.LOGIN_EXPR,
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-  };
+  let user = await Admin.findById(loggedInUserId);
 
-  res.cookie("jwt", token, options);
-  user.password = undefined;
+  if (!user) {
+    user = await Officer.findById(loggedInUserId);
+  }
 
-  res.status(statusCode).json({
+  if (!user) {
+    return res.status(404).json({
+      status: "fail",
+      message: "Profile not found in Admin or Officer",
+    });
+  }
+
+  res.status(200).json({
     status: "success",
-    token,
-    data: { user },
+    data: user,
   });
-};
+});
 
 exports.signup = AsyncErrorHandler(async (req, res) => {
   try {
@@ -101,7 +104,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       form.append(
         "file",
         fs.createReadStream(req.file.path),
-        req.file.originalname
+        req.file.originalname,
       );
 
       try {
@@ -111,9 +114,9 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
         });
 
         if (!response.data.success) {
-          return res
-            .status(500)
-            .json({ error: response.data.message || "Failed to upload avatar" });
+          return res.status(500).json({
+            error: response.data.message || "Failed to upload avatar",
+          });
         }
 
         avatar = {
@@ -129,7 +132,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       } catch (err) {
         console.error(
           "❌ Hostinger upload failed:",
-          err.response?.data || err.message
+          err.response?.data || err.message,
         );
         return res.status(500).json({ error: "Failed to upload avatar image" });
       }
@@ -185,7 +188,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
         subject: "Your Account Credentials",
         text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
       }).catch((err) =>
-        console.error("❌ Failed to send signup email:", err.message)
+        console.error("❌ Failed to send signup email:", err.message),
       );
     }
 
@@ -199,28 +202,27 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     // --- Emit socket event ONLY for officer and admin ---
     if (role === "officer" || role === "admin") {
       const io = req.app.get("io");
-        io.emit("newUserSignup", {
-          role,
-          user: newUserLogin
-            ? {
-                id: newUserLogin._id,
-                first_name,
-                last_name,
-                email,
-                role,
-              }
-            : null,
-          profile: {
-            id: linkedRecord._id,
-            first_name: linkedRecord.first_name,
-            last_name: linkedRecord.last_name,
-            Position: linkedRecord.Position || null,
-          },
-          createdAt: new Date(),
-        });
+      io.emit("newUserSignup", {
+        role,
+        user: newUserLogin
+          ? {
+              id: newUserLogin._id,
+              first_name,
+              last_name,
+              email,
+              role,
+            }
+          : null,
+        profile: {
+          id: linkedRecord._id,
+          first_name: linkedRecord.first_name,
+          last_name: linkedRecord.last_name,
+          Position: linkedRecord.Position || null,
+        },
+        createdAt: new Date(),
+      });
 
-        console.log(`📢 Socket emitted for new ${role} signup`);
-      
+      console.log(`📢 Socket emitted for new ${role} signup`);
     }
   } catch (error) {
     console.error("❌ Signup failed:", error);
@@ -230,7 +232,6 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     });
   }
 });
-
 
 exports.login = AsyncErrorHandler(async (req, res, next) => {
   const { email, password } = req.body;
@@ -413,7 +414,7 @@ exports.protect = AsyncErrorHandler(async (req, res, next) => {
   // 3. Verify JWT token
   const decoded = await util.promisify(jwt.verify)(
     token,
-    process.env.SECRET_STR
+    process.env.SECRET_STR,
   );
 
   const user = await UserLogin.findById(decoded.id);
@@ -462,7 +463,7 @@ exports.forgotPassword = AsyncErrorHandler(async (req, res, next) => {
   // If user doesn't exist, return 404
   if (!user) {
     return next(
-      new CustomError("We could  not find the user with given email", 404)
+      new CustomError("We could  not find the user with given email", 404),
     );
   }
 
@@ -496,8 +497,8 @@ exports.forgotPassword = AsyncErrorHandler(async (req, res, next) => {
     return next(
       new CustomError(
         "There was an error sending password reset email. Please try again later",
-        500
-      )
+        500,
+      ),
     );
   }
 });
@@ -537,11 +538,11 @@ exports.updatePassword = AsyncErrorHandler(async (req, res, next) => {
 
   const isMatch = await user.comparePasswordInDb(
     req.body.currentPassword,
-    user.password
+    user.password,
   );
   if (!isMatch) {
     return next(
-      new CustomError("The current password you provided is wrong", 401)
+      new CustomError("The current password you provided is wrong", 401),
     );
   }
 
@@ -557,4 +558,140 @@ exports.updatePassword = AsyncErrorHandler(async (req, res, next) => {
       user,
     },
   });
+});
+
+exports.UpdateAvatar = AsyncErrorHandler(async (req, res) => {
+  console.log("req", req.body);
+  const userId =  req.user.linkId;
+
+  console.log("userId", userId);
+
+  let user = await Admin.findById(userId);
+  let modelType = "Admin";
+
+  if (!user) {
+    user = await Officer.findById(userId);
+    modelType = "Officer";
+  }
+
+  if (!user) {
+    return res
+      .status(404)
+      .json({ error: "User not found in Admin or Officer" });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ error: "Avatar image is required" });
+  }
+
+  const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  if (!allowedTypes.includes(req.file.mimetype)) {
+    fs.unlink(req.file.path, () => {});
+    return res.status(400).json({ error: "Invalid image type" });
+  }
+
+  const oldAvatarUrl = user.avatar?.url || null;
+  let newAvatarUrl = null;
+
+  try {
+    const form = new FormData();
+    form.append("file", fs.createReadStream(req.file.path), {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
+
+    const uploadResponse = await axios.post(
+      "https://bp-sangguniangpanlalawigan.com/upload.php",
+      form,
+      {
+        headers: form.getHeaders(),
+        maxBodyLength: Infinity,
+      },
+    );
+
+    if (!uploadResponse.data.success) {
+      throw new Error(uploadResponse.data.message || "Upload failed");
+    }
+
+    newAvatarUrl = uploadResponse.data.url;
+
+    user.avatar = {
+      ...user.avatar,
+      url: newAvatarUrl,
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      status: true,
+      message: `${modelType} avatar updated successfully`,
+      role: modelType,
+      data: user,
+    });
+
+    if (oldAvatarUrl) {
+      const params = new URLSearchParams();
+      params.append("file", oldAvatarUrl);
+
+      axios
+        .post(
+          "https://bp-sangguniangpanlalawigan.com/delete.php",
+          params.toString(),
+          { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+        )
+        .catch(() => {});
+    }
+  } catch (error) {
+    console.error("UpdateUserAvatar Error:", error);
+    res.status(500).json({ error: "Something went wrong." });
+  } finally {
+    if (req.file) {
+      fs.unlink(req.file.path, () => {});
+    }
+  }
+});
+
+exports.UpdateProfileInfo = AsyncErrorHandler(async (req, res) => {
+  const userId = req.params.id;
+
+  let model = Admin;
+  let user = await Admin.findById(userId);
+
+  if (!user) {
+    model = Officer;
+    user = await Officer.findById(userId);
+  }
+
+  if (!user) {
+    return res.status(404).json({
+      error: "User not found in Admin or Officer",
+    });
+  }
+
+  try {
+    const { first_name, last_name, middle_name, email } = req.body;
+
+    const updateData = {
+      first_name,
+      last_name,
+      middle_name,
+      email,
+    };
+
+    const updatedUser = await model.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true }
+    );
+
+    res.status(200).json({
+      status: "success",
+      message: "Profile updated successfully",
+      data: updatedUser,
+    });
+
+  } catch (error) {
+    console.error("UpdateProfileInfo Error:", error);
+    res.status(500).json({ error: "Something went wrong." });
+  }
 });

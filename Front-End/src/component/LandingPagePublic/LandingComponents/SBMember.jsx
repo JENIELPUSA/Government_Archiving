@@ -182,7 +182,7 @@ const SBmember = ({ Position, onBack }) => {
         <div className="relative min-h-screen bg-[#0a192f] pb-12 font-sans">
             {/* Background Grid Pattern */}
             <div className="fixed inset-0 pointer-events-none opacity-20">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,#1e3a8a_0%,transparent_50%)]"></div>
+                {/* Removed the radial gradient circle (was blue, not yellow) */}
                 <div className="h-full w-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
             </div>
 

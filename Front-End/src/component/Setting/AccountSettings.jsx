@@ -1,301 +1,353 @@
-import {
-  FaUser,
-  FaEye,
-  FaEyeSlash,
-  FaEnvelope,
-  FaBriefcase,
-  FaLock,
-  FaKey,
-} from "react-icons/fa";
+import React, { useState, useEffect, useContext, useRef } from "react";
+import { FaUser, FaEye, FaEyeSlash, FaEnvelope, FaLock, FaCamera, FaTimes, FaCheck, FaCalendarAlt } from "react-icons/fa";
+
+// Contexts
 import { AuthContext } from "../../contexts/AuthContext";
-import React, { useState, useEffect, useContext } from "react";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
-import { UpdateDisplayContext } from "../../contexts/UpdateContext/updateContext";
+import SuccessFailed from "../../ReusableFolder/SuccessandField";
 
 const AccountSettings = ({ showPassword, setShowPassword }) => {
-  const { role, email, linkId } = useContext(AuthContext);
-  const { UpdateAdmin, isAdminProfile } = useContext(AdminDisplayContext);
-  const { UpdatePasswordData } = useContext(UpdateDisplayContext);
+    const { role, email, linkId, Profile, fetchProfile, updateAvatar, UpdateProfileInfo } = useContext(AuthContext);
+    const { UpdateAdmin } = useContext(AdminDisplayContext);
 
-  const [fullName, setFullName] = useState(
-    `${isAdminProfile.first_name || ""} ${isAdminProfile.last_name || ""}`
-  );
-  const [middleName, setMiddleName] = useState(isAdminProfile.middle_name || "");
-  const [department, setDepartment] = useState(isAdminProfile.specialty || "");
-  const [position, setPosition] = useState(role);
+    // Modal & Feedback States
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState("success");
+    const [customError, setCustomError] = useState("");
 
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+    // Profile States
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [middleName, setMiddleName] = useState("");
+    const [gender, setGender] = useState("");
+    const [createdAt, setCreatedAt] = useState("");
 
-  useEffect(() => {
-    if (isAdminProfile) {
-      setFullName(`${isAdminProfile.first_name || ""} ${isAdminProfile.last_name || ""}`);
-      setMiddleName(isAdminProfile.middle_name || "");
-      setDepartment(isAdminProfile.specialty || "");
-    }
-  }, [isAdminProfile]);
+    // Image States
+    const [previewImage, setPreviewImage] = useState(null);
+    const [tempImage, setTempImage] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const fileInputRef = useRef(null);
 
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
+    // Password States
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [newPassword, setNewPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
-    const [first, ...rest] = fullName.trim().split(" ");
-    const last = rest.join(" ");
+    // Initial Fetch
+    useEffect(() => {
+        fetchProfile();
+    }, []);
 
-    const payload = {
-      first_name: first,
-      last_name: last,
-      middle_name: middleName,
-      specialty: department,
-      email,
+    // Sync Profile Data to States
+    useEffect(() => {
+        if (Profile && linkId) {
+            const userProfile = Array.isArray(Profile) ? Profile.find((p) => p._id === linkId) : Profile;
+            if (userProfile) {
+                setFirstName(userProfile.first_name || "");
+                setLastName(userProfile.last_name || "");
+                setMiddleName(userProfile.middle_name || "");
+                setGender(userProfile.gender || "");
+                if (userProfile.created_at) {
+                    const date = new Date(userProfile.created_at).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                    });
+                    setCreatedAt(date);
+                }
+                if (userProfile.avatar?.url) {
+                    setPreviewImage(userProfile.avatar.url);
+                }
+            }
+        }
+    }, [Profile, linkId]);
+
+    // Handle Image Selection from PC
+    const handleImageSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setTempImage(reader.result);
+                setIsModalOpen(true);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
-    await UpdateAdmin(linkId, payload);
-    console.log("🔄 Updating profile with data:", payload);
-  };
+    // --- UPLOAD HANDLER (IMAGE ONLY) ---
+    const handleUploadImage = async () => {
+        if (!imageFile) return;
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert("❌ New passwords do not match!");
-      return;
-    }
+        try {
+            // Tatawagin ang function sa AuthContext
+            await updateAvatar(imageFile);
 
-    const payload = {
-      currentPassword,
-      password: newPassword,
-      confirmPassword,
+            // Success Feedback
+            setPreviewImage(tempImage);
+            setIsModalOpen(false);
+            setModalStatus("success");
+            setShowModal(true);
+            fetchProfile();
+        } catch (error) {
+            console.error("Upload Error:", error);
+            setModalStatus("failed");
+            setCustomError(error.response?.data?.message || "Failed to update profile picture.");
+            setShowModal(true);
+        }
     };
 
-    try {
-      await UpdatePasswordData(payload);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      console.error("❌ Failed to update password:", error);
-      alert("❌ Password update failed!");
-    }
-  };
+    const handleProfileSubmit = async (e) => {
+        e.preventDefault();
 
-  return (
-    <div className="mt-10 border-t border-gray-200 pt-6 dark:border-gray-700">
-      <div className="mb-6 flex justify-center">
-        <div className="rounded-full border-4 border-white bg-blue-100 p-5 shadow-lg dark:border-gray-800 dark:bg-blue-900/50">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-500 text-white">
-            <FaUser className="text-3xl" />
-          </div>
+        const payload = {
+            first_name: firstName,
+            last_name: lastName,
+            middle_name: middleName,
+            gender: gender,
+            email: email,
+        };
+
+        try {
+            await UpdateAdmin(linkId, payload);
+            setModalStatus("success");
+            setShowModal(true);
+        } catch (err) {
+            setModalStatus("failed");
+            setCustomError("Unable to update personal information.");
+            setShowModal(true);
+        }
+    };
+    return (
+        <div className="mx-auto max-w-5xl px-2 py-6 outline-none">
+            {/* AVATAR SECTION */}
+            <div className="mb-10 flex flex-col items-center justify-center space-y-4">
+                <div className="relative">
+                    <div className="size-36 overflow-hidden rounded-full border-4 border-blue-500/20 bg-blue-50 shadow-2xl dark:border-blue-500/30 dark:bg-slate-800">
+                        {previewImage ? (
+                            <img
+                                src={previewImage}
+                                alt="Profile"
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-blue-500/50">
+                                <FaUser size={60} />
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className="absolute bottom-1 right-2 flex size-10 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:scale-110 hover:bg-blue-700 active:scale-95"
+                    >
+                        <FaCamera size={16} />
+                    </button>
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleImageSelect}
+                        className="hidden"
+                        accept="image/*"
+                    />
+                </div>
+                <div className="text-center">
+                    <h2 className="text-xl font-bold text-gray-800 dark:text-white">{`${firstName} ${lastName}`}</h2>
+                    <p className="text-sm font-medium uppercase tracking-widest text-blue-600 dark:text-blue-400">{role}</p>
+                </div>
+            </div>
+
+            {/* PREVIEW MODAL (Bago i-save) */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+                    <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-slate-900">
+                        <div className="flex items-center justify-between border-b p-6 dark:border-gray-800">
+                            <h3 className="text-lg font-bold text-gray-800 dark:text-white">Update Photo</h3>
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="text-gray-400 hover:text-red-500"
+                            >
+                                <FaTimes size={20} />
+                            </button>
+                        </div>
+                        <div className="flex flex-col items-center space-y-6 p-10 text-center">
+                            <div className="size-48 overflow-hidden rounded-full border-4 border-blue-500 shadow-xl">
+                                <img
+                                    src={tempImage}
+                                    alt="Preview"
+                                    className="h-full w-full object-cover"
+                                />
+                            </div>
+                            <p className="text-sm font-medium italic text-gray-500">Save this as your new profile picture?</p>
+                        </div>
+                        <div className="grid grid-cols-2 border-t dark:border-gray-800">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="p-4 font-semibold text-gray-500 transition-colors hover:bg-gray-50 dark:hover:bg-slate-800"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUploadImage}
+                                className="flex items-center justify-center space-x-2 bg-blue-600 p-4 font-bold text-white transition-colors hover:bg-blue-700"
+                            >
+                                <FaCheck /> <span>Save Photo</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MAIN FORMS */}
+            <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+                {/* Personal Info */}
+                <div className="flex flex-col space-y-6 rounded-3xl border border-gray-100 bg-white p-8 shadow-sm dark:border-gray-700/50 dark:bg-slate-800/50">
+                    <div className="flex items-center space-x-3 border-b pb-4 dark:border-gray-700">
+                        <div className="rounded-lg bg-blue-100 p-2 text-blue-600 dark:bg-blue-900/30">
+                            <FaUser size={20} />
+                        </div>
+                        <h4 className="text-lg font-bold">Personal Information</h4>
+                    </div>
+                    <form
+                        onSubmit={handleProfileSubmit}
+                        className="space-y-5"
+                    >
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">First Name</label>
+                                <input
+                                    type="text"
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">Last Name</label>
+                                <input
+                                    type="text"
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">Middle Name</label>
+                                <input
+                                    type="text"
+                                    value={middleName}
+                                    onChange={(e) => setMiddleName(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">Gender</label>
+                                <select
+                                    value={gender}
+                                    onChange={(e) => setGender(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                >
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase text-gray-400">Email Address</label>
+                            <div className="flex items-center space-x-2 rounded-xl border border-gray-200 bg-gray-100 p-3.5 text-gray-500 dark:border-gray-600 dark:bg-slate-800">
+                                <FaEnvelope size={14} /> <span className="text-sm">{email}</span>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase text-gray-400">Member Since</label>
+                            <div className="flex items-center space-x-2 rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-gray-500 dark:border-gray-600 dark:bg-slate-900/50">
+                                <FaCalendarAlt
+                                    size={14}
+                                    className="text-blue-500"
+                                />{" "}
+                                <span className="text-sm font-medium">{createdAt || "N/A"}</span>
+                            </div>
+                        </div>
+                        <button
+                            type="submit"
+                            className="w-full rounded-xl bg-blue-600 py-4 font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:bg-blue-700 active:scale-[0.98]"
+                        >
+                            Save Changes
+                        </button>
+                    </form>
+                </div>
+
+                {/* Security/Password */}
+                <div className="flex flex-col space-y-6 rounded-3xl border border-gray-100 bg-white p-8 shadow-sm dark:border-gray-700/50 dark:bg-slate-800/50">
+                    <div className="flex items-center space-x-3 border-b pb-4 dark:border-gray-700">
+                        <div className="rounded-lg bg-amber-100 p-2 text-amber-600 dark:bg-amber-900/30">
+                            <FaLock size={20} />
+                        </div>
+                        <h4 className="text-lg font-bold">Security Settings</h4>
+                    </div>
+                    <form
+                        onSubmit={(e) => e.preventDefault()}
+                        className="space-y-5"
+                    >
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold uppercase text-gray-400">Current Password</label>
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={currentPassword}
+                                    onChange={(e) => setCurrentPassword(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-4 text-gray-400 hover:text-blue-500"
+                                >
+                                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="space-y-4 pt-2">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">New Password</label>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold uppercase text-gray-400">Confirm Password</label>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-slate-900"
+                                />
+                            </div>
+                        </div>
+                        <button className="w-full rounded-xl bg-slate-900 py-4 font-bold text-white transition-all hover:bg-black active:scale-[0.98] dark:bg-blue-600 dark:hover:bg-blue-700">
+                            Change Password
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {/* FEEDBACK MODAL (Success or Fail) */}
+            <SuccessFailed
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                status={modalStatus}
+                error={customError}
+            />
         </div>
-      </div>
-
-      <h3 className="mb-6 flex items-center justify-center text-xl font-bold">
-        <FaUser className="mr-3 text-blue-500" /> Account Settings
-      </h3>
-
-      <div className="space-y-6">
-        {/* Profile Update Form */}
-        <form
-          onSubmit={handleProfileSubmit}
-          className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-        >
-          <h4 className="mb-4 flex items-center text-lg font-semibold">
-            <FaUser className="mr-2 text-blue-500" /> Profile Information
-          </h4>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* Full Name */}
-            <div className="relative">
-              <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-                Full Name
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                  <FaUser className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-                />
-              </div>
-            </div>
-
-            {/* Middle Name */}
-            <div className="relative">
-              <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-                Middle Name
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                  <FaUser className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={middleName}
-                  onChange={(e) => setMiddleName(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-                />
-              </div>
-            </div>
-
-            {/* Department */}
-            <div className="relative">
-              <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-                Department
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                  <FaBriefcase className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-                />
-              </div>
-            </div>
-
-            {/* Position */}
-            <div className="relative">
-              <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-                Position
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                  <FaBriefcase className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={position}
-                  readOnly
-                  className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-                />
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="relative col-span-full">
-              <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-                Email
-              </label>
-              <div className="relative">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                  <FaEnvelope className="text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  value={email}
-                  readOnly
-                  className="w-full rounded-lg border border-gray-300 bg-gray-100 py-2.5 pl-10 pr-4 text-gray-600 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                />
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-5 flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white transition duration-200 hover:bg-blue-700"
-          >
-            <FaUser className="mr-2" /> Update Profile
-          </button>
-        </form>
-
-        {/* Password Change Form */}
-        <form
-          onSubmit={handlePasswordSubmit}
-          className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
-        >
-          <h4 className="mb-4 flex items-center text-lg font-semibold">
-            <FaLock className="mr-2 text-blue-500" /> Password Settings
-          </h4>
-
-          {/* Current Password */}
-          <div className="mb-5">
-            <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-              Current Password
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                <FaKey className="text-gray-400" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </div>
-
-          {/* New Password */}
-          <div className="mb-5">
-            <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-              New Password
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                <FaLock className="text-gray-400" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </div>
-
-          {/* Confirm Password */}
-          <div className="mb-5">
-            <label className="mb-1 block text-sm font-medium text-gray-600 dark:text-gray-300">
-              Confirm New Password
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
-                <FaLock className="text-gray-400" />
-              </div>
-              <input
-                type={showPassword ? "text" : "password"}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-transparent py-2.5 pl-10 pr-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600"
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? <FaEyeSlash /> : <FaEye />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-2 flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 font-medium text-white transition duration-200 hover:bg-blue-700"
-          >
-            <FaKey className="mr-2" /> Change Password
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default AccountSettings;

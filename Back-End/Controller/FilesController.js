@@ -930,7 +930,7 @@ exports.DisplayFiles = AsyncErrorHandler(async (req, res) => {
     const found = monthlySummaryRaw.find((m) => m._id === index + 1);
     return {
       month,
-      totalFileSize: found ? found.totalFileSize * 15 : 0, // multiply by 15
+      totalFileSize: found ? found.totalFileSize * 5 : 0, // multiply by 15
     };
   });
 
@@ -3264,7 +3264,7 @@ exports.CategorySummaryWithSize = AsyncErrorHandler(async (req, res) => {
         _id: 0,
         category: "$_id",
         totalFiles: 1,
-        totalFileSize: { $multiply: ["$totalFileSize", 15] },
+        totalFileSize: { $multiply: ["$totalFileSize", 5] },
       },
     },
   ]);
@@ -3314,7 +3314,7 @@ exports.CategorySummaryWithSize = AsyncErrorHandler(async (req, res) => {
           ],
         },
         totalFiles: 1,
-        totalFileSize: { $multiply: ["$totalFileSize", 15] },
+        totalFileSize: { $multiply: ["$totalFileSize", 5] },
       },
     },
     { $sort: { monthNumber: 1 } },

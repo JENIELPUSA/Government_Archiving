@@ -187,18 +187,18 @@ export const OfficerDisplayProvider = ({ children }) => {
 
     const UpdateOfficer = async (dataID, values) => {
         try {
-            const dataToSend = {
-                first_name: values.first_name || "",
-                last_name: values.last_name || "",
-                middle_name: values.middle_name || "",
-                gender: values.gender || "",
-                email: values.email || "",
-            };
-
-            const response = await axiosInstance.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Officer/${dataID}`, dataToSend, {
-                headers: { Authorization: `Bearer ${authToken}` },
+            const formData = new FormData();
+            formData.append("first_name", values.first_name || "");
+            formData.append("last_name", values.last_name || "");
+            formData.append("middle_name", values.middle_name || "");
+            formData.append("email", values.email || "");
+            if (values.avatar) formData.append("avatar", values.avatar);
+            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Officer/${dataID}`, formData, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
+                },
             });
-
             if (response.data && response.data.status === "success") {
                 setOfficer((prevUsers) => prevUsers.map((u) => (u._id === response.data.data._id ? { ...u, ...response.data.data } : u)));
                 setModalStatus("success");
@@ -218,6 +218,40 @@ export const OfficerDisplayProvider = ({ children }) => {
             } else {
                 setCustomError(error.message || "Unexpected error occurred.");
             }
+        }
+    };
+
+    const UpdateAdmin = async (dataID, values) => {
+        try {
+            const formData = new FormData();
+            formData.append("first_name", values.first_name || "");
+            formData.append("last_name", values.last_name || "");
+            formData.append("middle_name", values.middle_name || "");
+            formData.append("email", values.email || "");
+            formData.append("role", "admin");
+            if (values.avatar) formData.append("avatar", values.avatar);
+            const response = await axios.patch(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Admin/${dataID}`, formData, {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data?.status === "success") {
+                FetchAdminData();
+                setModalStatus("success");
+                setShowModal(true);
+            } else {
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Something went wrong.";
+
+            setCustomError(message);
+            setModalStatus("failed");
+            setShowModal(true);
+
+            return { success: false, error: message };
         }
     };
 

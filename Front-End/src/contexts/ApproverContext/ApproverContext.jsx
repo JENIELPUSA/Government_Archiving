@@ -27,10 +27,10 @@ export const ApproverDisplayProvider = ({ children }) => {
                         Authorization: `Bearer ${authToken}`,
                         "Cache-Control": "no-cache",
                     },
-                }
+                },
             );
 
-            setApprover(res.data.data || null); 
+            setApprover(res.data.data || null);
         } catch (error) {
             if (error.response?.status === 404) {
                 console.warn("No approver found");
@@ -38,7 +38,7 @@ export const ApproverDisplayProvider = ({ children }) => {
                 console.error("Error fetching approver:", error);
                 handleError(error);
             }
-        } 
+        }
     };
 
     const AddAprover = async (values) => {
@@ -60,6 +60,7 @@ export const ApproverDisplayProvider = ({ children }) => {
                 fetchApproverData();
                 setModalStatus("success");
                 setShowModal(true);
+                return { success: true, data };
             } else {
                 setModalStatus("failed");
                 setShowModal(true);

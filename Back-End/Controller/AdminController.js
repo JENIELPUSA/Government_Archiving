@@ -106,19 +106,31 @@ exports.DisplayProfile = AsyncErrorHandler(async (req, res) => {
     data: admin,
   });
 });
+const Officer = require("../Models/OfficerSchema");
 
 exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
-  console.log("Received file:", req.file);
-  console.log("Received data:", req.body);
-  const adminId = req.params.id;
+  console.log("req", req.body);
+  const id = req.params.id;
 
-  const oldRecord = await Admin.findById(adminId);
-  if (!oldRecord) {
-    return res.status(404).json({ error: "Admin not found" });
+  // Hanapin muna sa Officer
+  let record = await Officer.findById(id);
+  let collectionType = "Officer";
+
+  // Kung wala sa Officer, hanapin sa Admin
+  if (!record) {
+    record = await Admin.findById(id);
+    collectionType = "Admin";
   }
 
-  let newAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
-  const oldAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
+  // Kung wala sa parehong collection
+  if (!record) {
+    return res
+      .status(404)
+      .json({ error: "Record not found in Officer or Admin" });
+  }
+
+  let newAvatarUrl = record.avatar ? record.avatar.url : null;
+  const oldAvatarUrl = record.avatar ? record.avatar.url : null;
 
   if (req.file) {
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -131,6 +143,7 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
   }
 
   try {
+    // Upload avatar if provided
     if (req.file) {
       const form = new FormData();
       form.append("file", fs.createReadStream(req.file.path), {
@@ -141,10 +154,7 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
       const uploadResponse = await axios.post(
         "https://bp-sangguniangpanlalawigan.com/upload.php",
         form,
-        {
-          headers: form.getHeaders(),
-          maxBodyLength: Infinity,
-        },
+        { headers: form.getHeaders(), maxBodyLength: Infinity },
       );
 
       if (!uploadResponse.data.success) {
@@ -166,22 +176,24 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
     };
 
     if (req.file) {
-      updateData.avatar = {
-        ...oldRecord.avatar,
-        url: newAvatarUrl,
-      };
+      updateData.avatar = { ...record.avatar, url: newAvatarUrl };
     }
 
-    const updatedAdmin = await Admin.findByIdAndUpdate(adminId, updateData, {
-      new: true,
-    });
-
-    if (!updatedAdmin) {
-      return res.status(404).json({ error: "Admin not found after update" });
+    // Update depende sa collection kung saan nakita
+    let updatedRecord;
+    if (collectionType === "Officer") {
+      updatedRecord = await Officer.findByIdAndUpdate(id, updateData, {
+        new: true,
+      });
+    } else {
+      updatedRecord = await Admin.findByIdAndUpdate(id, updateData, {
+        new: true,
+      });
     }
 
-    res.json({ status: "success", data: updatedAdmin });
+    res.json({ status: "success", data: updatedRecord });
 
+    // Delete old avatar in background
     if (req.file && oldAvatarUrl) {
       const params = new URLSearchParams();
       params.append("file", oldAvatarUrl);
@@ -194,23 +206,20 @@ exports.UpdateAdmin = AsyncErrorHandler(async (req, res) => {
         )
         .then((response) => {
           if (response.data.success) {
-            console.log("Old news image deleted in background:", oldAvatarUrl);
+            console.log("Old avatar deleted:", oldAvatarUrl);
           } else {
             console.error(
-              "Failed to delete old news image in background:",
+              "Failed to delete old avatar:",
               response.data.message,
             );
           }
         })
         .catch((error) => {
-          console.error(
-            "Error deleting old news image in background:",
-            error.message,
-          );
+          console.error("Error deleting old avatar:", error.message);
         });
     }
   } catch (error) {
-    console.error("UpdateAdmin Error:", error);
+    console.error("Update Error:", error);
     res.status(500).json({ error: "Something went wrong." });
   } finally {
     if (req.file) {
