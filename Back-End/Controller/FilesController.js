@@ -1318,6 +1318,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
   const file = await Files.findById(id);
+
   if (!file) {
     return res.status(404).json({ message: "File not found." });
   }
@@ -1326,12 +1327,11 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
     return res.status(500).json({ message: "File URL missing in DB" });
   }
 
-  const fileExt = path.extname(file.fileUrl).toLowerCase();
-  const tempFilePath = path.join(tempDir, file._id + ".pdf");
+  const tempFilePath = path.join(tempDir, `${file._id}.pdf`);
 
   let isAborted = false;
 
-  // ✅ Detect client disconnect
+  // detect client disconnect
   req.on("close", () => {
     isAborted = true;
     console.log("Client disconnected");
@@ -1339,49 +1339,34 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
 
   try {
     // =========================
-    // DOWNLOAD + CACHE
+    // CACHE DOWNLOAD (SAFE)
     // =========================
     if (!fs.existsSync(tempFilePath)) {
       console.log(`[CACHE MISS] Downloading: ${file.fileUrl}`);
 
       const response = await axios.get(file.fileUrl, {
-        responseType: "stream",
-        timeout: 15000, // ✅ prevent hanging
+        responseType: "arraybuffer", // ✅ FIX: stable vs stream
+        timeout: 20000, // more stable for production
       });
 
-      const writeStream = fs.createWriteStream(tempFilePath);
-
-      if (fileExt === ".gz") {
-        console.log(`[DECOMPRESS] GZIP detected`);
-        const gunzip = zlib.createGunzip();
-
-        await pump(response.data, gunzip, writeStream).catch((err) => {
-          console.error("Download + unzip failed:", err);
-          throw err;
-        });
-      } else {
-        await pump(response.data, writeStream).catch((err) => {
-          console.error("Download failed:", err);
-          throw err;
-        });
-      }
+      fs.writeFileSync(tempFilePath, Buffer.from(response.data));
 
       console.log(`[CACHE SAVED] ${tempFilePath}`);
     } else {
       console.log(`[CACHE HIT] ${tempFilePath}`);
-      console.log("uhahay")
     }
 
     // =========================
-    // STREAM FILE
+    // STREAM FILE TO CLIENT
     // =========================
     const stat = fs.statSync(tempFilePath);
     const range = req.headers.range;
 
     res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Content-Type", "application/pdf");
 
+    // PARTIAL REQUEST (seeking)
     if (range) {
-      // PARTIAL CONTENT (PDF SEEK)
       const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
       const start = parseInt(startStr, 10);
       const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
@@ -1391,7 +1376,6 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
       res.writeHead(206, {
         "Content-Range": `bytes ${start}-${end}/${stat.size}`,
         "Content-Length": chunkSize,
-        "Content-Type": "application/pdf",
       });
 
       const fileStream = fs.createReadStream(tempFilePath, { start, end });
@@ -1413,7 +1397,6 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
       // FULL FILE
       res.writeHead(200, {
         "Content-Length": stat.size,
-        "Content-Type": "application/pdf",
       });
 
       const fileStream = fs.createReadStream(tempFilePath);
@@ -1433,11 +1416,10 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
     }
 
   } catch (err) {
-    console.error("Streaming failed:", err);
+    console.error("File streaming failed:", err);
 
-    // ✅ avoid crash if already closed
     if (!res.headersSent && !isAborted) {
-      res.status(500).json({
+      return res.status(500).json({
         message: "File streaming failed",
         error: err.message,
       });
