@@ -1,0 +1,342 @@
+import React, { createContext, useState, useEffect, useContext, useCallback } from "react";
+import { AuthContext } from "../AuthContext";
+import SuccessFailed from "../../ReusableFolder/SuccessandField";
+import axiosInstance from "../../ReusableFolder/axioxInstance";
+import axios from "axios";
+
+export const FolderContext = createContext();
+
+export const FolderDisplayProvider = ({ children }) => {
+    const [isFolder, setFolder] = useState([]);
+    const [isLoadingFolders, setIsLoadingFolders] = useState(true);
+    const [isLoadingFiles, setIsLoadingFiles] = useState(false);
+    const [error, setError] = useState(null);
+    const { authToken } = useContext(AuthContext);
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState("success");
+    const [customError, setCustomError] = useState("");
+    const [isfolderFiles, setFolderFiles] = useState([]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalFolderPages, setTotalFolderPages] = useState(1);
+    const [currentFolderPage, setCurrentFolderPage] = useState(1);
+    const [isCategoryFolder, setCategoriesFiles] = useState("");
+    const [show, setShow] = useState(10);
+    const [isTags, setTags] = useState("");
+    const [GeneralFile, setGeneralFile] = useState("");
+    const [TotalGeneralPages, setTotalGeneralPages] = useState(1);
+    const [CurrentGeneralPages, setCurrentGeneralPages] = useState(1);
+    const [istagsFile, settags] = useState([])
+    const fetchSpecifiCategory = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
+
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getUploadedCategoriesByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
+
+                const { totalPages, page, totalCategories } = res.data;
+                setCategoriesFiles(res.data.data);
+                setTotalPages(totalPages);
+                setCurrentPage(page);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
+
+    const fetchFilterTags = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
+
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getUniqueTagsByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
+
+                setTags(res.data.data);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
+
+    const fetchfolder = useCallback(
+        async (queryParams = {}) => {
+            try {
+                const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder`, {
+                    withCredentials: true,
+                    params: queryParams,
+                    headers: {
+                        "Cache-Control": "no-cache",
+                        Authorization: authToken ? `Bearer ${authToken}` : undefined,
+                    },
+                });
+                const { totalPages, currentPage } = res.data;
+                setFolder(res.data.data);
+                setTotalFolderPages(totalPages);
+                setCurrentFolderPage(currentPage);
+            } catch (error) {
+                console.error("Error fetching folder data:", error);
+                setError("Failed to fetch folders.");
+            } finally {
+                setIsLoadingFolders(false);
+            }
+        },
+        [authToken],
+    );
+
+    const getAllFiles = useCallback(
+        async (queryParams = {}) => {
+            try {
+                const res = await axiosInstance.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getAllFiles`, {
+                    withCredentials: true,
+                    params: queryParams,
+                    headers: {
+                        "Cache-Control": "no-cache",
+                        Authorization: authToken ? `Bearer ${authToken}` : undefined,
+                    },
+                });
+                const { totalPages, currentPage } = res.data;
+                setGeneralFile(res.data.data);
+                setTotalGeneralPages(totalPages);
+                setCurrentGeneralPages(currentPage);
+            } catch (error) {
+                console.error("Error fetching folder data:", error);
+                setError("Failed to fetch folders.");
+            } finally {
+                setIsLoadingFolders(false);
+            }
+        },
+        [authToken],
+    );
+
+    const getTags = useCallback(
+        async (queryParams = {}) => {
+            setIsLoadingFolders(true);
+            try {
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getTags`,
+                    {
+                        withCredentials: true,
+                        params: queryParams,
+                        headers: {
+                            "Cache-Control": "no-cache",
+                            Authorization: authToken ? `Bearer ${authToken}` : undefined,
+                        },
+                    }
+                );
+
+                // Our controller returns: { success, count, tags }
+                const { tags } = res.data;
+
+                // Update state (adjust your state variables if needed)
+                settags(tags);      // store the array of tags
+            } catch (error) {
+                console.error("Error fetching tags:", error);
+                setError("Failed to fetch tags.");
+            } finally {
+                setIsLoadingFolders(false);
+            }
+        },
+        [authToken]
+    );
+
+    useEffect(() => {
+        if (authToken) {
+            fetchfolder();
+            fetchSpecifiCategory();
+            fetchFilterTags();
+        }
+    }, [authToken, fetchfolder, fetchSpecifiCategory, fetchFilterTags]);
+
+    useEffect(() => {
+        if (customError) {
+            const timer = setTimeout(() => {
+                setCustomError(null);
+            }, 5000);
+
+            return () => clearTimeout(timer);
+        }
+    }, [customError]);
+
+    const AddFolder = async (values) => {
+        try {
+            const res = await axios.post(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder`,
+                {
+                    folderName: values.name,
+                    color: values.color,
+                },
+                {
+                    headers: { Authorization: `Bearer ${authToken}` },
+                },
+            );
+
+            if (res.data.status === "success") {
+                const newData = res.data.data;
+                fetchfolder();
+                setModalStatus("success");
+                setShowModal(true);
+                return { success: true, data: newData };
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Unexpected error occurred.";
+            setCustomError(message);
+        }
+    };
+
+    const updateFolder = async ({ _id, folderName, color }) => {
+        try {
+            const response = await axiosInstance.patch(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/${_id}`,
+                { folderName, color },
+                { headers: { Authorization: `Bearer ${authToken}` } },
+            );
+
+            if (response.data?.status === "success") {
+                const newData = response.data.data;
+                setFolder((prev) => prev.map((u) => (u._id === newData._id ? { ...u, ...newData } : u)));
+                setModalStatus("success");
+                setShowModal(true);
+                return { success: true, data: newData };
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Unexpected error occurred.";
+            setCustomError(message);
+        }
+    };
+
+    const deleteFolder = async (folderId) => {
+        try {
+            const response = await axiosInstance.delete(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/${folderId}`, {
+                headers: { Authorization: `Bearer ${authToken}` },
+            });
+
+            if (response.data.status === "success") {
+                const newData = response.data.data;
+                setModalStatus("success");
+                setShowModal(true);
+                setFolder((prev) => prev.filter((f) => f._id !== folderId));
+                return { success: true, data: newData };
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+                return { success: false, error: "Unexpected response from server." };
+            }
+        } catch (error) {
+            console.error("Error deleting folder:", error);
+            setModalStatus("failed");
+            setShowModal(true);
+            setCustomError(error.response?.data?.message || "Failed to delete folder.");
+        }
+    };
+
+    const fetchSpecificData = useCallback(
+        async (folderID, params = {}) => {
+            if (!authToken || !folderID) return;
+            setIsLoadingFiles(true);
+            setError(null);
+
+            try {
+                // Kung may tags array, i-join sa comma
+                const queryParams = { ...params };
+                if (queryParams.tags && Array.isArray(queryParams.tags)) {
+                    queryParams.tags = queryParams.tags.join(","); // <-- dito nagiging "tag1,tag2,tag3"
+                }
+
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Folder/getFilesByFolderId/${folderID}`,
+                    {
+                        withCredentials: true,
+                        params: queryParams,
+                        headers: { Authorization: `Bearer ${authToken}` },
+                    },
+                );
+
+                const { totalPages, currentPage } = res.data;
+                setFolderFiles(res.data.data);
+                setTotalPages(totalPages);
+                setCurrentPage(currentPage);
+            } catch (error) {
+                console.error("Error fetching files:", error);
+                setError("Failed to fetch files.");
+            } finally {
+                setIsLoadingFiles(false);
+            }
+        },
+        [authToken],
+    );
+
+    return (
+        <FolderContext.Provider
+            value={{
+                AddFolder,
+                isFolder,
+                fetchfolder,
+                error,
+                updateFolder,
+                deleteFolder,
+                setFolder,
+                customError,
+                setCustomError,
+                fetchSpecificData,
+                isfolderFiles,
+                isLoadingFiles,
+                totalPages,
+                currentPage,
+                setCurrentPage,
+                totalFolderPages,
+                setCurrentFolderPage,
+                fetchFilterTags,
+                currentFolderPage,
+                setIsLoadingFiles,
+                fetchSpecifiCategory,
+                isCategoryFolder,
+                show,
+                setShow,
+                isTags, GeneralFile, TotalGeneralPages, CurrentGeneralPages, getAllFiles, istagsFile, getTags
+            }}
+        >
+            {children}
+
+            <SuccessFailed
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                status={modalStatus}
+                error={customError}
+            />
+        </FolderContext.Provider>
+    );
+};
