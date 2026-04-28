@@ -55,6 +55,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       district,
       term_from,
       term_to,
+<<<<<<< HEAD
       term, 
       priorityNumber,
       isExOfficial
@@ -66,6 +67,12 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     // Convert isExOfficial from string to boolean
     const isExOfficialBoolean = isExOfficial === "true" || isExOfficial === true;
     console.log("isExOfficial converted to boolean:", isExOfficialBoolean);
+=======
+      term, priorityNumber
+    } = req.body;
+
+    console.log("RequestBody", req.body);
+>>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
 
     const defaultPassword = "123456789";
 
@@ -164,6 +171,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       term_to,
       detailInfo,
       district,
+<<<<<<< HEAD
       term, 
       priorityNumber,
       isExOfficial: isExOfficialBoolean, // Use the converted boolean value
@@ -171,13 +179,21 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     console.log("Profile data to save:", profileData); // Debug log
 
+=======
+      term, priorityNumber
+    };
+
+>>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
     if (email && role !== "sbmember") profileData.email = email;
     if (gender) profileData.gender = gender;
     if (Position)
       profileData.Position = Array.isArray(Position) ? Position[0] : Position;
 
     const linkedRecord = await profileModel.create(profileData);
+<<<<<<< HEAD
     console.log("✅ Member saved with isExOfficial:", linkedRecord.isExOfficial); // Debug log
+=======
+>>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
 
     let newUserLogin = null;
 

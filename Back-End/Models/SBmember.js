@@ -14,10 +14,13 @@ const SBschema = new mongoose.Schema({
     type: Number,
     unique: true
   },
+<<<<<<< HEAD
   isExOfficial: {
     type: Boolean,
     default: false
   },
+=======
+>>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
   term_from: { type: Date },
   term_to: { type: Date },
   middle_name: String,
