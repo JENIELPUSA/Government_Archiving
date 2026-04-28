@@ -1318,7 +1318,6 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
 exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
   const file = await Files.findById(id);
-<<<<<<< HEAD
   if (!file) return res.status(404).json({ message: "File not found." });
 
   if (!file.fileUrl)
@@ -1353,69 +1352,14 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
     const stat = fs.statSync(tempFilePath);
     const range = req.headers.range;
 
-=======
-
-  if (!file) {
-    return res.status(404).json({ message: "File not found." });
-  }
-
-  if (!file.fileUrl) {
-    return res.status(500).json({ message: "File URL missing in DB" });
-  }
-
-  const tempFilePath = path.join(tempDir, `${file._id}.pdf`);
-
-  let isAborted = false;
-
-  // detect client disconnect
-  req.on("close", () => {
-    isAborted = true;
-    console.log("Client disconnected");
-  });
-
-  try {
-    // =========================
-    // CACHE DOWNLOAD (SAFE)
-    // =========================
-    if (!fs.existsSync(tempFilePath)) {
-      console.log(`[CACHE MISS] Downloading: ${file.fileUrl}`);
-
-      const response = await axios.get(file.fileUrl, {
-        responseType: "arraybuffer", // ✅ FIX: stable vs stream
-        timeout: 20000, // more stable for production
-      });
-
-      fs.writeFileSync(tempFilePath, Buffer.from(response.data));
-
-      console.log(`[CACHE SAVED] ${tempFilePath}`);
-    } else {
-      console.log(`[CACHE HIT] ${tempFilePath}`);
-    }
-
-    // =========================
-    // STREAM FILE TO CLIENT
-    // =========================
-    const stat = fs.statSync(tempFilePath);
-    const range = req.headers.range;
-
-    res.setHeader("Accept-Ranges", "bytes");
-    res.setHeader("Content-Type", "application/pdf");
-
-    // PARTIAL REQUEST (seeking)
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
     if (range) {
       const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
       const start = parseInt(startStr, 10);
       const end = endStr ? parseInt(endStr, 10) : stat.size - 1;
-<<<<<<< HEAD
-=======
-
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
       const chunkSize = end - start + 1;
 
       res.writeHead(206, {
         "Content-Range": `bytes ${start}-${end}/${stat.size}`,
-<<<<<<< HEAD
         "Accept-Ranges": "bytes",
         "Content-Length": chunkSize,
         "Content-Type": "application/pdf",
@@ -1444,64 +1388,6 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
 exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   const { id } = req.params;
   const file = await Files.findById(id);
-=======
-        "Content-Length": chunkSize,
-      });
-
-      const fileStream = fs.createReadStream(tempFilePath, { start, end });
-
-      fileStream.pipe(res);
-
-      fileStream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).end("Stream error");
-        }
-      });
-
-      res.on("close", () => {
-        fileStream.destroy();
-      });
-
-    } else {
-      // FULL FILE
-      res.writeHead(200, {
-        "Content-Length": stat.size,
-      });
-
-      const fileStream = fs.createReadStream(tempFilePath);
-
-      fileStream.pipe(res);
-
-      fileStream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).end("Stream error");
-        }
-      });
-
-      res.on("close", () => {
-        fileStream.destroy();
-      });
-    }
-
-  } catch (err) {
-    console.error("File streaming failed:", err);
-
-    if (!res.headersSent && !isAborted) {
-      return res.status(500).json({
-        message: "File streaming failed",
-        error: err.message,
-      });
-    }
-  }
-});
-exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
-  const { id } = req.params;
-
-  const file = await Files.findById(id);
-
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
   if (!file) return res.status(404).json({ message: "File not found." });
 
   if (!file.fileUrl)
@@ -1510,7 +1396,6 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
   const fileExt = path.extname(file.fileUrl).toLowerCase();
   const tempFilePath = path.join(tempDir, file._id + ".pdf");
 
-<<<<<<< HEAD
   try {
     if (!fs.existsSync(tempFilePath)) {
       console.log(`[CACHE MISS] Downloading file ${file.fileUrl}...`);
@@ -1526,66 +1411,17 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
       } else {
         const writeStream = fs.createWriteStream(tempFilePath);
         await pump(response.data, writeStream);
-=======
-  let isAborted = false;
-
-  // ✅ handle client disconnect
-  req.on("close", () => {
-    isAborted = true;
-    console.log("Client disconnected");
-  });
-
-  try {
-    // =========================
-    // DOWNLOAD + CACHE
-    // =========================
-    if (!fs.existsSync(tempFilePath)) {
-      console.log(`[CACHE MISS] Downloading file ${file.fileUrl}...`);
-
-      const response = await axios.get(file.fileUrl, {
-        responseType: "stream",
-        timeout: 15000, // ✅ important
-      });
-
-      const writeStream = fs.createWriteStream(tempFilePath);
-
-      if (fileExt === ".gz") {
-        console.log(`[DECOMPRESS] Extracting GZIP file...`);
-        const gunzip = zlib.createGunzip();
-
-        await pump(response.data, gunzip, writeStream).catch((err) => {
-          console.error("Download + unzip failed:", err);
-          throw err;
-        });
-      } else {
-        await pump(response.data, writeStream).catch((err) => {
-          console.error("Download failed:", err);
-          throw err;
-        });
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
       }
 
       console.log(`[CACHE WRITE] Saved to temp: ${tempFilePath}`);
     } else {
       console.log(`[CACHE HIT] Serving from temp: ${tempFilePath}`);
     }
-<<<<<<< HEAD
     res.setHeader("Accept-Ranges", "bytes");
 
     const stat = fs.statSync(tempFilePath);
     const range = req.headers.range;
 
-=======
-
-    // =========================
-    // STREAM FILE
-    // =========================
-    const stat = fs.statSync(tempFilePath);
-    const range = req.headers.range;
-
-    res.setHeader("Accept-Ranges", "bytes");
-
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
     if (range) {
       const [startStr, endStr] = range.replace(/bytes=/, "").split("-");
       const start = parseInt(startStr, 10);
@@ -1594,34 +1430,13 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
 
       res.writeHead(206, {
         "Content-Range": `bytes ${start}-${end}/${stat.size}`,
-<<<<<<< HEAD
         "Accept-Ranges": "bytes",
-=======
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
         "Content-Length": chunkSize,
         "Content-Type": "application/pdf",
       });
 
       const fileStream = fs.createReadStream(tempFilePath, { start, end });
-<<<<<<< HEAD
       await pump(fileStream, res);
-=======
-
-      // ✅ FIX: use pipe instead of pump
-      fileStream.pipe(res);
-
-      fileStream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).end("Stream error");
-        }
-      });
-
-      res.on("close", () => {
-        fileStream.destroy();
-      });
-
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
     } else {
       res.writeHead(200, {
         "Content-Length": stat.size,
@@ -1629,7 +1444,6 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
       });
 
       const fileStream = fs.createReadStream(tempFilePath);
-<<<<<<< HEAD
       await pump(fileStream, res);
     }
   } catch (err) {
@@ -1638,33 +1452,6 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
       res
         .status(500)
         .json({ message: "File streaming failed", error: err.message });
-=======
-
-      // ✅ FIX: use pipe instead of pump
-      fileStream.pipe(res);
-
-      fileStream.on("error", (err) => {
-        console.error("Stream error:", err);
-        if (!res.headersSent) {
-          res.status(500).end("Stream error");
-        }
-      });
-
-      res.on("close", () => {
-        fileStream.destroy();
-      });
-    }
-
-  } catch (err) {
-    console.error("Streaming failed:", err);
-
-    if (!res.headersSent && !isAborted) {
-      res.status(500).json({
-        message: "File streaming failed",
-        error: err.message,
-      });
-    }
->>>>>>> 1306ace7df29ed5fd175c6a3d9f70423b8a8a13c
   }
 });
 
