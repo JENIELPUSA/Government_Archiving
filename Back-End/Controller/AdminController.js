@@ -72,6 +72,9 @@ exports.deleteAdmin = AsyncErrorHandler(async (req, res, next) => {
   }
 });
 
+
+
+
 exports.DisplayAdmin = AsyncErrorHandler(async (req, res) => {
   try {
     const adminResults = await Admin.find();
