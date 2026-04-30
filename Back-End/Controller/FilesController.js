@@ -1107,6 +1107,9 @@ exports.getLatestBillsThisWeek = async (req, res) => {
   }
 };
 
+
+
+
 exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   const { search, district, detailInfo, term_from, term_to } = req.query;
   const aggregationPipeline = [];
