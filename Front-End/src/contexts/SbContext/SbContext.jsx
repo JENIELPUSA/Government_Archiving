@@ -9,7 +9,7 @@ export const SbMemberDisplayContext = createContext();
 export const SbMemberDisplayProvider = ({ children }) => {
     const { authToken } = useContext(AuthContext);
     const [isSummaryTerm, setSummaryTerm] = useState();
-
+    const [terms, setTerms] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [modalStatus, setModalStatus] = useState("success");
@@ -79,6 +79,36 @@ export const SbMemberDisplayProvider = ({ children }) => {
         [authToken],
     );
 
+    const DisplayYearTerm = useCallback(
+        async () => {
+            if (!authToken) return;
+
+            try {
+                setLoading(true);
+
+                const res = await axiosInstance.get(
+                    `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/displaygroupbyyear`,
+                    {
+                        withCredentials: true,
+                        headers: {
+                            Authorization: `Bearer ${authToken}`,
+                            "Cache-Control": "no-cache",
+                        },
+                    }
+                );
+
+                setTerms(res.data.data);
+            } catch (error) {
+                console.error("Error fetching year terms:", error);
+                setCustomError(error.message || "Failed to fetch year terms.");
+            } finally {
+                setLoading(false);
+            }
+        },
+        [authToken]
+    );
+
+
     const DisplayPublicAuthor = useCallback(
         async (queryParams = {}) => {
             try {
@@ -131,100 +161,109 @@ export const SbMemberDisplayProvider = ({ children }) => {
         [setGroupPublicAuthor, setTotalPages, setCurrentPage],
     );
 
-const AddSbData = async (values) => {
-    try {
-        const formData = new FormData();
+    const AddSbData = async (values) => {
+        try {
+            const formData = new FormData();
 
-        const first_name = values.first_name?.trim() || "";
-        const middle_name = values.middle_name?.trim() || "";
-        const last_name = values.last_name?.trim() || "";
+            const first_name = values.first_name?.trim() || "";
+            const middle_name = values.middle_name?.trim() || "";
+            const last_name = values.last_name?.trim() || "";
 
-        formData.append("first_name", first_name);
-        formData.append("last_name", last_name);
-        formData.append("term", values.term || "");
-        formData.append("Position", values.Position || "");
-        formData.append("term_from", values.term_from || "");
-        formData.append("term_to", values.term_to || "");
+            formData.append("first_name", first_name);
+            formData.append("last_name", last_name);
+            formData.append("term", values.term || "");
+            formData.append("Position", values.Position || "");
+            formData.append("term_from", values.term_from || "");
+            formData.append("term_to", values.term_to || "");
 
-        const isExOfficialValue = values.Position
-            ?.trim()
-            .toLowerCase()
-            .startsWith("ex");
+            const isExOfficialValue = values.Position
+                ?.trim()
+                .toLowerCase()
+                .startsWith("ex");
 
-        formData.append("isExOfficial", isExOfficialValue ? "true" : "false");
+            formData.append("isExOfficial", isExOfficialValue ? "true" : "false");
 
-        console.log("✅ isExOfficial (startsWith Ex):", isExOfficialValue);
+            console.log("✅ isExOfficial (startsWith Ex):", isExOfficialValue);
 
-        // ✅ Priority Number
-        if (values.priorityNumber !== null && values.priorityNumber !== undefined) {
-            formData.append("priorityNumber", values.priorityNumber.toString());
-            console.log("✅ priorityNumber:", values.priorityNumber);
-        } else {
-            formData.append("priorityNumber", "");
-        }
-
-        // ✅ Static role
-        formData.append("role", "sbmember");
-
-        // ✅ Optional fields
-        if (middle_name) formData.append("middle_name", middle_name);
-        if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
-        if (values.district) formData.append("district", values.district);
-        if (values.avatar) formData.append("avatar", values.avatar);
-
-        // 🔍 DEBUG FormData
-        console.log("=== FINAL FORMDATA ENTRIES ===");
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ": " + pair[1]);
-        }
-
-        // ✅ API CALL
-        const res = await axios.post(
-            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`,
-            formData,
-            {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                    "Content-Type": "multipart/form-data",
-                },
+            // ✅ Priority Number
+            if (values.priorityNumber !== null && values.priorityNumber !== undefined) {
+                formData.append("priorityNumber", values.priorityNumber.toString());
+                console.log("✅ priorityNumber:", values.priorityNumber);
+            } else {
+                formData.append("priorityNumber", "");
             }
-        );
 
-        // ✅ SUCCESS HANDLING
-        if (res.data.status === "Success") {
-            const newAdmin = res.data.data;
+            // ✅ Static role
+            formData.append("role", "sbmember");
 
-            setModalStatus("success");
-            setShowModal(true);
-            DisplayPerSb();
+            // ✅ Optional fields
+            if (middle_name) formData.append("middle_name", middle_name);
+            if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
+            if (values.district) formData.append("district", values.district);
+            if (values.avatar) formData.append("avatar", values.avatar);
 
-            return { success: true, data: newAdmin };
-        } else {
-            setModalStatus("failed");
-            setShowModal(true);
+            // ✅✅✅ CHANGED: Selected Year Term - gamitin ang selectedYearFrom at selectedYearTo
+            if (values.selectedYearFrom && values.selectedYearTo) {
+                formData.append("selectedYearFrom", values.selectedYearFrom.toString());
+                formData.append("selectedYearTo", values.selectedYearTo.toString());
 
-            return { success: false, error: "Unexpected response from server." };
+            } else {
+                console.log("ℹ️ No selectedYearFrom/To provided");
+            }
+
+            // 🔍 DEBUG FormData
+            console.log("=== FINAL FORMDATA ENTRIES ===");
+            for (let pair of formData.entries()) {
+                console.log(pair[0] + ": " + pair[1]);
+            }
+
+            // ✅ API CALL
+            const res = await axios.post(
+                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/authentication/signup`,
+                formData,
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            // ✅ SUCCESS HANDLING
+            if (res.data.status === "Success") {
+                const newAdmin = res.data.data;
+
+                setModalStatus("success");
+                setShowModal(true);
+                DisplayPerSb();
+
+                return { success: true, data: newAdmin };
+            } else {
+                setModalStatus("failed");
+                setShowModal(true);
+
+                return { success: false, error: "Unexpected response from server." };
+            }
+
+        } catch (error) {
+            console.error("❌ Error in AddSbData:", error);
+
+            if (error.response?.data) {
+                const message =
+                    error.response.data.message ||
+                    error.response.data.error ||
+                    "Something went wrong.";
+
+                setCustomError(message);
+            } else if (error.request) {
+                setCustomError("No response from the server.");
+            } else {
+                setCustomError(error.message || "Unexpected error occurred.");
+            }
+
+            return { success: false, error: error.message };
         }
-
-    } catch (error) {
-        console.error("❌ Error in AddSbData:", error);
-
-        if (error.response?.data) {
-            const message =
-                error.response.data.message ||
-                error.response.data.error ||
-                "Something went wrong.";
-
-            setCustomError(message);
-        } else if (error.request) {
-            setCustomError("No response from the server.");
-        } else {
-            setCustomError(error.message || "Unexpected error occurred.");
-        }
-
-        return { success: false, error: error.message };
-    }
-};
+    };
 
     const DeleteSB = async (officerID) => {
         try {
@@ -260,11 +299,16 @@ const AddSbData = async (values) => {
     }, [authToken]);
 
     const UpdateSbmember = async (dataID, values) => {
+
+        console.log("values", values)
         try {
             console.log("=== UpdateSbmember Received ===");
             console.log("values:", values);
             console.log("Priority Number:", values.priorityNumber);
             console.log("Position:", values.Position);
+            console.log("Selected Year From:", values.selectedYearFrom);
+            console.log("Selected Year To:", values.selectedYearTo);
+            console.log("Is Ex-Official:", values.isExOfficial);
 
             const formData = new FormData();
 
@@ -277,7 +321,6 @@ const AddSbData = async (values) => {
             }
 
             // Position - Use values.Position (capital P) from the form
-            // FIXED: Remove duplicate and use the correct field
             let positionValue = values.Position || values.position || "";
 
             // Ensure Position is a string, not an array
@@ -298,7 +341,35 @@ const AddSbData = async (values) => {
                 formData.append("priorityNumber", "");
             }
 
-            // Term Information
+            // Ex-Official Status
+            if (values.isExOfficial !== undefined) {
+                formData.append("isExOfficial", values.isExOfficial ? "true" : "false");
+                console.log("Adding isExOfficial to update:", values.isExOfficial);
+            }
+
+            // ✅✅✅ YEAR_FROM and YEAR_TO for Ex-Official members
+            // Kung may selectedYearFrom at selectedYearTo mula sa form
+            if (values.selectedYearFrom && values.selectedYearTo) {
+                formData.append("year_from", values.selectedYearFrom.toString());
+                formData.append("year_to", values.selectedYearTo.toString());
+                console.log("✅ Adding year_from to update:", values.selectedYearFrom);
+                console.log("✅ Adding year_to to update:", values.selectedYearTo);
+            }
+            // Kung direct na year_from at year_to ang ipinasa
+            else if (values.year_from && values.year_to) {
+                formData.append("year_from", values.year_from.toString());
+                formData.append("year_to", values.year_to.toString());
+                console.log("✅ Adding year_from (direct) to update:", values.year_from);
+                console.log("✅ Adding year_to (direct) to update:", values.year_to);
+            }
+            // Kung Ex-Official pero walang year data, i-clear ang year_from at year_to
+            else if (values.isExOfficial === true) {
+                formData.append("year_from", "");
+                formData.append("year_to", "");
+                console.log("⚠️ Ex-Official but no year data, clearing year_from/year_to");
+            }
+
+            // Term Information (para sa regular members o ex-official na walang year data)
             formData.append("term", values.term || "");
             formData.append("role", "sbmember");
             formData.append("district", values.district || "");
@@ -331,6 +402,10 @@ const AddSbData = async (values) => {
 
             if (response.data?.status === "success") {
                 console.log("Update successful:", response.data.data);
+                if (response.data.data.isExOfficial) {
+                    console.log("Updated year_from:", response.data.data.year_from);
+                    console.log("Updated year_to:", response.data.data.year_to);
+                }
                 return { success: true, data: response.data.data };
             } else {
                 return { success: false, error: "Unexpected response from server." };
@@ -379,7 +454,7 @@ const AddSbData = async (values) => {
         const fetchAllData = async () => {
             setLoading(true);
             try {
-                await Promise.all([DisplayPerSb(), FetchDisplaySbMember(), DisplayPublicAuthor(), FetchDropdown()]);
+                await Promise.all([DisplayPerSb(), FetchDisplaySbMember(), DisplayPublicAuthor(), FetchDropdown(), DisplayYearTerm()]);
             } catch (err) {
                 console.error("Error fetching SB data", err);
             } finally {
@@ -388,7 +463,7 @@ const AddSbData = async (values) => {
         };
 
         fetchAllData();
-    }, [DisplayPerSb, FetchDisplaySbMember, DisplayPublicAuthor]);
+    }, [DisplayPerSb, FetchDisplaySbMember, DisplayPublicAuthor, DisplayYearTerm]);
     return (
         <SbMemberDisplayContext.Provider
             value={{
@@ -414,7 +489,7 @@ const AddSbData = async (values) => {
                 DisplaySummaryTerm,
                 isSummaryTerm,
                 isGroupSpecificAuthor,
-                DisplaySpecificPublicAuthor,
+                DisplaySpecificPublicAuthor, terms
             }}
         >
             {children}

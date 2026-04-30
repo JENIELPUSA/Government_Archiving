@@ -18,6 +18,8 @@ const SBschema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  year_from: { type: Number },
+  year_to: { type: Number },
   term_from: { type: Date },
   term_to: { type: Date },
   middle_name: String,

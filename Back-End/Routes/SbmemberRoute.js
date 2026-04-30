@@ -7,6 +7,10 @@ router
   .route("/")
   .get(authController.protect, SBmemberController.DisplaySBmember)
   .post(authController.protect, SBmemberController.createSBmember);
+
+router
+  .route("/displaygroupbyyear")
+  .get(authController.protect, SBmemberController.Displayyearterm)
 router
   .route("/:id")
   .delete(authController.protect, SBmemberController.deleteSBmember)

@@ -195,11 +195,67 @@ exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
   }
 });
 
+exports.Displayyearterm = AsyncErrorHandler(async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $addFields: {
+          year_from: { $year: "$term_from" },
+          year_to: { $year: "$term_to" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year_from: "$year_from",
+            year_to: "$year_to"
+          }
+        }
+      },
+
+      {
+        $sort: {
+          "_id.year_from": 1
+        }
+      },
+
+      {
+        $project: {
+          _id: 0,
+          year_from: "$_id.year_from",
+          year_to: "$_id.year_to"
+        }
+      }
+    ];
+
+    const terms = await SBmember.aggregate(pipeline);
+
+    res.status(200).json({
+      status: "success",
+      data: terms,
+      totalTerms: terms.length
+    });
+
+  } catch (error) {
+    console.error("Error fetching SB member terms:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching terms.",
+      error: error.message
+    });
+  }
+});
+
 
 exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   const SbmemberID = req.params.id;
 
-  console.log("req",req.body)
+  console.log("req.body", req.body);
+  console.log("year_from from body:", req.body.year_from);
+  console.log("year_to from body:", req.body.year_to);
+  console.log("isExOfficial from body:", req.body.isExOfficial);
+  console.log("selectedYearFrom from body:", req.body.selectedYearFrom);
+  console.log("selectedYearTo from body:", req.body.selectedYearTo);
 
   const oldRecord = await SBmember.findById(SbmemberID);
   if (!oldRecord) {
@@ -282,6 +338,42 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     priorityNum = parseInt(priorityNum, 10);
   }
 
+  // ✅ Handle isExOfficial - convert to boolean
+  let isExOfficialValue = req.body.isExOfficial;
+  if (isExOfficialValue === "true" || isExOfficialValue === true) {
+    isExOfficialValue = true;
+  } else if (isExOfficialValue === "false" || isExOfficialValue === false) {
+    isExOfficialValue = false;
+  } else {
+    isExOfficialValue = oldRecord.isExOfficial || false;
+  }
+  console.log("isExOfficial value to save:", isExOfficialValue);
+
+  // ✅ Handle year_from and year_to
+  let yearFromValue = null;
+  let yearToValue = null;
+
+  // Priority 1: Use selectedYearFrom/selectedYearTo (from form)
+  if (req.body.selectedYearFrom && req.body.selectedYearTo) {
+    yearFromValue = parseInt(req.body.selectedYearFrom, 10);
+    yearToValue = parseInt(req.body.selectedYearTo, 10);
+    console.log("Using selectedYearFrom/To:", yearFromValue, yearToValue);
+  }
+  // Priority 2: Use direct year_from/year_to
+  else if (req.body.year_from && req.body.year_to) {
+    yearFromValue = parseInt(req.body.year_from, 10);
+    yearToValue = parseInt(req.body.year_to, 10);
+    console.log("Using direct year_from/to:", yearFromValue, yearToValue);
+  }
+  // Priority 3: If Ex-Official is true but no year data, keep existing or set to null
+  else if (isExOfficialValue === true) {
+    // Keep existing year_from/year_to if they exist, otherwise null
+    yearFromValue = oldRecord.year_from || null;
+    yearToValue = oldRecord.year_to || null;
+    console.log("Ex-Official but no new year data, keeping existing:", yearFromValue, yearToValue);
+  }
+
+  // Build updateData
   const updateData = {
     first_name: req.body.first_name,
     last_name: req.body.last_name,
@@ -291,9 +383,25 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     term_from: req.body.term_from,
     term: req.body.term,
     email: req.body.email,
-    Position: finalPosition,  // ← Now guaranteed to be a string
+    Position: finalPosition,
     detailInfo: req.body.detailInfo,
+    isExOfficial: isExOfficialValue,
   };
+
+  // ✅ Add year_from and year_to to updateData if they have values
+  if (yearFromValue !== null && yearToValue !== null) {
+    updateData.year_from = yearFromValue;
+    updateData.year_to = yearToValue;
+    console.log("✅ Adding year_from to update:", yearFromValue);
+    console.log("✅ Adding year_to to update:", yearToValue);
+  } else {
+    // If Ex-Official is false or no year data, clear year fields
+    if (isExOfficialValue === false) {
+      updateData.year_from = null;
+      updateData.year_to = null;
+      console.log("⚠️ Not Ex-Official, clearing year_from/year_to");
+    }
+  }
 
   // Add priorityNumber to updateData if it exists
   if (priorityNum !== null) {
@@ -306,6 +414,8 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       url: newAvatarUrl,
     };
   }
+
+  console.log("Final updateData:", updateData);
 
   const updatedSBmember = await SBmember.findByIdAndUpdate(
     SbmemberID,
@@ -320,6 +430,10 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       error: "SB Member not found after update, rollback not possible.",
     });
   }
+
+  console.log("Updated SBmember - isExOfficial:", updatedSBmember.isExOfficial);
+  console.log("Updated SBmember - year_from:", updatedSBmember.year_from);
+  console.log("Updated SBmember - year_to:", updatedSBmember.year_to);
 
   res.json({
     status: "success",
@@ -338,17 +452,17 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       )
       .then((response) => {
         if (response.data.success) {
-          console.log("Old news image deleted in background:", oldAvatarUrl);
+          console.log("Old avatar deleted in background:", oldAvatarUrl);
         } else {
           console.error(
-            "Failed to delete old news image in background:",
+            "Failed to delete old avatar in background:",
             response.data.message
           );
         }
       })
       .catch((error) => {
         console.error(
-          "Error deleting old news image in background:",
+          "Error deleting old avatar in background:",
           error.message
         );
       });

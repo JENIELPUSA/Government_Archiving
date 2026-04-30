@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 
-function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMembers = [] }) {
+function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMembers = [], yearterm }) {
     const [newMember, setNewMember] = useState({
         first_name: "",
         middle_name: "",
@@ -16,44 +16,42 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         avatar: null,
         preview: null,
         isExOfficial: false,
+        selectedYearTermData: null,
     });
 
     const [isLoading, setIsLoading] = useState(false);
     const [positionInput, setPositionInput] = useState("");
     const [priorityError, setPriorityError] = useState("");
     const [termError, setTermError] = useState("");
-    const [positionError, setPositionError] = useState(""); // New state for position validation
+    const [positionError, setPositionError] = useState("");
+    const [selectedYearTerm, setSelectedYearTerm] = useState("");
     const fileInputRef = useRef(null);
 
-    // Get used priority numbers
     const usedPriorities = existingMembers
         .filter(m => m.priorityNumber && (!memberToEdit || m._id !== memberToEdit._id))
         .map(m => m.priorityNumber);
 
-    // Function to check if position starts with "ex" (case-insensitive)
     const startsWithEx = (input) => {
         if (!input) return false;
         const lowerInput = input.toLowerCase().trim();
         return lowerInput.startsWith("ex");
     };
 
-    // Function to validate position (should not start with "ex" unless Ex-Official)
     const validatePosition = (input, isExOfficialChecked) => {
         if (isExOfficialChecked) {
             setPositionError("");
             return true;
         }
-        
+
         if (startsWithEx(input)) {
             setPositionError("Position cannot start with 'ex' (e.g., Ex-Officio, Ex-Official, etc.). Use the Ex-Official checkbox instead.");
             return false;
         }
-        
+
         setPositionError("");
         return true;
     };
 
-    // Function to standardize position input
     const standardizePosition = (input) => {
         if (!input) return "";
 
@@ -90,7 +88,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
             .join(" ");
     };
 
-    // Function to validate term dates
     const validateTermDates = (termFrom, termTo) => {
         if (!termFrom || !termTo) {
             setTermError("Both Term From and Term To are required");
@@ -109,7 +106,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         return true;
     };
 
-    // Handle term date changes
     const handleTermDateChange = (name, value) => {
         setNewMember((prev) => ({
             ...prev,
@@ -120,6 +116,24 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
             validateTermDates(value, newMember.term_to);
         } else if (name === "term_to") {
             validateTermDates(newMember.term_from, value);
+        }
+    };
+
+    const handleYearTermSelect = (value) => {
+        setSelectedYearTerm(value);
+        if (value && yearterm && yearterm.length > 0) {
+            const selectedTerm = yearterm.find(term => `${term.year_from}-${term.year_to}` === value);
+            if (selectedTerm) {
+                setNewMember((prev) => ({
+                    ...prev,
+                    selectedYearTermData: selectedTerm,
+                }));
+            }
+        } else {
+            setNewMember((prev) => ({
+                ...prev,
+                selectedYearTermData: null,
+            }));
         }
     };
 
@@ -139,20 +153,23 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 avatar: null,
                 preview: avatar || null,
                 isExOfficial: memberToEdit.isExOfficial || false,
+                selectedYearTermData: memberToEdit.selectedYearTermData || null,
             });
-            
-            // Kung Ex-Official ang member na ini-edit, i-set ang positionInput sa "Ex-Officio"
+
             if (memberToEdit.isExOfficial) {
                 setPositionInput("Ex-Officio");
                 setPositionError("");
+                if (memberToEdit.selectedYearTermData) {
+                    const termValue = `${memberToEdit.selectedYearTermData.year_from}-${memberToEdit.selectedYearTermData.year_to}`;
+                    setSelectedYearTerm(termValue);
+                }
             } else {
                 setPositionInput(memberToEdit.Position || "");
-                // Validate existing position when editing
                 if (memberToEdit.Position) {
                     validatePosition(memberToEdit.Position, false);
                 }
             }
-            
+
             if (memberToEdit.memberInfo?.term_from && memberToEdit.memberInfo?.term_to) {
                 validateTermDates(memberToEdit.memberInfo.term_from, memberToEdit.memberInfo.term_to);
             }
@@ -171,11 +188,13 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 avatar: null,
                 preview: null,
                 isExOfficial: false,
+                selectedYearTermData: null,
             });
             setPositionInput("");
             setPriorityError("");
             setTermError("");
             setPositionError("");
+            setSelectedYearTerm("");
         }
     }, [memberToEdit, avatar]);
 
@@ -183,43 +202,34 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         const { name, value, type, checked } = e.target;
 
         if (type === 'checkbox') {
-            console.log("=== CHECKBOX CHANGED ===");
-            console.log("Checkbox name:", name);
-            console.log("Checkbox checked:", checked);
-
             if (checked) {
-                // Kapag naka-check ang Ex-Official, i-set ang position sa "Ex-Officio"
                 setNewMember((prev) => ({
                     ...prev,
                     [name]: checked,
                     position: "Ex-Officio",
                 }));
                 setPositionInput("Ex-Officio");
-                setPositionError(""); // Clear any position error
-                console.log("Set position to: Ex-Officio");
+                setPositionError("");
             } else {
-                // Kapag in-uncheck, i-clear ang position
                 setNewMember((prev) => ({
                     ...prev,
                     [name]: checked,
                     position: "",
+                    selectedYearTermData: null,
                 }));
                 setPositionInput("");
-                console.log("Cleared position");
+                setSelectedYearTerm("");
             }
             return;
         } else if (name === "position") {
-            // Hindi na pwedeng i-edit ang position kapag naka-check ang Ex-Official
             if (newMember.isExOfficial) {
-                console.log("Position editing is disabled when Ex-Official is checked");
                 return;
             }
-            
+
             setPositionInput(value);
-            
-            // Validate na hindi dapat magsimula sa "ex"
+
             const isValid = validatePosition(value, newMember.isExOfficial);
-            
+
             if (isValid) {
                 const standardizedValue = standardizePosition(value);
                 setNewMember((prev) => ({
@@ -227,7 +237,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                     [name]: standardizedValue,
                 }));
             } else {
-                // If invalid, don't update the position in newMember
                 setNewMember((prev) => ({
                     ...prev,
                     [name]: "",
@@ -311,7 +320,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // 1. Validation Logic
         if (!newMember.term_from || !newMember.term_to) {
             setTermError("Both Term From and Term To are required");
             return;
@@ -325,13 +333,11 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
             return;
         }
 
-        // Validate position if not Ex-Official
         if (!newMember.isExOfficial && startsWithEx(positionInput)) {
             setPositionError("Position cannot start with 'ex' (e.g., Ex-Officio, Ex-Official, etc.). Use the Ex-Official checkbox instead.");
             return;
         }
 
-        // Check if position is required (not Ex-Official)
         if (!newMember.isExOfficial && (!positionInput || positionInput.trim() === "")) {
             setPositionError("Position is required for non Ex-Official members");
             return;
@@ -340,15 +346,12 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         setIsLoading(true);
 
         try {
-            // Siguraduhin ang casting sa boolean dito palang
             const isEx = newMember.isExOfficial === true || newMember.isExOfficial === "true";
 
-            // Siguraduhin na kung Ex-Official, ang position ay "Ex-Officio"
             let finalPosition = newMember.position;
             if (isEx) {
                 finalPosition = "Ex-Officio";
             } else {
-                // Double-check na hindi nagsisimula sa "ex" ang position
                 if (startsWithEx(positionInput)) {
                     setPositionError("Position cannot start with 'ex'");
                     setIsLoading(false);
@@ -357,7 +360,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 finalPosition = standardizePosition(positionInput);
             }
 
-            // 2. Explicit Payload Construction
             const finalData = {
                 first_name: newMember.first_name,
                 middle_name: newMember.middle_name,
@@ -369,18 +371,14 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 term: newMember.term,
                 term_from: newMember.term_from,
                 term_to: newMember.term_to,
-                // SIGURADUHIN ANG SPELLING: isExOfficial
                 isExOfficial: isEx,
                 avatar: newMember.avatar,
                 preview: newMember.preview,
+                selectedYearFrom: newMember.selectedYearTermData?.year_from || null,
+                selectedYearTo: newMember.selectedYearTermData?.year_to || null,
                 ...(memberToEdit && { _id: memberToEdit._id }),
             };
 
-            console.log("DEBUG: Final Data before sending to context:", finalData);
-            console.log("DEBUG: isExOfficial value:", finalData.isExOfficial);
-            console.log("DEBUG: Position value:", finalData.Position);
-
-            // 3. I-pass ang finalData object
             await onAddMember(finalData);
 
         } catch (error) {
@@ -390,7 +388,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         }
     };
 
-    // Helper function para sa position placeholder
     const getPositionPlaceholder = () => {
         if (newMember.isExOfficial) {
             return "Position is set to Ex-Officio (disabled when Ex-Official is checked)";
@@ -405,7 +402,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: -50, opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="w-full max-w-4xl rounded-lg bg-white shadow-xl dark:bg-gray-800"
+                className="w-full max-w-5xl rounded-lg bg-white shadow-xl dark:bg-gray-800"
             >
                 <div className="flex items-center justify-between border-b p-4 dark:border-gray-700">
                     <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
@@ -436,7 +433,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
 
                 <form onSubmit={handleSubmit} className="p-6">
                     <div className="flex flex-col gap-8 md:flex-row">
-                        {/* Left Column */}
+                        {/* Left Column - Avatar and Sidebar Options */}
                         <div className="flex w-full flex-col items-center md:w-1/3">
                             {/* Avatar Section */}
                             <div
@@ -485,85 +482,6 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                 disabled={isLoading}
                             />
 
-                            {/* Position Input */}
-                            <div className="mt-6 w-full">
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Position <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="position"
-                                    value={positionInput}
-                                    onChange={handleInputChange}
-                                    disabled={isLoading || newMember.isExOfficial}
-                                    placeholder={getPositionPlaceholder()}
-                                    className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
-                                        ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                                        ${newMember.isExOfficial ? "cursor-not-allowed bg-gray-100 dark:bg-gray-600" : "border-gray-300"}
-                                        ${positionError && !newMember.isExOfficial ? "border-red-500" : ""}
-                                        `}
-                                    required={!newMember.isExOfficial}
-                                />
-                                {positionError && !newMember.isExOfficial && (
-                                    <p className="mt-1 text-xs text-red-500">{positionError}</p>
-                                )}
-                                {newMember.isExOfficial && (
-                                    <p className="mt-1 text-xs text-blue-500">
-                                        ℹ️ Position is automatically set to "Ex-Officio" because Ex-Official is checked
-                                    </p>
-                                )}
-                                {!newMember.isExOfficial && !positionError && positionInput && (
-                                    <p className="mt-1 text-xs text-green-500">
-                                        ✓ Position accepted
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* Priority Number */}
-                            <div className="mt-6 w-full">
-                                <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Priority Number
-                                    <span className="ml-2 text-xs text-gray-500">(Lower number = Higher priority)</span>
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="number"
-                                        name="priorityNumber"
-                                        value={newMember.priorityNumber === null ? "" : newMember.priorityNumber}
-                                        onChange={handleInputChange}
-                                        disabled={isLoading}
-                                        min="1"
-                                        step="1"
-                                        placeholder="Enter priority number"
-                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            } ${priorityError ? "border-red-500" : "border-gray-300"}`}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleAutoAssignPriority}
-                                        disabled={isLoading}
-                                        className="whitespace-nowrap rounded-md bg-green-500 px-3 py-2 text-sm text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
-                                    >
-                                        Auto Assign
-                                    </button>
-                                </div>
-                                {priorityError && (
-                                    <p className="mt-1 text-xs text-red-500">{priorityError}</p>
-                                )}
-                                {!priorityError && newMember.priorityNumber && (
-                                    <p className="mt-1 text-xs text-green-500">
-                                        Priority {newMember.priorityNumber} - Will be displayed in order
-                                    </p>
-                                )}
-                                {usedPriorities.length > 0 && (
-                                    <div className="mt-2">
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                                            Used priorities: {usedPriorities.sort((a, b) => a - b).join(", ")}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-
                             {/* Ex-Official Checkbox */}
                             <div className="mt-6 w-full">
                                 <label className="mb-3 flex cursor-pointer items-center space-x-3">
@@ -586,6 +504,37 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                 </p>
                             </div>
 
+                            {/* Select Year Term Section - Only shows when Ex-Official is checked */}
+                            {newMember.isExOfficial && (
+                                <div className="mt-6 w-full">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Select Year Term
+                                    </label>
+                                    <select
+                                        value={selectedYearTerm}
+                                        onChange={(e) => handleYearTermSelect(e.target.value)}
+                                        disabled={isLoading}
+                                        className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
+                                            }`}
+                                    >
+                                        <option value="">Select a year term...</option>
+                                        {yearterm && yearterm.map((term, index) => (
+                                            <option key={index} value={`${term.year_from}-${term.year_to}`}>
+                                                {term.year_from} - {term.year_to}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {selectedYearTerm && newMember.selectedYearTermData && (
+                                        <p className="mt-1 text-xs text-green-500">
+                                            ✓ Selected: {newMember.selectedYearTermData.year_from} - {newMember.selectedYearTermData.year_to}
+                                        </p>
+                                    )}
+                                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        ℹ️ Select the year term for this Ex-Official member
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Term Number */}
                             <div className="mt-6 w-full">
                                 <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -607,25 +556,22 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     <option value="3rd_term">3rd Term</option>
                                 </select>
                             </div>
-
-                            {/* Test Button for Debugging */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    console.log("=== TEST CHECKBOX VALUE ===");
-                                    console.log("Current isExOfficial:", newMember.isExOfficial);
-                                    console.log("Current position:", newMember.position);
-                                    console.log("Current positionInput:", positionInput);
-                                    alert(`isExOfficial is: ${newMember.isExOfficial}\nPosition is: ${newMember.position || positionInput}`);
-                                }}
-                                className="mt-4 rounded-md bg-gray-500 px-3 py-1 text-xs text-white hover:bg-gray-600"
-                            >
-                                Test Checkbox Value
-                            </button>
                         </div>
 
                         {/* Right Column */}
                         <div className="w-full md:w-2/3">
+
+
+                            {/* Used Priorities Info */}
+                            {usedPriorities.length > 0 && (
+                                <div className="mb-6">
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        Used priorities: {usedPriorities.sort((a, b) => a - b).join(", ")}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Personal Details Grid */}
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 {/* First Name */}
                                 <div className="col-span-1">
@@ -677,10 +623,10 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     />
                                 </div>
 
-                                {/* Designation */}
+                                {/* Designation/District */}
                                 <div className="col-span-1">
                                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Designation
+                                        Designation/District
                                     </label>
                                     <input
                                         type="text"
@@ -704,8 +650,9 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                         value={newMember.term_from ? newMember.term_from.split('T')[0] : ""}
                                         onChange={handleInputChange}
                                         disabled={isLoading}
-                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            } ${termError ? "border-red-500" : "border-gray-300"}`}
+                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
+                                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
+                                            ${termError ? "border-red-500" : "border-gray-300"}`}
                                         required
                                     />
                                 </div>
@@ -721,10 +668,87 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                         value={newMember.term_to ? newMember.term_to.split('T')[0] : ""}
                                         onChange={handleInputChange}
                                         disabled={isLoading}
-                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            } ${termError ? "border-red-500" : "border-gray-300"}`}
+                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
+                                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
+                                            ${termError ? "border-red-500" : "border-gray-300"}`}
                                         required
                                     />
+                                </div>
+                            </div>
+                            {/* Position and Priority Number - Side by Side at the top */}
+                            <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
+                                {/* Position Input */}
+                                <div className="col-span-1">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Position <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="position"
+                                        value={positionInput}
+                                        onChange={handleInputChange}
+                                        disabled={isLoading || newMember.isExOfficial}
+                                        placeholder={getPositionPlaceholder()}
+                                        className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
+                                        ${isLoading ? "cursor-not-allowed opacity-50" : ""}
+                                        ${newMember.isExOfficial ? "cursor-not-allowed bg-gray-100 dark:bg-gray-600" : "border-gray-300"}
+                                        ${positionError && !newMember.isExOfficial ? "border-red-500" : ""}
+                                        `}
+                                        required={!newMember.isExOfficial}
+                                    />
+                                    {positionError && !newMember.isExOfficial && (
+                                        <p className="mt-1 text-xs text-red-500">{positionError}</p>
+                                    )}
+                                    {newMember.isExOfficial && (
+                                        <p className="mt-1 text-xs text-blue-500">
+                                            ℹ️ Position is automatically set to "Ex-Officio" because Ex-Official is checked
+                                        </p>
+                                    )}
+                                    {!newMember.isExOfficial && !positionError && positionInput && (
+                                        <p className="mt-1 text-xs text-green-500">
+                                            ✓ Position accepted
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Priority Number */}
+                                <div className="col-span-1">
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Priority Number
+                                        <span className="ml-2 text-xs text-gray-500">(Lower = Higher)</span>
+                                    </label>
+                                    <div>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                name="priorityNumber"
+                                                value={newMember.priorityNumber === null ? "" : newMember.priorityNumber}
+                                                onChange={handleInputChange}
+                                                disabled={isLoading}
+                                                min="1"
+                                                step="1"
+                                                placeholder="Enter priority"
+                                                className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
+                                                    } ${priorityError ? "border-red-500" : "border-gray-300"}`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleAutoAssignPriority}
+                                                disabled={isLoading}
+                                                className="whitespace-nowrap rounded-md bg-green-500 px-3 py-2 text-sm text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+                                            >
+                                                Auto
+                                            </button>
+                                        </div>
+                                        {priorityError && (
+                                            <p className="mt-1 text-xs text-red-500">{priorityError}</p>
+                                        )}
+                                        {!priorityError && newMember.priorityNumber && (
+                                            <p className="mt-1 text-xs text-green-500">
+                                                Priority {newMember.priorityNumber}
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -767,8 +791,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     type="submit"
                                     disabled={isLoading || !!priorityError || !!termError || !!positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to}
                                     className={`rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 ${isLoading || priorityError || termError || positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to
-                                            ? "cursor-not-allowed opacity-50"
-                                            : ""
+                                        ? "cursor-not-allowed opacity-50"
+                                        : ""
                                         }`}
                                 >
                                     {isLoading ? (

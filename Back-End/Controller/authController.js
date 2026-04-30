@@ -55,13 +55,17 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       district,
       term_from,
       term_to,
-      term, 
+      term,
       priorityNumber,
-      isExOfficial
+      isExOfficial,
+      selectedYearFrom,  // ✅ IDAGDAG ITO
+      selectedYearTo     // ✅ IDAGDAG ITO
     } = req.body;
 
     console.log("RequestBody", req.body);
-    console.log("isExOfficial raw value:", isExOfficial); // Debug log
+    console.log("isExOfficial raw value:", isExOfficial);
+    console.log("selectedYearFrom:", selectedYearFrom);
+    console.log("selectedYearTo:", selectedYearTo);
 
     // Convert isExOfficial from string to boolean
     const isExOfficialBoolean = isExOfficial === "true" || isExOfficial === true;
@@ -155,6 +159,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
 
     const profileModel = profileModels[role];
 
+    // ✅ Build profile data
     const profileData = {
       avatar,
       first_name,
@@ -164,12 +169,30 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       term_to,
       detailInfo,
       district,
-      term, 
+      term,
       priorityNumber,
-      isExOfficial: isExOfficialBoolean, // Use the converted boolean value
+      isExOfficial: isExOfficialBoolean,
     };
 
-    console.log("Profile data to save:", profileData); // Debug log
+    // ✅✅✅ KAPAG ang isExOfficial ay TRUE, i-save ang year_from at year_to (tama sa schema)
+    if (isExOfficialBoolean === true) {
+      if (selectedYearFrom && selectedYearTo) {
+        profileData.year_from = selectedYearFrom;  // ✅ gamitin ang year_from (tulad sa schema)
+        profileData.year_to = selectedYearTo;      // ✅ gamitin ang year_to (tulad sa schema)
+        console.log("✅ Saving year_from:", selectedYearFrom);
+        console.log("✅ Saving year_to:", selectedYearTo);
+      } else if (req.body.year_from && req.body.year_to) {
+        // Backup: kung direct na year_from/year_to ang ipinasa
+        profileData.year_from = req.body.year_from;
+        profileData.year_to = req.body.year_to;
+        console.log("✅ Saving year_from (from body):", req.body.year_from);
+        console.log("✅ Saving year_to (from body):", req.body.year_to);
+      } else {
+        console.log("⚠️ isExOfficial is true but year_from/year_to are missing");
+      }
+    }
+
+    console.log("Profile data to save:", profileData);
 
     if (email && role !== "sbmember") profileData.email = email;
     if (gender) profileData.gender = gender;
@@ -177,7 +200,11 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       profileData.Position = Array.isArray(Position) ? Position[0] : Position;
 
     const linkedRecord = await profileModel.create(profileData);
-    console.log("✅ Member saved with isExOfficial:", linkedRecord.isExOfficial); // Debug log
+    console.log("✅ Member saved with isExOfficial:", linkedRecord.isExOfficial);
+    if (linkedRecord.isExOfficial) {
+      console.log("✅ Year from saved:", linkedRecord.year_from);
+      console.log("✅ Year to saved:", linkedRecord.year_to);
+    }
 
     let newUserLogin = null;
 
