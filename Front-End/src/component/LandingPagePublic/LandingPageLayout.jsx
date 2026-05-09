@@ -137,7 +137,6 @@ function LandingPageLayout() {
             }
         }
     }, [landingData]);
-
     // IMPROVED: Force scroll to top with multiple strategies
     const scrollToTop = useCallback(() => {
         if (scrollContainerRef.current) {
@@ -145,14 +144,12 @@ function LandingPageLayout() {
             scrollContainerRef.current.scrollTop = 0;
             // Smooth scroll as backup
             scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-
             // Double-check scroll after a tiny delay (for any async rendering)
             setTimeout(() => {
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTop = 0;
                 }
             }, 50);
-
             // Third check after render cycle
             setTimeout(() => {
                 if (scrollContainerRef.current) {
@@ -160,7 +157,6 @@ function LandingPageLayout() {
                 }
             }, 150);
         }
-
         // Also try to scroll window as fallback
         window.scrollTo(0, 0);
     }, []);
@@ -209,7 +205,6 @@ function LandingPageLayout() {
         setActiveSection(previousSection);
         // scrollToTop will be called by the useEffect below
     };
-
     // Function to go back to home/hero section
     const handleBackToHome = useCallback(() => {
         setActiveSection("hero");
@@ -273,7 +268,6 @@ function LandingPageLayout() {
         const timeoutId = setTimeout(() => {
             scrollToTop();
         }, 10);
-
         return () => clearTimeout(timeoutId);
     }, [activeSection, scrollToTop]);
 

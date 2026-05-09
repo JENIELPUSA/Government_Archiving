@@ -40,7 +40,6 @@ const FooterQuickAccess = ({
             onNavigateToSection(pageId);
             return;
         }
-
         const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
 
         if (isSamePage) {
@@ -68,7 +67,6 @@ const FooterQuickAccess = ({
             <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6 md:py-8">
                 {/* MAIN FOOTER CONTENT - RESPONSIVE LAYOUT */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 lg:gap-12">
-
                     {/* COLUMN 1: BRAND & DESCRIPTION - Full width on mobile, 2 cols on medium, 1 col on large */}
                     <div className="sm:col-span-2 md:col-span-1">
                         <div className="flex flex-col items-center md:items-start">

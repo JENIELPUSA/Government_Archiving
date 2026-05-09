@@ -145,7 +145,6 @@ const MemberCard = ({ member, onClick }) => {
     );
 };
 
-
 const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm }) => {
     const [members, setMembers] = useState(group.members || []);
     const [innerLoading, setInnerLoading] = useState(false);
