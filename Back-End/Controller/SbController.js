@@ -1,0 +1,668 @@
+const AsyncErrorHandler = require("../Utils/AsyncErrorHandler");
+const SBmember = require("../Models/SBmember");
+const UserLoginSchema = require("../Models/LogInDentalSchema");
+const Files = require("../Models/File");
+const axios = require("axios");
+const fs = require("fs");
+const FormData = require("form-data");
+exports.createSBmember = AsyncErrorHandler(async (req, res) => {
+  const newSBmember = await SBmember.create(req.body);
+
+  res.status(201).json({
+    status: "success",
+    message: "SB member created successfully.",
+    data: newSBmember,
+  });
+});
+
+exports.DisplaySBmember = AsyncErrorHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 5;
+    const skip = (page - 1) * limit;
+    const { search = "", dateFrom, dateTo } = req.query;
+    const matchStage = {};
+    const hasDateFrom = dateFrom && dateFrom.trim() !== "";
+    const hasDateTo = dateTo && dateTo.trim() !== "";
+
+    if (hasDateFrom || hasDateTo) {
+      matchStage.created_at = {};
+
+      if (hasDateFrom) {
+        matchStage.created_at.$gte = new Date(dateFrom);
+      }
+
+      if (hasDateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setDate(endDate.getDate() + 1);
+        matchStage.created_at.$lt = endDate;
+      }
+    }
+
+    const pipeline = [
+      {
+        $addFields: {
+          full_name: {
+            $concat: [
+              { $ifNull: ["$first_name", ""] },
+              " ",
+              { $ifNull: ["$middle_name", ""] },
+              " ",
+              { $ifNull: ["$last_name", ""] },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          ...matchStage,
+          ...(search.trim()
+            ? {
+              full_name: {
+                $regex: new RegExp(search.trim(), "i"),
+              },
+            }
+            : {}),
+        },
+      },
+      {
+        $sort: { created_at: -1 },
+      },
+      {
+        $project: {
+          _id: 1,
+          avatar: 1,
+          first_name: 1,
+          middle_name: 1,
+          last_name: 1,
+          detailInfo: 1,
+          term_from: 1,
+          term_to: 1,
+          email: 1,
+          Position: 1,
+          created_at: 1,
+          full_name: 1,
+        },
+      },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const results = await SBmember.aggregate(pipeline);
+
+    const data = results[0].data;
+    const totalSBmember = results[0].totalCount[0]?.count || 0;
+
+    res.status(200).json({
+      status: "success",
+      data,
+      totalSBmember,
+      currentPage: page,
+      totalPages: Math.ceil(totalSBmember / limit),
+    });
+  } catch (error) {
+    console.error("Error fetching SB members:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching SB members.",
+      error: error.message,
+    });
+  }
+});
+
+exports.DisplaySBmemberInDropdown = AsyncErrorHandler(async (req, res) => {
+  try {
+    const { search = "" } = req.query;
+
+    const pipeline = [
+      // 1️⃣ Build full name
+      {
+        $addFields: {
+          full_name: {
+            $trim: {
+              input: {
+                $concat: [
+                  { $ifNull: ["$first_name", ""] },
+                  " ",
+                  { $ifNull: ["$middle_name", ""] },
+                  " ",
+                  { $ifNull: ["$last_name", ""] },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      // 2️⃣ Optional search
+      ...(search.trim()
+        ? [
+          {
+            $match: {
+              full_name: { $regex: new RegExp(search.trim(), "i") },
+            },
+          },
+        ]
+        : []),
+
+      // 3️⃣ GROUP BY NAME (remove duplicates)
+      {
+        $group: {
+          _id: {
+            first_name: "$first_name",
+            middle_name: "$middle_name",
+            last_name: "$last_name",
+          },
+          authorId: { $first: "$_id" }, // ✅ REAL ObjectId
+          full_name: { $first: "$full_name" },
+          Position: { $first: "$Position" },
+        },
+      },
+
+      // 4️⃣ Sort
+      {
+        $sort: { full_name: 1 },
+      },
+
+      // 5️⃣ Final shape
+      {
+        $project: {
+          _id: "$authorId", // ✅ ObjectId returned as _id
+          full_name: 1,
+          Position: 1,
+        },
+      },
+    ];
+
+    const members = await SBmember.aggregate(pipeline);
+
+    res.status(200).json({
+      status: "success",
+      data: members,
+      totalMembers: members.length,
+    });
+  } catch (error) {
+    console.error("Error fetching all SB members:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching all SB members.",
+      error: error.message,
+    });
+  }
+});
+
+exports.Displayyearterm = AsyncErrorHandler(async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $addFields: {
+          year_from: { $year: "$term_from" },
+          year_to: { $year: "$term_to" }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year_from: "$year_from",
+            year_to: "$year_to"
+          }
+        }
+      },
+
+      {
+        $sort: {
+          "_id.year_from": 1
+        }
+      },
+
+      {
+        $project: {
+          _id: 0,
+          year_from: "$_id.year_from",
+          year_to: "$_id.year_to"
+        }
+      }
+    ];
+
+    const terms = await SBmember.aggregate(pipeline);
+
+    res.status(200).json({
+      status: "success",
+      data: terms,
+      totalTerms: terms.length
+    });
+
+  } catch (error) {
+    console.error("Error fetching SB member terms:", error);
+    res.status(500).json({
+      status: "fail",
+      message: "Something went wrong while fetching terms.",
+      error: error.message
+    });
+  }
+});
+
+
+exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
+  const SbmemberID = req.params.id;
+
+  console.log("req.body", req.body);
+  console.log("year_from from body:", req.body.year_from);
+  console.log("year_to from body:", req.body.year_to);
+  console.log("isExOfficial from body:", req.body.isExOfficial);
+  console.log("selectedYearFrom from body:", req.body.selectedYearFrom);
+  console.log("selectedYearTo from body:", req.body.selectedYearTo);
+
+  const oldRecord = await SBmember.findById(SbmemberID);
+  if (!oldRecord) {
+    return res.status(404).json({ error: "SB Member not found" });
+  }
+
+  let newAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
+  const oldAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
+
+  if (req.file) {
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete invalid temp file:", err);
+      });
+      return res.status(400).json({ error: "Invalid image type" });
+    }
+
+    try {
+      const form = new FormData();
+      form.append("file", fs.createReadStream(req.file.path), {
+        filename: req.file.originalname,
+        contentType: req.file.mimetype,
+      });
+
+      const uploadResponse = await axios.post(
+        process.env.UPLOAD_URL,
+        form,
+        {
+          headers: form.getHeaders(),
+          maxBodyLength: Infinity,
+        }
+      );
+
+      if (!uploadResponse.data.success) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Failed to delete temp file:", err);
+        });
+        return res.status(500).json({
+          error: uploadResponse.data.message || "Failed to upload new avatar",
+        });
+      }
+
+      newAvatarUrl = uploadResponse.data.url;
+      console.log("New avatar uploaded to Hostinger:", newAvatarUrl);
+    } catch (error) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete temp file:", err);
+      });
+      console.error("Error during avatar upload:", error.message);
+      return res.status(500).json({
+        error: "Failed to upload new avatar due to a server error.",
+      });
+    } finally {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Failed to delete temp file:", err);
+      });
+    }
+  }
+
+  // CRITICAL FIX: Handle Position if it's an array
+  let positionValue = req.body.Position;
+
+  // If Position is an array (like ['', 'Board_Member']), convert to string
+  if (Array.isArray(positionValue)) {
+    // Filter out empty strings and take the last valid value
+    const validValues = positionValue.filter(v => v && typeof v === 'string' && v.trim());
+    positionValue = validValues.length > 0 ? validValues[validValues.length - 1] : '';
+    console.log("Converted Position from array to string:", positionValue);
+  }
+
+  // Ensure Position is a string
+  const finalPosition = String(positionValue || '');
+
+  // Handle priorityNumber if it exists
+  let priorityNum = req.body.priorityNumber;
+  if (priorityNum === "" || priorityNum === null || priorityNum === undefined) {
+    priorityNum = null;
+  } else {
+    priorityNum = parseInt(priorityNum, 10);
+  }
+
+  // ✅ Handle isExOfficial - convert to boolean
+  let isExOfficialValue = req.body.isExOfficial;
+  if (isExOfficialValue === "true" || isExOfficialValue === true) {
+    isExOfficialValue = true;
+  } else if (isExOfficialValue === "false" || isExOfficialValue === false) {
+    isExOfficialValue = false;
+  } else {
+    isExOfficialValue = oldRecord.isExOfficial || false;
+  }
+  console.log("isExOfficial value to save:", isExOfficialValue);
+
+  // ✅ Handle year_from and year_to
+  let yearFromValue = null;
+  let yearToValue = null;
+
+  // Priority 1: Use selectedYearFrom/selectedYearTo (from form)
+  if (req.body.selectedYearFrom && req.body.selectedYearTo) {
+    yearFromValue = parseInt(req.body.selectedYearFrom, 10);
+    yearToValue = parseInt(req.body.selectedYearTo, 10);
+    console.log("Using selectedYearFrom/To:", yearFromValue, yearToValue);
+  }
+  // Priority 2: Use direct year_from/year_to
+  else if (req.body.year_from && req.body.year_to) {
+    yearFromValue = parseInt(req.body.year_from, 10);
+    yearToValue = parseInt(req.body.year_to, 10);
+    console.log("Using direct year_from/to:", yearFromValue, yearToValue);
+  }
+  // Priority 3: If Ex-Official is true but no year data, keep existing or set to null
+  else if (isExOfficialValue === true) {
+    // Keep existing year_from/year_to if they exist, otherwise null
+    yearFromValue = oldRecord.year_from || null;
+    yearToValue = oldRecord.year_to || null;
+    console.log("Ex-Official but no new year data, keeping existing:", yearFromValue, yearToValue);
+  }
+
+  // Build updateData
+  const updateData = {
+    first_name: req.body.first_name,
+    last_name: req.body.last_name,
+    middle_name: req.body.middle_name,
+    term_to: req.body.term_to,
+    district: req.body.district,
+    term_from: req.body.term_from,
+    term: req.body.term,
+    email: req.body.email,
+    Position: finalPosition,
+    detailInfo: req.body.detailInfo,
+    isExOfficial: isExOfficialValue,
+  };
+
+  // ✅ Add year_from and year_to to updateData if they have values
+  if (yearFromValue !== null && yearToValue !== null) {
+    updateData.year_from = yearFromValue;
+    updateData.year_to = yearToValue;
+    console.log("✅ Adding year_from to update:", yearFromValue);
+    console.log("✅ Adding year_to to update:", yearToValue);
+  } else {
+    // If Ex-Official is false or no year data, clear year fields
+    if (isExOfficialValue === false) {
+      updateData.year_from = null;
+      updateData.year_to = null;
+      console.log("⚠️ Not Ex-Official, clearing year_from/year_to");
+    }
+  }
+
+  // Add priorityNumber to updateData if it exists
+  if (priorityNum !== null) {
+    updateData.priorityNumber = priorityNum;
+  }
+
+  if (req.file) {
+    updateData.avatar = {
+      ...oldRecord.avatar,
+      url: newAvatarUrl,
+    };
+  }
+
+  console.log("Final updateData:", updateData);
+
+  const updatedSBmember = await SBmember.findByIdAndUpdate(
+    SbmemberID,
+    updateData,
+    {
+      new: true,
+    }
+  );
+
+  if (!updatedSBmember) {
+    return res.status(404).json({
+      error: "SB Member not found after update, rollback not possible.",
+    });
+  }
+
+  console.log("Updated SBmember - isExOfficial:", updatedSBmember.isExOfficial);
+  console.log("Updated SBmember - year_from:", updatedSBmember.year_from);
+  console.log("Updated SBmember - year_to:", updatedSBmember.year_to);
+
+  res.json({
+    status: "success",
+    data: updatedSBmember,
+  });
+
+  if (req.file && oldAvatarUrl) {
+    const params = new URLSearchParams();
+    params.append("file", oldAvatarUrl);
+
+    axios
+      .post(
+        process.env.REMOVE_URL,
+        params.toString(),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      )
+      .then((response) => {
+        if (response.data.success) {
+          console.log("Old avatar deleted in background:", oldAvatarUrl);
+        } else {
+          console.error(
+            "Failed to delete old avatar in background:",
+            response.data.message
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "Error deleting old avatar in background:",
+          error.message
+        );
+      });
+  }
+});
+
+exports.deleteSBmember = AsyncErrorHandler(async (req, res, next) => {
+  const SbmemberID = req.params.id;
+
+  const existingSB = await SBmember.findById(SbmemberID);
+  if (!existingSB) {
+    return res.status(404).json({
+      status: "fail",
+      message: "SB member not found.",
+    });
+  }
+
+  const fileUsingSB = await Files.exists({ author: SbmemberID });
+  if (fileUsingSB) {
+    return res.status(400).json({
+      status: "fail",
+      message:
+        "Cannot delete SB member. This member is linked to existing files.",
+    });
+  }
+
+  const avatarUrlToDelete = existingSB.avatar?.url;
+  const userLogin = await UserLoginSchema.findOne({ linkedId: SbmemberID });
+  if (userLogin) {
+    await UserLoginSchema.findByIdAndDelete(userLogin._id);
+  }
+
+  await SBmember.findByIdAndDelete(SbmemberID);
+
+  res.status(200).json({
+    status: "success",
+    message: "SB member and related login deleted successfully.",
+  });
+
+  // Hakbang 3: "Fire and Forget" - I-delete ang avatar file sa background.
+  if (avatarUrlToDelete) {
+    const params = new URLSearchParams();
+    params.append("file", avatarUrlToDelete);
+
+    axios
+      .post(
+        process.env.REMOVE_URL,
+        params.toString(),
+        {
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+        }
+      )
+      .then((response) => {
+        if (response.data.success) {
+          console.log(
+            "✅ Avatar deleted from Hostinger in background:",
+            avatarUrlToDelete
+          );
+        } else {
+          console.error(
+            "❌ Failed to delete avatar from Hostinger in background:",
+            response.data.message
+          );
+        }
+      })
+      .catch((error) => {
+        console.error(
+          "❌ Error deleting avatar from Hostinger in background:",
+          error.message
+        );
+      });
+  }
+});
+
+exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
+  const { search } = req.query;
+  const aggregationPipeline = [
+    {
+      $lookup: {
+        from: "files",
+        localField: "_id",
+        foreignField: "author",
+        as: "files",
+      },
+    },
+    {
+      $unwind: {
+        path: "$files",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "files.category",
+        foreignField: "_id",
+        as: "categoryInfo",
+      },
+    },
+    {
+      $unwind: {
+        path: "$categoryInfo",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $addFields: {
+        fullName: {
+          $concat: [
+            "$first_name",
+            " ",
+            { $ifNull: ["$middle_name", ""] },
+            " ",
+            "$last_name",
+          ],
+        },
+        "files.categoryName": "$categoryInfo.category",
+      },
+    },
+    ...(search
+      ? [
+        {
+          $match: {
+            $or: [
+              {
+                $or: [
+                  { first_name: { $regex: search, $options: "i" } },
+                  { middle_name: { $regex: search, $options: "i" } },
+                  { last_name: { $regex: search, $options: "i" } },
+                ],
+              },
+              {
+                fullName: { $regex: search, $options: "i" },
+              },
+            ],
+          },
+        },
+      ]
+      : []),
+    {
+      $group: {
+        _id: "$_id",
+        fullName: { $first: "$fullName" },
+        memberInfo: { $first: "$$ROOT" },
+        files: {
+          $push: {
+            _id: "$files._id",
+            title: "$files.title",
+            summary: "$files.summary",
+            category: "$categoryInfo.category",
+            createdAt: "$files.createdAt",
+            status: "$files.status",
+            filePath: "$files.filePath",
+            resolutionNo: "$files.ResolutionNo",
+            dateOfResolution: "$files.dateOfResolution",
+            resolutionNumber: "$files.resolutionNumber",
+          },
+        },
+        count: {
+          $sum: {
+            $cond: [{ $ifNull: ["$files._id", false] }, 1, 0],
+          },
+        },
+        resolutionCount: {
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Resolution"] }, 1, 0],
+          },
+        },
+        ordinanceCount: {
+          $sum: {
+            $cond: [{ $eq: ["$categoryInfo.category", "Ordinance"] }, 1, 0],
+          },
+        },
+      },
+    },
+    {
+      $sort: { fullName: 1 },
+    },
+  ];
+
+  const AuthorsWithFiles = await SBmember.aggregate(
+    aggregationPipeline
+  ).allowDiskUse(true);
+
+  const totalCount = AuthorsWithFiles.length;
+
+  const limit = parseInt(req.query.limit) || 6;
+  const currentPage = parseInt(req.query.page) || 1;
+  const totalPages = Math.ceil(totalCount / limit);
+
+  const startIndex = (currentPage - 1) * limit;
+  const endIndex = currentPage * limit;
+  const paginatedData = AuthorsWithFiles.slice(startIndex, endIndex);
+
+  res.status(200).json({
+    status: "success",
+    currentPage,
+    totalPages,
+    data: paginatedData,
+  });
+});
