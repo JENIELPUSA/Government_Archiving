@@ -164,17 +164,6 @@ const FooterQuickAccess = ({
                             &copy; {new Date().getFullYear()} Sangguniang Panlalawigan ng Biliran.
                             All rights reserved.
                         </p>
-                        <div className="flex flex-wrap justify-center gap-4 md:gap-6 order-1 md:order-2 mb-3 md:mb-0">
-                            <a className="text-blue-300 hover:text-white cursor-pointer text-xs sm:text-sm transition-colors duration-200">
-                                Privacy Policy
-                            </a>
-                            <a className="text-blue-300 hover:text-white cursor-pointer text-xs sm:text-sm transition-colors duration-200">
-                                Terms of Service
-                            </a>
-                            <a className="text-blue-300 hover:text-white cursor-pointer text-xs sm:text-sm transition-colors duration-200">
-                                Sitemap
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>

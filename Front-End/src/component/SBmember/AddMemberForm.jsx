@@ -20,6 +20,10 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         selectedYearTermData: null,
     });
 
+
+    console.log("memberToEdit",memberToEdit)
+
+
     const [isLoading, setIsLoading] = useState(false);
     const [positionInput, setPositionInput] = useState("");
     const [priorityError, setPriorityError] = useState("");
@@ -155,21 +159,21 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
     useEffect(() => {
         if (memberToEdit) {
             setNewMember({
-                first_name: memberToEdit.memberInfo?.first_name || "",
-                middle_name: memberToEdit.memberInfo?.middle_name || "",
-                last_name: memberToEdit.memberInfo?.last_name || "",
+                first_name: memberToEdit.memberInfo?.first_name || memberToEdit.first_name || "",
+                middle_name: memberToEdit.memberInfo?.middle_name || memberToEdit.middle_name || "",
+                last_name: memberToEdit.memberInfo?.last_name || memberToEdit.last_name || "",
                 detailInfo: memberToEdit.detailInfo || "",
                 position: memberToEdit.Position || "",
                 subPosition: memberToEdit.SubPosition || "",
-                term: memberToEdit.memberInfo?.term || "",
-                district: memberToEdit.district || "",
-                term_from: memberToEdit.memberInfo?.term_from || "",
-                term_to: memberToEdit.memberInfo?.term_to || "",
-                priorityNumber: memberToEdit.priorityNumber || "",
+                term: memberToEdit.memberInfo?.term || memberToEdit.term || "",
+                district: memberToEdit.district || memberToEdit.district || "",
+                term_from: memberToEdit.memberInfo?.term_from || memberToEdit.term_from || "",
+                term_to: memberToEdit.memberInfo?.term_to || memberToEdit.term_to || "",
+                priorityNumber: memberToEdit.priorityNumber || memberToEdit.priorityNumber || "",
                 avatar: null,
                 preview: avatar || null,
                 isExOfficial: memberToEdit.isExOfficial || false,
-                selectedYearTermData: memberToEdit.selectedYearTermData || null,
+                selectedYearTermData: memberToEdit.selectedYearTermData|| memberToEdit.selectedYearTermData || null,
             });
 
             if (memberToEdit.isExOfficial) {
@@ -616,13 +620,13 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                             className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Ex-Official Member
+                                            Ex-Officio Member
                                         </span>
                                     </label>
                                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                                         {newMember.isExOfficial
-                                            ? "✓ This member is marked as an Ex-Official member"
-                                            : "☐ Check this box if this is an Ex-Official member"}
+                                            ? "✓ This member is marked as an Ex-Officio member"
+                                            : "☐ Check this box if this is an Ex-Officio member"}
                                     </p>
                                 </div>
 
@@ -652,7 +656,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                             </p>
                                         )}
                                         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                            ℹ️ Select the year term for this Ex-Official member
+                                            ℹ️ Select the year term for this Ex-Officio member
                                         </p>
                                     </div>
                                 )}

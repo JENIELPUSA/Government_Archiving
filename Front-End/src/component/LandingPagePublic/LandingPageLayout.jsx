@@ -103,7 +103,9 @@ function LandingPageLayout() {
     const [previousSection, setPreviousSection] = useState("hero");
     const [selectedNews, setSelectedNews] = useState(null);
     const [currentVisibleSection, setCurrentVisibleSection] = useState("hero");
-    const { landingData, loading } = useContext(LandingPageContext)
+    const [refreshKey, setRefreshKey] = useState(0); // For forcing component remount/reintegration
+    const { landingData, loading, refetchLandingData } = useContext(LandingPageContext);
+    
     // State para sa Images (Existing + New)
     const [previews, setPreviews] = useState([]);
     // Initial State para sa Form
@@ -111,10 +113,12 @@ function LandingPageLayout() {
         title: '',
         subtitle: '',
         Mission: '',
-        Vission: '', // Note: Double 's' base sa iyong data object
+        Vission: '',
     });
 
     const scrollContainerRef = useRef(null);
+
+    const heroSectionIds = ["hero", "mission", "news", "transparency", "gallery", "map", "contact", "about", "legislative-history"];
 
     // Sync context data to local state
     useEffect(() => {
@@ -137,6 +141,7 @@ function LandingPageLayout() {
             }
         }
     }, [landingData]);
+
     // IMPROVED: Force scroll to top with multiple strategies
     const scrollToTop = useCallback(() => {
         if (scrollContainerRef.current) {
@@ -161,18 +166,55 @@ function LandingPageLayout() {
         window.scrollTo(0, 0);
     }, []);
 
+    // Function to force reintegration of current section
+    const forceReintegration = useCallback((section, role = null, docType = null) => {
+        console.log("FORCE REINTEGRATION CALLED:", { section, role, docType });
+        
+        // Increment refresh key to force component remount
+        setRefreshKey(prev => prev + 1);
+        
+        // For officials - refresh data
+        if (section === "officials" && role) {
+            setSelectedOfficialRole("");
+            setTimeout(() => {
+                setSelectedOfficialRole(role);
+            }, 50);
+        }
+        
+        // For legislative - refresh documents
+        if (section === "legislative" && docType) {
+            setSelectedDocumentType("");
+            setTimeout(() => {
+                setSelectedDocumentType(docType);
+            }, 50);
+        }
+        
+        // For hero section with specific subsections
+        if (section !== "hero" && !role && !docType && !heroSectionIds.includes(section)) {
+            setActiveSection("");
+            setTimeout(() => {
+                setActiveSection(section);
+            }, 50);
+        }
+        
+        // For hero main page or subsections - refresh landing data
+        if (heroSectionIds.includes(section) || section === "hero") {
+            if (typeof refetchLandingData === 'function') {
+                refetchLandingData();
+            }
+        }
+    }, [refetchLandingData, heroSectionIds]);
+
     const handleViewFile = (fileId, fileData, fileName) => {
         setPreviousSection(activeSection);
         setSelectedFile({ fileId, fileData, fileName });
         setActiveSection("pdf-view");
-        // scrollToTop will be called by the useEffect below
     };
 
     // Function to handle closing PDF view
     const handleClosePDF = () => {
         setSelectedFile(null);
         setActiveSection(previousSection);
-        // scrollToTop will be called by the useEffect below
     };
 
     // Function to handle setting officials or legislative
@@ -188,7 +230,6 @@ function LandingPageLayout() {
             setSelectedDocumentType("");
             setActiveSection("officials");
         }
-        // scrollToTop will be called by the useEffect below
     };
 
     // Function to handle viewing news content
@@ -196,15 +237,14 @@ function LandingPageLayout() {
         setPreviousSection(activeSection);
         setSelectedNews(news);
         setActiveSection("news-content");
-        // scrollToTop will be called by the useEffect below
     };
 
     // Function to handle closing news content view
     const handleCloseNews = () => {
         setSelectedNews(null);
         setActiveSection(previousSection);
-        // scrollToTop will be called by the useEffect below
     };
+    
     // Function to go back to home/hero section
     const handleBackToHome = useCallback(() => {
         setActiveSection("hero");
@@ -212,7 +252,6 @@ function LandingPageLayout() {
         setSelectedDocumentType("");
         setSelectedFile(null);
         setSelectedNews(null);
-        // scrollToTop will be called by the useEffect below
     }, []);
 
     // Track which section is currently visible (for Footer highlighting)
@@ -223,9 +262,8 @@ function LandingPageLayout() {
             if (!scrollContainerRef.current) return;
 
             const container = scrollContainerRef.current;
-            const scrollPosition = container.scrollTop + 100; // Offset for navbar
+            const scrollPosition = container.scrollTop + 100;
 
-            // Define section positions
             const sections = [
                 { id: 'hero', element: document.getElementById('hero-section') },
                 { id: 'mission', element: document.getElementById('mission-section') },
@@ -237,7 +275,6 @@ function LandingPageLayout() {
                 { id: 'contact', element: document.getElementById('contact-section') }
             ].filter(section => section.element);
 
-            // Find current visible section
             let currentSection = 'hero';
             for (const section of sections) {
                 const elementTop = section.element.offsetTop;
@@ -255,21 +292,18 @@ function LandingPageLayout() {
         const container = scrollContainerRef.current;
         if (container) {
             container.addEventListener('scroll', handleScroll);
-            // Initial check
             handleScroll();
-
             return () => container.removeEventListener('scroll', handleScroll);
         }
     }, [activeSection]);
 
-    // CRITICAL FIX: Scroll to top whenever activeSection changes, with proper timing
+    // CRITICAL FIX: Scroll to top whenever activeSection changes
     useEffect(() => {
-        // Small delay to ensure DOM is updated before scrolling
         const timeoutId = setTimeout(() => {
             scrollToTop();
         }, 10);
         return () => clearTimeout(timeoutId);
-    }, [activeSection, scrollToTop]);
+    }, [activeSection, scrollToTop, refreshKey]);
 
     // Animation variants
     const pageVariants = {
@@ -293,12 +327,12 @@ function LandingPageLayout() {
     const renderContent = () => {
         // Show skeleton loader while loading
         if (loading) {
-            return <PulseSkeletonLoader />;
+            return <PulseSkeletonLoader key={`skeleton-${refreshKey}`} />;
         }
 
         if (activeSection === "pdf-view" && selectedFile) {
             return (
-                <div className="min-h-screen bg-white">
+                <div className="min-h-screen bg-white" key={`pdf-${selectedFile.fileId}-${refreshKey}`}>
                     <PDFview
                         fileId={selectedFile.fileId}
                         file={selectedFile.fileData}
@@ -311,7 +345,7 @@ function LandingPageLayout() {
 
         if (activeSection === "news-content" && selectedNews) {
             return (
-                <div className="min-h-screen bg-white">
+                <div className="min-h-screen bg-white" key={`news-${selectedNews.id}-${refreshKey}`}>
                     <NewsContent
                         news={selectedNews}
                         onBack={handleCloseNews}
@@ -322,25 +356,23 @@ function LandingPageLayout() {
 
         if (activeSection === "hero") {
             return (
-                <div className="relative flex w-full flex-col">
+                <div className="relative flex w-full flex-col" key={`hero-${refreshKey}`}>
                     <div id="hero-section" className="h-screen">
                         <Hero scrollContainerRef={scrollContainerRef} formData={formData} />
                     </div>
                     <div id="mission-section">
                         <MissionVisionSection formData={formData} previews={previews} />
                     </div>
-                    {/* Pass handleViewNews prop to NewsSection */}
                     <div id="news-section">
-                        <NewsSection onNewsView={handleViewNews} />
+                        <NewsSection onNewsView={handleViewNews} key={`news-section-${refreshKey}`} />
                     </div>
                     <CalendarEvent />
 
-
                     <div id="transparency-section">
-                        <TransparencySection onViewFile={handleViewFile} />
+                        <TransparencySection onViewFile={handleViewFile} key={`transparency-${refreshKey}`} />
                     </div>
                     <div id="legislative-history-section">
-                        <BiliranLegislativeHistory />
+                        <BiliranLegislativeHistory key={`history-${refreshKey}`} />
                     </div>
                     <div id="map-section">
                         <MapSection />
@@ -356,7 +388,7 @@ function LandingPageLayout() {
         if (activeSection === "officials") {
             if (selectedOfficialRole === "Board_Member") {
                 return (
-                    <div className="min-h-screen bg-white">
+                    <div className="min-h-screen bg-white" key={`board-${selectedOfficialRole}-${refreshKey}`}>
                         <BoardMemberLayout
                             Position={selectedOfficialRole}
                             onBack={handleBackToHome}
@@ -366,7 +398,7 @@ function LandingPageLayout() {
                 );
             } else if (selectedOfficialRole === "Governor" || selectedOfficialRole === "Vice_Governor") {
                 return (
-                    <div className="min-h-screen bg-white">
+                    <div className="min-h-screen bg-white" key={`mayor-${selectedOfficialRole}-${refreshKey}`}>
                         <MayorLayout
                             Position={selectedOfficialRole}
                             onBack={handleBackToHome}
@@ -376,7 +408,7 @@ function LandingPageLayout() {
                 );
             } else {
                 return (
-                    <div className="min-h-screen bg-white">
+                    <div className="min-h-screen bg-white" key={`sb-${selectedOfficialRole}-${refreshKey}`}>
                         <SBMembers
                             Position={selectedOfficialRole}
                             onBack={handleBackToHome}
@@ -389,7 +421,7 @@ function LandingPageLayout() {
 
         if (activeSection === "legislative") {
             return (
-                <div className="min-h-screen">
+                <div className="min-h-screen" key={`legislative-${selectedDocumentType}-${refreshKey}`}>
                     <Documents
                         searchKeyword={searchKeyword}
                         onViewFile={handleViewFile}
@@ -402,21 +434,20 @@ function LandingPageLayout() {
 
         switch (activeSection) {
             case "mission":
-                return <MissionVisionSection />;
+                return <MissionVisionSection key={`mission-${refreshKey}`} />;
             case "news":
-                // For direct navigation to news section
-                return <NewsSection onNewsView={handleViewNews} />;
+                return <NewsSection onNewsView={handleViewNews} key={`news-section-${refreshKey}`} />;
             case "transparency":
-                return <TransparencySection onViewFile={handleViewFile} />;
+                return <TransparencySection onViewFile={handleViewFile} key={`transparency-${refreshKey}`} />;
             case "gallery":
-                return <GallerySection />;
+                return <GallerySection key={`gallery-${refreshKey}`} />;
             case "map":
-                return <MapSection />;
+                return <MapSection key={`map-${refreshKey}`} />;
             case "about":
-                return <AboutContactSection />;
+                return <AboutContactSection key={`about-${refreshKey}`} />;
             default:
                 return (
-                    <div className="relative flex w-full flex-col">
+                    <div className="relative flex w-full flex-col" key={`default-${refreshKey}`}>
                         <div className="h-screen">
                             <Hero scrollContainerRef={scrollContainerRef} />
                         </div>
@@ -438,11 +469,22 @@ function LandingPageLayout() {
         if (role) {
             handleSetOfficial(role);
         }
+        
         // Immediate scroll to top
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
         }
     }, [handleSetOfficial]);
+
+    // Handle navigation to hero subsections
+    const handleNavigateToSection = useCallback((sectionId) => {
+        if (activeSection === sectionId) {
+            forceReintegration(sectionId);
+        } else {
+            setActiveSection(sectionId);
+        }
+        scrollToTop();
+    }, [activeSection, forceReintegration, scrollToTop]);
 
     return (
         <div className="flex min-h-screen flex-col overflow-x-hidden bg-white font-sans text-slate-800 antialiased">
@@ -452,6 +494,8 @@ function LandingPageLayout() {
                 searchKeyword={searchKeyword}
                 setSearchKeyword={setSearchKeyword}
                 setOfficial={handleSetOfficial}
+                onNavigateToSection={handleNavigateToSection}
+                onReintegrate={forceReintegration}
             />
 
             <main
@@ -464,7 +508,7 @@ function LandingPageLayout() {
             >
                 <AnimatePresence mode="wait">
                     <motion.div
-                        key={activeSection}
+                        key={`${activeSection}-${refreshKey}`}
                         initial="initial"
                         animate="in"
                         exit="out"
@@ -474,7 +518,6 @@ function LandingPageLayout() {
                     >
                         <div className="w-full max-w-full bg-white pt-[70px]">
                             {renderContent()}
-                            {/* Avoid double footer in pdf-view and news-content */}
                             {!loading && !["pdf-view", "news-content"].includes(activeSection) && (
                                 <Footer
                                     currentPage={activeSection}

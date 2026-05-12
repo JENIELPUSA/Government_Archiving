@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import headlogo from "../../../assets/logo-login.png";
 
-const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword, setOfficial, onNavigateToSection, onOpenLegislativeTracker }) => {
+const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearchKeyword, setOfficial, onNavigateToSection, onOpenLegislativeTracker, onReintegrate }) => {
     const [showScrollNavbar, setShowScrollNavbar] = useState(true);
     const [isScrolled, setIsScrolled] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -83,17 +83,53 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
             return;
         }
 
+        // Check if clicking the SAME page/section
+        const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
+        
+        console.log("Click detected:", { pageId, currentPage, isSamePage, lastClicked: lastClickedPageRef.current });
+
+        // For hero sections (mission, news, transparency, etc.)
         if (onNavigateToSection && heroSectionIds.includes(pageId)) {
-            onNavigateToSection(pageId);
+            if (isSamePage) {
+                // CALL REINTEGRATION FUNCTION
+                console.log("REINTEGRATING same hero section:", pageId);
+                if (typeof onReintegrate === 'function') {
+                    onReintegrate(pageId);
+                }
+                scrollToSection(pageId);
+            } else {
+                onNavigateToSection(pageId);
+            }
             setDesktopOpenSubmenu(null);
             setMobileMenuOpen(false);
             setOpenSubmenu(null);
+            lastClickedPageRef.current = pageId;
             return;
         }
 
-        const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
-
+        // For regular pages and subpages
         if (isSamePage) {
+            // CALL REINTEGRATION FUNCTION
+            console.log("REINTEGRATING same page:", pageId, "parent:", parentId);
+            
+            if (typeof onReintegrate === 'function') {
+                // Pass the page type and identifier for proper reintegration
+                if (parentId === "officials") {
+                    onReintegrate("officials", pageId);
+                } else if (parentId === "transparency") {
+                    onReintegrate("legislative", pageId);
+                } else {
+                    onReintegrate(pageId);
+                }
+            }
+            
+            // Also reset the official if needed
+            if (parentId === "officials" && typeof setOfficial === "function") {
+                setOfficial("");
+                setTimeout(() => setOfficial(pageId), 50);
+            }
+            
+            // Scroll behavior
             if (pageId === "hero") {
                 window.scrollTo({
                     top: 0,
@@ -109,6 +145,8 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
             return;
         }
 
+        // NOT the same page - normal navigation
+        console.log("Navigating to new page:", pageId);
         setCurrentPage(pageId);
         lastClickedPageRef.current = pageId;
 
