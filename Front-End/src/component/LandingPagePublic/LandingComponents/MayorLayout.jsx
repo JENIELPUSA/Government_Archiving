@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useContext, useMemo, useRef } from "react";
-import { Clock, Mail, User, UserCircle } from "lucide-react";
+import { Clock, Mail, User, Shield, Calendar, Landmark, ChevronDown, ChevronUp, CheckCircle, FileText, GraduationCap, Briefcase, MoreHorizontal } from "lucide-react";
 import { SbMemberDisplayContext } from "../../../contexts/SbContext/SbContext";
 import Breadcrumb from "./Breadcrumb";
 import BannerImage from "./BannerImage";
+import Transparency from "../../../assets/Transparency.svg"
+import bagongpilipinas from "../../../assets/bagongpilipinas.png"
 
 const extractYear = (dateStr) => {
     if (!dateStr) return null;
@@ -38,13 +40,24 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
     const [currentImage, setCurrentImage] = useState("/placeholder-avatar.png");
     const [imageKey, setImageKey] = useState(0);
     const [isBiographyExpanded, setIsBiographyExpanded] = useState(false);
+    const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
     const [needsTruncation, setNeedsTruncation] = useState(false);
+    const [needsSummaryTruncation, setNeedsSummaryTruncation] = useState(false);
+    const [activeStep, setActiveStep] = useState(0);
+    const [expandedCategories, setExpandedCategories] = useState({});
     const biographyRef = useRef(null);
+    const summaryRef = useRef(null);
 
     const isLoading = contextLoading || localLoading;
     const lastProfileKey = useRef(null);
     const hasFetched = useRef(false);
-    
+
+    const sections = [
+        { id: "profile", title: "Profile Information", icon: User },
+        { id: "summary", title: "Summary of Credentials", icon: Shield },
+        { id: "legislative", title: "Legislative Track Record", icon: Calendar },
+    ];
+
     const formatPositionForDisplay = (pos) => {
         const positionMap = {
             Board_Member: "Board Member",
@@ -94,21 +107,6 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
             null;
     };
 
-    // Helper function to get role badge color
-    const getRoleBadgeColor = (role) => {
-        switch(role) {
-            case "Chairperson":
-                return "bg-blue-100 text-blue-800";
-            case "ViceChairperson":
-                return "bg-purple-100 text-purple-800";
-            case "Member":
-                return "bg-green-100 text-green-800";
-            default:
-                return "bg-gray-100 text-gray-800";
-        }
-    };
-
-    // Compute profileData and currentOfficial before using them in effects
     const profileData = useMemo(() => {
         const currentOfficial = official || directMember;
         return currentOfficial?.memberInfo || currentOfficial || {};
@@ -121,24 +119,101 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
         getMemberName(directMember) ||
         "Name not available";
 
-    // Check if biography needs truncation - moved after currentOfficial is defined
+    const summaryData = useMemo(() => {
+        return currentOfficial?.summary || currentOfficial?.memberInfo?.summary || [];
+    }, [currentOfficial]);
+
+    // Group summaries by specificname
+    const groupedSummaries = useMemo(() => {
+        const groups = {
+            Education_Experience: [],
+            Work_Experience: [],
+            Others: []
+        };
+
+        if (Array.isArray(summaryData) && summaryData.length > 0) {
+            summaryData.forEach(item => {
+                const specificname = item.specificname || "";
+                if (specificname === "Education_Experience") {
+                    groups.Education_Experience.push(item);
+                } else if (specificname === "Work_Experience") {
+                    groups.Work_Experience.push(item);
+                } else {
+                    groups.Others.push(item);
+                }
+            });
+        }
+        
+        return groups;
+    }, [summaryData]);
+
+    const hasSummaries = useMemo(() => {
+        return summaryData.length > 0;
+    }, [summaryData]);
+
+    const toggleCategory = (category) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [category]: !prev[category]
+        }));
+    };
+
+    const scrollToSection = (sectionId, index) => {
+        setActiveStep(index);
+        const element = document.getElementById(sectionId);
+        if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    };
+
     useEffect(() => {
         if (biographyRef.current && currentOfficial) {
             const element = biographyRef.current;
             const lineHeight = parseInt(getComputedStyle(element).lineHeight);
-            const maxHeight = lineHeight * 6; // 6 lines max before truncation
+            const maxHeight = lineHeight * 6;
             const needsCollapse = element.scrollHeight > maxHeight;
             setNeedsTruncation(needsCollapse);
         }
     }, [currentOfficial, isBiographyExpanded]);
 
-    // If member is passed directly, use it immediately
+    useEffect(() => {
+        if (summaryRef.current && hasSummaries) {
+            const summaryHeight = summaryRef.current.scrollHeight;
+            const maxHeight = 400;
+            setNeedsSummaryTruncation(summaryHeight > maxHeight);
+        }
+    }, [hasSummaries, isSummaryExpanded]);
+
+    useEffect(() => {
+        const observerOptions = {
+            threshold: 0.5,
+            rootMargin: "-80px 0px -50% 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    const index = sections.findIndex(s => s.id === entry.target.id);
+                    if (index !== -1) {
+                        setActiveStep(index);
+                    }
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => {
+            const element = document.getElementById(section.id);
+            if (element) observer.observe(element);
+        });
+
+        return () => observer.disconnect();
+    }, [currentOfficial]);
+
     useEffect(() => {
         if (directMember) {
             setOfficial(directMember);
             setLocalLoading(false);
 
-            // Fetch summary term for this member
             const firstName = directMember.first_name || directMember.memberInfo?.first_name;
             const lastName = directMember.last_name || directMember.memberInfo?.last_name;
 
@@ -153,9 +228,8 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
         }
     }, [directMember, DisplaySummaryTerm]);
 
-    // Fetch official from API if no direct member provided
     useEffect(() => {
-        if (directMember) return; // Skip API fetch if we have direct member
+        if (directMember) return;
 
         const profileKey = `${fullName || ""}-${Position || ""}`;
 
@@ -191,9 +265,8 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
 
     const lastFetchedProfile = useRef({ first: "", middle: "", last: "" });
 
-    // Update official when loaded from API
     useEffect(() => {
-        if (directMember) return; // Skip if we already have direct member
+        if (directMember) return;
 
         if (isGroupSpecificAuthor?.length > 0) {
             const officialData = isGroupSpecificAuthor[0];
@@ -230,7 +303,6 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
         }
     }, [isGroupSpecificAuthor, DisplaySummaryTerm, directMember]);
 
-    // Direct image display without shuffle effect
     useEffect(() => {
         if (!official && !directMember) {
             setCurrentImage("/placeholder-avatar.png");
@@ -238,31 +310,24 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
         }
 
         const currentOfficial = official || directMember;
-        
-        // Directly set the final image
         const finalImg = currentOfficial?.memberInfo?.avatar?.url ||
             currentOfficial?.avatar?.url ||
             "/placeholder-avatar.png";
-        
+
         setCurrentImage(finalImg);
         setImageKey((prev) => prev + 1);
-        
     }, [official, directMember, isGroupPublicAuthor]);
 
-    // Process term data from isSummaryTerm
     const termData = useMemo(() => {
         if (!isSummaryTerm || isSummaryTerm.length === 0) {
-            return { terms: [], ordinancesByYear: {}, resolutionsByYear: {} };
+            return { terms: [], ordinancesByYear: {} };
         }
 
         const summaryData = isSummaryTerm[0];
-        
-        // Check if the data has the old structure (with terms array) or new structure (direct files)
+
         if (summaryData.terms && Array.isArray(summaryData.terms)) {
-            // Old structure with nested terms
             const ordMap = {};
-            const resMap = {};
-            
+
             summaryData.terms.forEach((termItem) => {
                 if (termItem.titles && Array.isArray(termItem.titles)) {
                     termItem.titles.forEach((titleObj) => {
@@ -273,115 +338,98 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
                         ordMap[year].push({ title, role: titleObj.role || null });
                     });
                 }
-    
-                if (termItem.summaries && Array.isArray(termItem.summaries)) {
-                    termItem.summaries.forEach((summaryObj) => {
-                        const title = typeof summaryObj === "string" ? summaryObj : summaryObj.title;
-                        const date = typeof summaryObj === "string" ? null : summaryObj.date;
-                        const year = extractYear(date) || "Unknown";
-                        if (!resMap[year]) resMap[year] = [];
-                        resMap[year].push({ title, role: summaryObj.role || null });
-                    });
-                }
             });
-            
-            return { 
-                terms: summaryData.terms, 
-                ordinancesByYear: ordMap, 
-                resolutionsByYear: resMap 
+
+            return {
+                terms: summaryData.terms,
+                ordinancesByYear: ordMap
             };
-        } 
-        
-        // New structure based on your data
-        // Use the counts directly from summaryData instead of counting from files
+        }
+
         const termObj = {
             Position: summaryData.Position || summaryData.position,
             term: summaryData.term,
             from: summaryData.from,
             to: summaryData.to,
-            ordinanceCount: summaryData.ordinanceCount || 0,  // Use the provided count
-            resolutionCount: summaryData.resolutionCount || 0, // Use the provided count
-            titles: [], // ordinances with roles
-            summaries: [] // resolutions with roles
+            ordinanceCount: summaryData.ordinanceCount || 0,
+            resolutionCount: summaryData.resolutionCount || 0,
+            titles: [],
+            summaries: []
         };
-        
-        // Process files array for ordinances and resolutions (for display in modal)
+
         const ordMap = {};
-        const resMap = {};
-        
+
         if (summaryData.files && Array.isArray(summaryData.files)) {
             summaryData.files.forEach((file) => {
                 const title = file.title || "";
                 const category = file.category || "";
                 const roles = file.roles || [];
-                
-                // Get the primary role (first role in the array, or "Member" if empty)
                 const primaryRole = roles.length > 0 ? roles[0] : "Member";
-                
+
                 if (category === "Ordinance") {
                     termObj.titles.push({ title, role: primaryRole, allRoles: roles });
-                    // Don't increment count here - use the provided count
-                    
-                    // Group by year for sidebar
                     const yearMatch = title.match(/\b(19|20)\d{2}\b/);
                     const year = yearMatch ? yearMatch[0] : "Unknown";
                     if (!ordMap[year]) ordMap[year] = [];
                     ordMap[year].push({ title, role: primaryRole, allRoles: roles });
-                } else if (category === "Resolution") {
-                    termObj.summaries.push({ title, role: primaryRole, allRoles: roles });
-                    // Don't increment count here - use the provided count
-                    
-                    // Group by year for sidebar
-                    const yearMatch = title.match(/\b(19|20)\d{2}\b/);
-                    const year = yearMatch ? yearMatch[0] : "Unknown";
-                    if (!resMap[year]) resMap[year] = [];
-                    resMap[year].push({ title, role: primaryRole, allRoles: roles });
                 }
             });
         }
-        
-        return { 
-            terms: [termObj], 
-            ordinancesByYear: ordMap, 
-            resolutionsByYear: resMap 
+
+        return {
+            terms: [termObj],
+            ordinancesByYear: ordMap
         };
     }, [isSummaryTerm]);
 
     const animationStyles = `
     @keyframes pop-in {
-      0% { transform: scale(0.8); opacity: 0; }
-      80% { transform: scale(1.05); }
+      0% { transform: scale(0.95); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
     }
     .animate-pop-in {
-      animation: pop-in 0.6s ease-out;
+      animation: pop-in 0.4s ease-out forwards;
     }
     `;
 
+    const biographyParagraphs = (currentOfficial?.detailInfo || "Biography data not available.")
+        .split("\n")
+        .slice(1)
+        .filter(para => para.trim());
+
+    const displayedParagraphs = isBiographyExpanded
+        ? biographyParagraphs
+        : biographyParagraphs.slice(0, 3);
+
     if (isLoading && !directMember) {
         return (
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-blue-950">
+                <style>{animationStyles}</style>
+                <div className="w-full h-1.5 flex">
+                    <div className="bg-blue-600 flex-1"></div>
+                    <div className="bg-amber-400 w-12"></div>
+                    <div className="bg-red-600 flex-1"></div>
+                </div>
                 <BannerImage selection={formatPositionForBanner(currentPosition)} />
-                <div className="border-b bg-white">
+                <div className="border-b bg-blue-900/50 border-blue-800 shadow-sm">
                     <div className="mx-auto max-w-6xl px-4 py-3">
-                        <div className="h-4 w-1/3 animate-pulse rounded bg-gray-200"></div>
+                        <div className="h-4 w-1/3 animate-pulse rounded bg-blue-700"></div>
                     </div>
                 </div>
                 <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-                    {/* Skeleton loading UI */}
                     <div className="mb-5 space-y-3">
-                        <div className="h-8 w-3/4 animate-pulse rounded bg-gray-200"></div>
-                        <div className="h-6 w-1/2 animate-pulse rounded bg-gray-200"></div>
+                        <div className="h-8 w-3/4 animate-pulse rounded bg-blue-800"></div>
+                        <div className="h-6 w-1/2 animate-pulse rounded bg-blue-800"></div>
                     </div>
                     <div className="flex flex-col gap-6 md:flex-row md:gap-8">
                         <div className="flex-1 space-y-6">
-                            <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
+                            <div className="rounded-lg bg-white p-4 shadow-md sm:p-6 border border-slate-200">
                                 <div className="flex flex-col gap-6 md:flex-row">
-                                    <div className="mx-auto h-48 w-48 animate-pulse rounded bg-gray-200 sm:h-64 sm:w-64 md:mx-0"></div>
+                                    <div className="mx-auto h-48 w-48 animate-pulse rounded bg-slate-200 sm:h-64 sm:w-64 md:mx-0"></div>
                                     <div className="mt-4 flex-1 space-y-4 md:mt-0">
                                         <div className="space-y-2">
-                                            <div className="h-4 w-full animate-pulse rounded bg-gray-200"></div>
-                                            <div className="h-4 w-5/6 animate-pulse rounded bg-gray-200"></div>
+                                            <div className="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                                            <div className="h-4 w-5/6 animate-pulse rounded bg-slate-200"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -395,18 +443,20 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
 
     if (!currentOfficial) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-gray-50">
-                <div className="px-4 text-center">
-                    <h2 className="text-xl font-bold text-gray-800">No Official Found</h2>
-                    <p className="mt-2 text-gray-600">
-                        No {formatPositionForDisplay(currentPosition)} is currently listed in the system.
+            <div className="flex min-h-screen items-center justify-center bg-blue-950">
+                <style>{animationStyles}</style>
+                <div className="px-4 text-center max-w-md bg-white p-8 rounded-lg shadow-md border border-slate-200">
+                    <Landmark className="mx-auto h-12 w-12 text-slate-400 mb-3" />
+                    <h2 className="text-xl font-bold text-slate-800">No Official Record Found</h2>
+                    <p className="mt-2 text-sm text-slate-600">
+                        No {formatPositionForDisplay(currentPosition)} is currently listed or active in the database.
                     </p>
                     {onBack && (
                         <button
                             onClick={onBack}
-                            className="mt-4 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                            className="mt-5 inline-flex items-center justify-center rounded bg-blue-800 px-4 py-2 text-sm font-medium text-white hover:bg-blue-900 transition-colors"
                         >
-                            Go Back
+                            Return to Directory
                         </button>
                     )}
                 </div>
@@ -414,247 +464,498 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
         );
     }
 
-    // Get biography paragraphs
-    const biographyParagraphs = (currentOfficial.detailInfo || "Biography not available.")
-        .split("\n")
-        .slice(1)
-        .filter(para => para.trim());
-
-    const displayedParagraphs = isBiographyExpanded 
-        ? biographyParagraphs 
-        : biographyParagraphs.slice(0, 3); // Show only first 3 paragraphs when collapsed
-
     return (
-        <div className="min-h-screen bg-blue-950">
+        <div className="min-h-screen bg-blue-950 font-sans antialiased">
             <style>{animationStyles}</style>
 
+            <div className="w-full h-1.5 flex">
+                <div className="bg-blue-600 flex-1"></div>
+                <div className="bg-amber-400 w-12"></div>
+                <div className="bg-red-600 flex-1"></div>
+            </div>
+
             <BannerImage selection={formatPositionForBanner(currentPosition)} />
-            <Breadcrumb
-                position={formatPositionForDisplay(currentPosition)}
-                onBack={onBack}
-            />
+
+            <div className="bg-blue-950 backdrop-blur-sm border-b border-blue-800 shadow-sm sticky top-0 z-20">
+                <div className="mx-auto max-w-6xl">
+                    <Breadcrumb
+                        position={formatPositionForDisplay(currentPosition)}
+                        onBack={onBack}
+                    />
+                </div>
+            </div>
+
+            <div className="sticky top-12 z-20 bg-blue-950/95 backdrop-blur-sm border-b border-blue-800 shadow-md">
+                <div className="mx-auto max-w-6xl px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                        {sections.map((section, index) => {
+                            const Icon = section.icon;
+                            const isActive = activeStep === index;
+                            const isCompleted = activeStep > index;
+                            
+                            return (
+                                <React.Fragment key={section.id}>
+                                    <button
+                                        onClick={() => scrollToSection(section.id, index)}
+                                        className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-300 ${
+                                            isActive
+                                                ? "bg-blue-800 text-white shadow-lg scale-105"
+                                                : "text-blue-300 hover:text-white hover:bg-blue-800/50"
+                                        }`}
+                                    >
+                                        {isCompleted ? (
+                                            <CheckCircle className="h-5 w-5" />
+                                        ) : (
+                                            <Icon className={`h-5 w-5 ${isActive ? "text-white" : "text-blue-400"}`} />
+                                        )}
+                                        <span className="text-sm font-medium hidden sm:inline">
+                                            {section.title}
+                                        </span>
+                                        <span className="text-xs font-medium sm:hidden">
+                                            {index + 1}
+                                        </span>
+                                    </button>
+                                    
+                                    {index < sections.length - 1 && (
+                                        <div className={`flex-1 h-0.5 rounded-full transition-all duration-300 ${
+                                            activeStep > index ? "bg-blue-600" : "bg-blue-800"
+                                        }`} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
 
             <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
-                <div className="mb-5">
-                    <h1 className="mb-2 text-left text-2xl font-bold text-white sm:text-3xl md:text-4xl">
-                        HON. {currentFullName}
-                    </h1>
-                    <p className="text-left text-lg font-medium text-gray-100 sm:text-xl md:text-2xl">
-                        {formatPositionForDisplay(currentPosition)}
-                    </p>
+                <div className="mb-6 border-b-2 border-blue-700 pb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+                    <div>
+                        <span className="text-xs font-bold tracking-widest text-blue-300 uppercase block mb-1">Republic of the Philippines</span>
+                        <h1 className="text-2xl font-black text-white sm:text-3xl md:text-4xl tracking-tight">
+                            HON. {currentFullName.toUpperCase()}
+                        </h1>
+                        <p className="mt-1 text-base font-semibold text-amber-400 sm:text-lg md:text-xl flex items-center gap-1.5">
+                            <Shield className="h-5 w-5 text-amber-400 inline" /> {formatPositionForDisplay(currentPosition)}
+                        </p>
+                    </div>
                 </div>
 
-                <div className="flex flex-col gap-6 md:flex-row md:gap-8">
-                    {/* Profile Content */}
-                    <div className="flex-1">
-                        <div className="mb-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
-                            <div className="flex flex-col gap-6 md:flex-row">
-                                <div className="relative flex-shrink-0">
-                                    <div className="relative">
-                                        <img
-                                            key={imageKey}
-                                            src={currentImage}
-                                            alt={currentFullName}
-                                            className={`mx-auto h-48 w-48 rounded-lg border-2 border-gray-200 object-cover sm:h-64 sm:w-64 md:mx-0 md:h-[340px] md:w-64 animate-pop-in border-gray-300 shadow-lg`}
-                                            onError={(e) => {
-                                                e.target.src = "/placeholder-avatar.png";
-                                            }}
-                                        />
-                                    </div>
+                <div className="flex flex-col lg:flex-row gap-8">
+                    <div className="flex-1 space-y-8">
+                        {/* Section 1: Profile Information */}
+                        <div id="profile" className="scroll-mt-32">
+                            <div className="rounded-lg bg-white border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-50 to-white px-6 py-3 border-b border-slate-200">
+                                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <User className="h-5 w-5 text-blue-700" />
+                                        Profile Information
+                                    </h2>
                                 </div>
+                                <div className="p-4 sm:p-6">
+                                    <div className="flex flex-col gap-6 md:flex-row">
+                                        <div className="flex-shrink-0 mx-auto md:mx-0">
+                                            <div className="relative p-1 bg-white border border-slate-300 rounded shadow-md">
+                                                <img
+                                                    key={imageKey}
+                                                    src={currentImage}
+                                                    alt={currentFullName}
+                                                    className="h-48 w-48 object-cover sm:h-56 sm:w-56 md:h-64 md:w-56 animate-pop-in"
+                                                    onError={(e) => {
+                                                        e.target.src = "/placeholder-avatar.png";
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
 
-                                <div className="mt-4 flex-1 md:mt-0">
-                                    <div className="mb-4">
-                                        <p className="text-sm leading-relaxed text-gray-700 sm:text-base">
-                                            {currentOfficial.bio
-                                                ? currentOfficial.bio
-                                                : currentOfficial.detailInfo
-                                                    ? currentOfficial.detailInfo.split("\n")[0] ||
-                                                    currentOfficial.detailInfo.substring(0, 200) + (currentOfficial.detailInfo.length > 200 ? "..." : "")
-                                                    : "Biography not available."}
-                                        </p>
-                                    </div>
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div className="mb-4">
+                                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Official Statement / Overview</h3>
+                                                <p className="text-sm leading-relaxed text-slate-700 italic border-l-4 border-slate-300 pl-3">
+                                                    "{currentOfficial.bio
+                                                        ? currentOfficial.bio
+                                                        : currentOfficial.detailInfo
+                                                            ? currentOfficial.detailInfo.split("\n")[0] || currentOfficial.detailInfo.substring(0, 200) + "..."
+                                                            : "Official summary currently unpopulated."}"
+                                                </p>
+                                            </div>
 
-                                    <div className="rounded-lg bg-blue-50 p-3 sm:p-4">
-                                        <h3 className="mb-2 text-sm font-semibold text-gray-900 sm:text-base">
-                                            {getOfficeTitle(currentPosition)}
-                                        </h3>
-                                        <div className="space-y-1.5 text-xs sm:text-sm">
-                                            {profileData.district && (
-                                                <div className="flex items-start gap-2">
-                                                    <User className="mt-0.5 h-4 w-4 text-gray-600" />
-                                                    <span className="text-gray-700">{profileData.district}</span>
+                                            <div className="rounded border border-slate-200 bg-slate-50 p-4">
+                                                <h4 className="mb-2.5 text-xs font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-200 pb-1">
+                                                    <Landmark className="h-3.5 w-3.5" /> Mandate & Office Information
+                                                </h4>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-700">
+                                                    <div className="font-semibold text-slate-900 col-span-1 sm:col-span-2 text-sm mb-1">
+                                                        {getOfficeTitle(currentPosition)}
+                                                    </div>
+                                                    {profileData.district && (
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="h-3.5 w-3.5 text-slate-500" />
+                                                            <span>Jurisdiction: <strong className="text-slate-900">{profileData.district}</strong></span>
+                                                        </div>
+                                                    )}
+                                                    {profileData.term_from && profileData.term_to && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Calendar className="h-3.5 w-3.5 text-slate-500" />
+                                                            <span>Incumbency: <span className="text-slate-900 font-medium">{formatDate(profileData.term_from)} – {formatDate(profileData.term_to)}</span></span>
+                                                        </div>
+                                                    )}
+                                                    {profileData.term && (
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock className="h-3.5 w-3.5 text-slate-500" />
+                                                            <span>Legislative Session: <span className="text-slate-900 font-medium">{profileData.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}</span></span>
+                                                        </div>
+                                                    )}
+                                                    {profileData.email && (
+                                                        <div className="flex items-center gap-2 sm:col-span-2 border-t border-slate-200/60 pt-1.5 mt-1">
+                                                            <Mail className="h-3.5 w-3.5 text-slate-500" />
+                                                            <span>Official Email: <a href={`mailto:${profileData.email}`} className="text-blue-800 hover:underline font-medium">{profileData.email}</a></span>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
-                                            {profileData.term_from && profileData.term_to && (
-                                                <div className="flex items-start gap-2">
-                                                    <span className="mt-0.5">📅</span>
-                                                    <span className="text-gray-700">
-                                                        Term: {formatDate(profileData.term_from)} – {formatDate(profileData.term_to)}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {profileData.term && (
-                                                <div className="flex items-start gap-2">
-                                                    <Clock className="mt-0.5 h-3.5 w-3.5 text-blue-600 sm:h-4 sm:w-4" />
-                                                    <span className="text-gray-700">
-                                                        {profileData.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            {profileData.email && (
-                                                <div className="flex items-start gap-2">
-                                                    <Mail className="mt-0.5 h-3.5 w-3.5 text-blue-600 sm:h-4 sm:w-4" />
-                                                    <span className="text-gray-700">{profileData.email}</span>
-                                                </div>
-                                            )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-xl bg-white p-4 shadow-sm sm:p-6">
-                            <h2 className="mb-4 border-b pb-2 text-xl font-bold text-gray-900 sm:text-2xl">Biography</h2>
-                            <div 
-                                ref={biographyRef}
-                                className={`space-y-3 text-sm leading-relaxed text-gray-700 sm:text-base ${
-                                    !isBiographyExpanded && needsTruncation ? 'max-h-48 overflow-hidden' : ''
-                                }`}
-                                style={{
-                                    maxHeight: !isBiographyExpanded && needsTruncation ? '12rem' : 'none'
-                                }}
-                            >
-                                {displayedParagraphs.map((para, i) => (
-                                    <p key={i}>{para.trim() || "\u00A0"}</p>
-                                ))}
-                            </div>
-                            
-                            {/* View More / View Less Button */}
-                            {biographyParagraphs.length > 3 && (
-                                <div className="mt-4 text-center">
-                                    <button
-                                        onClick={() => setIsBiographyExpanded(!isBiographyExpanded)}
-                                        className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors duration-200"
-                                    >
-                                        {isBiographyExpanded ? (
-                                            <>
-                                                <span>View Less</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                                                </svg>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span>View More</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </>
+                        {/* Section 2: Summary of Credentials - Simple Design */}
+                        <div id="summary" className="scroll-mt-32">
+                            <div className="rounded-lg bg-white border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-50 to-white px-6 py-3 border-b border-slate-200">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                            <Shield className="h-5 w-5 text-blue-700" />
+                                            Summary of Credentials
+                                        </h2>
+                                        {needsSummaryTruncation && (
+                                            <button
+                                                onClick={() => setIsSummaryExpanded(!isSummaryExpanded)}
+                                                className="flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-900 transition-colors"
+                                            >
+                                                {isSummaryExpanded ? (
+                                                    <>Collapse <ChevronUp className="h-4 w-4" /></>
+                                                ) : (
+                                                    <>Expand <ChevronDown className="h-4 w-4" /></>
+                                                )}
+                                            </button>
                                         )}
-                                    </button>
+                                    </div>
                                 </div>
-                            )}
+                                <div className="p-4 sm:p-6">
+                                    {hasSummaries ? (
+                                        <div 
+                                            ref={summaryRef}
+                                            className={`transition-all duration-300 ${!isSummaryExpanded && needsSummaryTruncation ? 'max-h-[400px] overflow-y-auto relative' : ''}`}
+                                        >
+                                            <div className="space-y-6">
+                                                {/* Education Experience Group */}
+                                                {groupedSummaries.Education_Experience.length > 0 && (
+                                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                                        <button
+                                                            onClick={() => toggleCategory("Education_Experience")}
+                                                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <GraduationCap className="h-5 w-5 text-slate-600" />
+                                                                <h3 className="font-semibold text-slate-800">Educational Background</h3>
+                                                                <span className="ml-2 text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                                                    {groupedSummaries.Education_Experience.length}
+                                                                </span>
+                                                            </div>
+                                                            {expandedCategories.Education_Experience ? (
+                                                                <ChevronUp className="h-4 w-4 text-slate-500" />
+                                                            ) : (
+                                                                <ChevronDown className="h-4 w-4 text-slate-500" />
+                                                            )}
+                                                        </button>
+                                                        
+                                                        {expandedCategories.Education_Experience !== false && (
+                                                            <div className="p-4 space-y-3 divide-y divide-slate-100">
+                                                                {groupedSummaries.Education_Experience.map((summaryItem, idx) => {
+                                                                    const subTitles = summaryItem.subTitle || [];
+                                                                    
+                                                                    return (
+                                                                        <div key={`edu_${idx}`} className="pt-3 first:pt-0">
+                                                                            <h4 className="font-semibold text-slate-800 mb-2">
+                                                                                {summaryItem.title || '—'}
+                                                                            </h4>
+                                                                            {subTitles.length > 0 && (
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {subTitles.map((sub, subIdx) => (
+                                                                                        <span key={subIdx} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">
+                                                                                            <FileText className="h-3 w-3" />
+                                                                                            {sub}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Work Experience Group */}
+                                                {groupedSummaries.Work_Experience.length > 0 && (
+                                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                                        <button
+                                                            onClick={() => toggleCategory("Work_Experience")}
+                                                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <Briefcase className="h-5 w-5 text-slate-600" />
+                                                                <h3 className="font-semibold text-slate-800">Work Experience</h3>
+                                                                <span className="ml-2 text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                                                    {groupedSummaries.Work_Experience.length}
+                                                                </span>
+                                                            </div>
+                                                            {expandedCategories.Work_Experience ? (
+                                                                <ChevronUp className="h-4 w-4 text-slate-500" />
+                                                            ) : (
+                                                                <ChevronDown className="h-4 w-4 text-slate-500" />
+                                                            )}
+                                                        </button>
+                                                        
+                                                        {expandedCategories.Work_Experience !== false && (
+                                                            <div className="p-4 space-y-3 divide-y divide-slate-100">
+                                                                {groupedSummaries.Work_Experience.map((summaryItem, idx) => {
+                                                                    const subTitles = summaryItem.subTitle || [];
+                                                                    
+                                                                    return (
+                                                                        <div key={`work_${idx}`} className="pt-3 first:pt-0">
+                                                                            <h4 className="font-semibold text-slate-800 mb-2">
+                                                                                {summaryItem.title || '—'}
+                                                                            </h4>
+                                                                            {subTitles.length > 0 && (
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {subTitles.map((sub, subIdx) => (
+                                                                                        <span key={subIdx} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">
+                                                                                            <FileText className="h-3 w-3" />
+                                                                                            {sub}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Others Group */}
+                                                {groupedSummaries.Others.length > 0 && (
+                                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                                        <button
+                                                            onClick={() => toggleCategory("Others")}
+                                                            className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                                                        >
+                                                            <div className="flex items-center gap-2">
+                                                                <MoreHorizontal className="h-5 w-5 text-slate-600" />
+                                                                <h3 className="font-semibold text-slate-800">Other Credentials</h3>
+                                                                <span className="ml-2 text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full">
+                                                                    {groupedSummaries.Others.length}
+                                                                </span>
+                                                            </div>
+                                                            {expandedCategories.Others ? (
+                                                                <ChevronUp className="h-4 w-4 text-slate-500" />
+                                                            ) : (
+                                                                <ChevronDown className="h-4 w-4 text-slate-500" />
+                                                            )}
+                                                        </button>
+                                                        
+                                                        {expandedCategories.Others !== false && (
+                                                            <div className="p-4 space-y-3 divide-y divide-slate-100">
+                                                                {groupedSummaries.Others.map((summaryItem, idx) => {
+                                                                    const subTitles = summaryItem.subTitle || [];
+                                                                    
+                                                                    return (
+                                                                        <div key={`other_${idx}`} className="pt-3 first:pt-0">
+                                                                            <h4 className="font-semibold text-slate-800 mb-2">
+                                                                                {summaryItem.title || '—'}
+                                                                            </h4>
+                                                                            {subTitles.length > 0 && (
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {subTitles.map((sub, subIdx) => (
+                                                                                        <span key={subIdx} className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded">
+                                                                                            <FileText className="h-3 w-3" />
+                                                                                            {sub}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {!isSummaryExpanded && needsSummaryTruncation && (
+                                                <div className="sticky bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none -mt-16"></div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div
+                                                ref={biographyRef}
+                                                className={`space-y-3.5 text-sm leading-relaxed text-slate-700 ${!isBiographyExpanded && needsTruncation ? 'max-h-48 overflow-hidden relative' : ''}`}
+                                                style={{ maxHeight: !isBiographyExpanded && needsTruncation ? '12rem' : 'none' }}
+                                            >
+                                                {displayedParagraphs.map((para, i) => (
+                                                    <p key={i} className="text-justify">{para.trim() || "\u00A0"}</p>
+                                                ))}
+                                                {!isBiographyExpanded && needsTruncation && (
+                                                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                                                )}
+                                            </div>
+
+                                            {biographyParagraphs.length > 3 && (
+                                                <div className="mt-4 border-t border-slate-100 pt-3 text-center">
+                                                    <button
+                                                        onClick={() => setIsBiographyExpanded(!isBiographyExpanded)}
+                                                        className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-blue-800 hover:text-blue-950 transition-colors"
+                                                    >
+                                                        {isBiographyExpanded ? (
+                                                            <><span>Collapse Biography</span><ChevronUp className="h-3 w-3" /></>
+                                                        ) : (
+                                                            <><span>Read Full Biography</span><ChevronDown className="h-3 w-3" /></>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="mt-6 rounded-xl bg-white p-4 shadow-sm sm:p-6">
-                            <h2 className="mb-3 border-b pb-2 text-xl font-bold text-gray-900 sm:text-2xl">Term Summary</h2>
-                            <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">Position</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">Term</th>
-                                            <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-700 sm:px-6 sm:py-3">Ordinances</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 bg-white">
-                                        {termData.terms.length > 0 ? (
-                                            termData.terms.map((termItem, index) => (
-                                                <tr key={index}>
-                                                    <td className="whitespace-nowrap px-3 py-3 text-sm font-medium text-gray-900 sm:px-6 sm:py-4">
-                                                        {formatPositionForDisplay(termItem.Position) || formatPositionForDisplay(currentPosition) || "—"}
-                                                    </td>
-                                                    <td className="px-3 py-3 text-sm text-gray-700 sm:px-6 sm:py-4">
-                                                        <div>
-                                                            {termItem.term && (
-                                                                <span>
-                                                                    {termItem.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
-                                                                </span>
-                                                            )}
-                                                            {termItem.from && termItem.to && (
-                                                                <span className="ml-1 text-xs text-gray-500 sm:text-sm">
-                                                                    ({termItem.from}–{termItem.to})
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-3 py-3 text-sm sm:px-6 sm:py-4">
-                                                        {termItem.ordinanceCount > 0 ? (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setModalData({
-                                                                        type: "ordinance",
-                                                                        items: termItem.titles || [],
-                                                                        position: formatPositionForDisplay(termItem.Position) || formatPositionForDisplay(currentPosition),
-                                                                        term: termItem.term,
-                                                                    });
-                                                                    setIsModalOpen(true);
-                                                                }}
-                                                                className="cursor-pointer text-xs font-medium text-blue-600 hover:underline sm:text-sm"
-                                                            >
-                                                                {termItem.ordinanceCount}
-                                                            </button>
-                                                        ) : (
-                                                            <span className="text-xs text-gray-500 sm:text-sm">0</span>
-                                                        )}
-                                                    </td>
+                        {/* Section 3: Legislative Track Record */}
+                        <div id="legislative" className="scroll-mt-32">
+                            <div className="rounded-lg bg-white border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-50 to-white px-6 py-3 border-b border-slate-200">
+                                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                        <Calendar className="h-5 w-5 text-blue-700" />
+                                        Legislative Track Record
+                                    </h2>
+                                </div>
+                                <div className="p-4 sm:p-6">
+                                    <div className="overflow-x-auto border border-slate-200 rounded">
+                                        <table className="min-w-full divide-y divide-slate-200 text-xs sm:text-sm">
+                                            <thead className="bg-slate-50 text-slate-700 uppercase tracking-wider font-semibold text-[11px]">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left border-b">Designation</th>
+                                                    <th className="px-4 py-3 text-left border-b">Legislative Term</th>
+                                                    <th className="px-4 py-3 text-center border-b w-32">Enacted Files</th>
                                                 </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="4" className="px-3 py-3 text-center text-sm text-gray-500 sm:px-6 sm:py-4">
-                                                    No term data available.
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-200 bg-white text-slate-700">
+                                                {termData.terms.length > 0 ? (
+                                                    termData.terms.map((termItem, index) => (
+                                                        <tr key={index} className="hover:bg-slate-50/60 transition-colors">
+                                                            <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">
+                                                                {formatPositionForDisplay(termItem.Position) || formatPositionForDisplay(currentPosition) || "—"}
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-1.5">
+                                                                    {termItem.term && (
+                                                                        <span className="font-medium text-slate-900">
+                                                                            {termItem.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}
+                                                                        </span>
+                                                                    )}
+                                                                    {termItem.from && termItem.to && (
+                                                                        <span className="text-slate-500 font-mono text-xs">
+                                                                            ({termItem.from}–{termItem.to})
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-center">
+                                                                {termItem.ordinanceCount > 0 ? (
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setModalData({
+                                                                                type: "ordinance",
+                                                                                items: termItem.titles || [],
+                                                                                position: formatPositionForDisplay(termItem.Position) || formatPositionForDisplay(currentPosition),
+                                                                                term: termItem.term,
+                                                                            });
+                                                                            setIsModalOpen(true);
+                                                                        }}
+                                                                        className="inline-flex items-center justify-center bg-blue-50 border border-blue-200 text-blue-800 hover:bg-blue-100 px-2.5 py-1 rounded font-bold transition-all text-xs"
+                                                                    >
+                                                                        View Docs ({termItem.ordinanceCount})
+                                                                    </button>
+                                                                ) : (
+                                                                    <span className="text-slate-400 italic text-xs">None listed</span>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan="3" className="px-4 py-6 text-center text-sm text-slate-400 italic">
+                                                            No deployment or term records available in this scope.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* SIDEBAR */}
-                    <div className="hidden lg:block lg:w-64">
-                        <div className="sticky top-24 rounded-xl bg-white p-4 shadow-sm">
-                            <div className="border-t border-gray-200 pt-4">
-                                <div className="mb-4">
-                                    <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-700">Ordinances</h3>
-                                    {Object.keys(termData.ordinancesByYear).length > 0 ? (
-                                        Object.entries(termData.ordinancesByYear)
-                                            .sort(([a], [b]) => {
-                                                if (b === "Unknown") return -1;
-                                                if (a === "Unknown") return 1;
-                                                return b - a;
-                                            })
-                                            .map(([year, items]) => (
-                                                <div key={year} className="mb-2">
-                                                    <p className="text-[9px] font-medium text-blue-700">{year}</p>
-                                                    <ul className="mt-1 space-y-1 text-[9px] text-gray-600">
-                                                        {items.slice(0, 3).map((item, i) => (
-                                                            <li key={i} className="truncate" title={item.title}>
-                                                                {item.title}
-                                                            </li>
-                                                        ))}
-                                                        {items.length > 3 && (
-                                                            <li className="text-[8px] text-gray-400">+{items.length - 3} more</li>
-                                                        )}
-                                                    </ul>
-                                                </div>
-                                            ))
-                                    ) : (
-                                        <p className="text-[9px] italic text-gray-500">None</p>
-                                    )}
+                    {/* Right Sidebar for Desktop */}
+                    <div className="hidden lg:block lg:w-64 flex-shrink-0">
+                        <div className="sticky top-36 space-y-4">
+                            <div className="rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50/40 transition-colors flex items-center justify-center min-h-[240px] p-4">
+                                <div className="w-full h-56 bg-white flex items-center justify-center overflow-hidden">
+                                    <img
+                                        src={Transparency}
+                                        alt="Transparency Seal"
+                                        className="w-full h-full object-fill"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="rounded-lg bg-white border border-slate-200 shadow-sm hover:bg-slate-50/40 transition-colors flex items-center justify-center min-h-[240px] p-4">
+                                <div className="w-full h-56 bg-white flex items-center justify-center overflow-hidden">
+                                    <img
+                                        src={bagongpilipinas}
+                                        alt="Bagong Pilipinas"
+                                        className="w-full h-full object-fill"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="rounded-lg bg-white border border-slate-200 p-4 shadow-sm">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-3 pb-1 border-b border-slate-200 flex items-center gap-1">
+                                    🏛️ Quick Directory Archive
+                                </h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="text-[11px] font-bold uppercase tracking-wide text-blue-900 mb-1.5">Ordinances Index</h4>
+                                        {Object.keys(termData.ordinancesByYear).length > 0 ? (
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {Object.keys(termData.ordinancesByYear).map((year) => (
+                                                    <span key={year} className="inline-flex items-center px-2 py-0.5 rounded bg-slate-100 text-slate-800 font-mono text-xs border border-slate-200">
+                                                        FY {year}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-slate-400 italic">No historical index.</p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -662,68 +963,19 @@ const OfficialProfileLayout = ({ member: directMember, fullName, Position, onBac
                 </div>
             </div>
 
-            {/* Modal with Role Display */}
             {isModalOpen && modalData && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4"
-                    onClick={() => setIsModalOpen(false)}
-                >
-                    <div
-                        className="relative max-h-[80vh] w-full max-w-2xl overflow-hidden rounded-lg bg-white shadow-xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="border-b bg-gray-50 px-4 py-3 sm:px-6 sm:py-4">
-                            <h3 className="text-base font-semibold text-gray-900 sm:text-lg">
-                                {modalData.type === "ordinance" ? "Ordinance Titles" : "Resolution Summaries"}
-                            </h3>
-                            <p className="text-xs text-gray-600 sm:text-sm">
-                                {modalData.position} •{" "}
-                                {modalData.term ? modalData.term.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) : "Unknown Term"}
-                            </p>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                            <h3 className="font-bold text-lg">{modalData.position} Documents</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
-
-                        <div className="max-h-[60vh] overflow-y-auto p-4 sm:p-6">
-                            {modalData.items.length > 0 ? (
-                                <div className="space-y-3">
-                                    {modalData.items.map((item, i) => (
-                                        <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
-                                            <div className="flex items-start gap-2">
-                                                <div className="flex-1">
-                                                    <p className="text-xs text-gray-700 sm:text-sm">
-                                                        {typeof item === "string" ? item : item.title}
-                                                    </p>
-                                                </div>
-                                                {item.role && (
-                                                    <div className="flex-shrink-0">
-                                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium sm:px-2.5 sm:py-0.5 sm:text-xs ${getRoleBadgeColor(item.role)}`}>
-                                                            <UserCircle className="mr-1 h-3 w-3" />
-                                                            {item.role}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {item.allRoles && item.allRoles.length > 1 && (
-                                                <div className="mt-1 pl-4">
-                                                    <span className="text-[9px] text-gray-400 sm:text-[10px]">
-                                                        Also: {item.allRoles.slice(1).join(", ")}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                        <div className="p-4">
+                            {modalData.items?.map((item, idx) => (
+                                <div key={idx} className="py-2 border-b last:border-0">
+                                    <p className="text-sm">{typeof item === 'string' ? item : item.title}</p>
                                 </div>
-                            ) : (
-                                <p className="text-xs italic text-gray-500 sm:text-sm">No data available.</p>
-                            )}
-                        </div>
-
-                        <div className="border-t bg-gray-50 px-4 py-2 text-right sm:px-6 sm:py-3">
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 sm:px-4 sm:py-2 sm:text-sm"
-                            >
-                                Close
-                            </button>
+                            ))}
                         </div>
                     </div>
                 </div>

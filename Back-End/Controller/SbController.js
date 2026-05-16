@@ -249,14 +249,6 @@ exports.Displayyearterm = AsyncErrorHandler(async (req, res) => {
 
 exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   const SbmemberID = req.params.id;
-
-  console.log("req.body", req.body);
-  console.log("year_from from body:", req.body.year_from);
-  console.log("year_to from body:", req.body.year_to);
-  console.log("isExOfficial from body:", req.body.isExOfficial);
-  console.log("selectedYearFrom from body:", req.body.selectedYearFrom);
-  console.log("selectedYearTo from body:", req.body.selectedYearTo);
-
   const oldRecord = await SBmember.findById(SbmemberID);
   if (!oldRecord) {
     return res.status(404).json({ error: "SB Member not found" });
@@ -265,6 +257,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   let newAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
   const oldAvatarUrl = oldRecord.avatar ? oldRecord.avatar.url : null;
 
+  // --- Upload new avatar if file exists ---
   if (req.file) {
     const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
     if (!allowedTypes.includes(req.file.mimetype)) {
@@ -300,12 +293,12 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       }
 
       newAvatarUrl = uploadResponse.data.url;
-      console.log("New avatar uploaded to Hostinger:", newAvatarUrl);
+      console.log("✅ New avatar uploaded:", newAvatarUrl);
     } catch (error) {
       fs.unlink(req.file.path, (err) => {
         if (err) console.error("Failed to delete temp file:", err);
       });
-      console.error("Error during avatar upload:", error.message);
+      console.error("❌ Avatar upload error:", error.message);
       return res.status(500).json({
         error: "Failed to upload new avatar due to a server error.",
       });
@@ -316,21 +309,16 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  // CRITICAL FIX: Handle Position if it's an array
+  // --- Handle Position ---
   let positionValue = req.body.Position;
-
-  // If Position is an array (like ['', 'Board_Member']), convert to string
   if (Array.isArray(positionValue)) {
-    // Filter out empty strings and take the last valid value
     const validValues = positionValue.filter(v => v && typeof v === 'string' && v.trim());
     positionValue = validValues.length > 0 ? validValues[validValues.length - 1] : '';
     console.log("Converted Position from array to string:", positionValue);
   }
-
-  // Ensure Position is a string
   const finalPosition = String(positionValue || '');
 
-  // Handle priorityNumber if it exists
+  // --- Handle priorityNumber ---
   let priorityNum = req.body.priorityNumber;
   if (priorityNum === "" || priorityNum === null || priorityNum === undefined) {
     priorityNum = null;
@@ -338,7 +326,7 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     priorityNum = parseInt(priorityNum, 10);
   }
 
-  // ✅ Handle isExOfficial - convert to boolean
+  // --- Handle isExOfficial ---
   let isExOfficialValue = req.body.isExOfficial;
   if (isExOfficialValue === "true" || isExOfficialValue === true) {
     isExOfficialValue = true;
@@ -349,31 +337,108 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
   }
   console.log("isExOfficial value to save:", isExOfficialValue);
 
-  // ✅ Handle year_from and year_to
+  // --- Handle year_from and year_to ---
   let yearFromValue = null;
   let yearToValue = null;
 
-  // Priority 1: Use selectedYearFrom/selectedYearTo (from form)
   if (req.body.selectedYearFrom && req.body.selectedYearTo) {
     yearFromValue = parseInt(req.body.selectedYearFrom, 10);
     yearToValue = parseInt(req.body.selectedYearTo, 10);
     console.log("Using selectedYearFrom/To:", yearFromValue, yearToValue);
-  }
-  // Priority 2: Use direct year_from/year_to
-  else if (req.body.year_from && req.body.year_to) {
+  } else if (req.body.year_from && req.body.year_to) {
     yearFromValue = parseInt(req.body.year_from, 10);
     yearToValue = parseInt(req.body.year_to, 10);
     console.log("Using direct year_from/to:", yearFromValue, yearToValue);
-  }
-  // Priority 3: If Ex-Official is true but no year data, keep existing or set to null
-  else if (isExOfficialValue === true) {
-    // Keep existing year_from/year_to if they exist, otherwise null
+  } else if (isExOfficialValue === true) {
     yearFromValue = oldRecord.year_from || null;
     yearToValue = oldRecord.year_to || null;
-    console.log("Ex-Official but no new year data, keeping existing:", yearFromValue, yearToValue);
+    console.log("Keeping existing year_from/year_to:", yearFromValue, yearToValue);
   }
 
-  // Build updateData
+  // ========================================
+  // ✅ PROCESS SUMMARY WITH SPECIFICNAME
+  // ========================================
+  let processedSummary = oldRecord.summary || [];
+
+  if (req.body.summary !== undefined) {
+    console.log("🔍 Processing summary for update...");
+    console.log("Type:", typeof req.body.summary);
+    console.log("Value:", req.body.summary);
+
+    let rawSummary = req.body.summary;
+
+    // If string, try to parse as JSON
+    if (typeof rawSummary === 'string') {
+      const trimmed = rawSummary.trim();
+      
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          rawSummary = JSON.parse(trimmed);
+          console.log("✅ Parsed JSON string to:", typeof rawSummary);
+          console.log("Is Array:", Array.isArray(rawSummary));
+        } catch (e) {
+          console.log("⚠️ Failed to parse JSON:", e.message);
+          if (trimmed.includes('[object Object]')) {
+            console.log("❌ Invalid [object Object], keeping old summary");
+            rawSummary = null;
+          } else {
+            rawSummary = [{ title: trimmed, subTitle: [], specificname: "" }];
+          }
+        }
+      } else if (trimmed !== "" && !trimmed.includes('[object Object]')) {
+        rawSummary = [{ title: trimmed, subTitle: [], specificname: "" }];
+        console.log("📝 Treated as plain text title");
+      } else {
+        console.log("⚠️ Invalid/empty summary string");
+        rawSummary = null;
+      }
+    }
+
+    // Process the parsed summary with specificname
+    if (Array.isArray(rawSummary)) {
+      processedSummary = rawSummary
+        .filter(item => item && typeof item === 'object')
+        .map(item => ({
+          title: String(item.title || "").trim(),
+          subTitle: Array.isArray(item.subTitle) 
+            ? item.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
+            : [],
+          specificname: item.specificname || "" // ✅ ADDED: Preserve specificname
+        }));
+      console.log(`✅ Processed ${processedSummary.length} summaries from array`);
+    } else if (rawSummary && typeof rawSummary === 'object' && rawSummary.title) {
+      processedSummary = [{
+        title: String(rawSummary.title || "").trim(),
+        subTitle: Array.isArray(rawSummary.subTitle) 
+          ? rawSummary.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
+          : [],
+        specificname: rawSummary.specificname || "" // ✅ ADDED: Preserve specificname
+      }];
+      console.log("✅ Processed single summary object");
+    } else if (rawSummary === null || rawSummary === undefined) {
+      console.log("ℹ️ Keeping existing summary");
+      // processedSummary already set to oldRecord.summary
+    } else {
+      processedSummary = [];
+      console.log("⚠️ Invalid summary format, using empty array");
+    }
+  } else {
+    console.log("ℹ️ No summary in request, keeping existing");
+  }
+
+  console.log("📋 Final summary to save:", JSON.stringify(processedSummary, null, 2));
+  console.log("📋 Summary count:", processedSummary.length);
+  
+  // Log specificname values for verification
+  if (processedSummary.length > 0) {
+    processedSummary.forEach((item, idx) => {
+      console.log(`📋 Summary ${idx + 1} specificname: "${item.specificname}"`);
+    });
+  }
+
+  // ========================================
+  // BUILD UPDATE DATA
+  // ========================================
   const updateData = {
     first_name: req.body.first_name,
     last_name: req.body.last_name,
@@ -386,28 +451,28 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     Position: finalPosition,
     detailInfo: req.body.detailInfo,
     isExOfficial: isExOfficialValue,
+    subPosition: req.body.subPosition || req.body.SubPosition || oldRecord.subPosition || "",
+    summary: processedSummary, // ✅ ADDED with specificname
   };
 
-  // ✅ Add year_from and year_to to updateData if they have values
+  // Add year_from and year_to
   if (yearFromValue !== null && yearToValue !== null) {
     updateData.year_from = yearFromValue;
     updateData.year_to = yearToValue;
     console.log("✅ Adding year_from to update:", yearFromValue);
     console.log("✅ Adding year_to to update:", yearToValue);
-  } else {
-    // If Ex-Official is false or no year data, clear year fields
-    if (isExOfficialValue === false) {
-      updateData.year_from = null;
-      updateData.year_to = null;
-      console.log("⚠️ Not Ex-Official, clearing year_from/year_to");
-    }
+  } else if (isExOfficialValue === false) {
+    updateData.year_from = null;
+    updateData.year_to = null;
+    console.log("⚠️ Not Ex-Official, clearing year_from/year_to");
   }
 
-  // Add priorityNumber to updateData if it exists
+  // Add priorityNumber
   if (priorityNum !== null) {
     updateData.priorityNumber = priorityNum;
   }
 
+  // Add avatar if new file uploaded
   if (req.file) {
     updateData.avatar = {
       ...oldRecord.avatar,
@@ -415,14 +480,17 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     };
   }
 
-  console.log("Final updateData:", updateData);
+  console.log("========================================");
+  console.log("💾 FINAL UPDATE DATA");
+  console.log("========================================");
+  console.log(JSON.stringify(updateData, null, 2));
+  console.log("========================================");
 
+  // --- UPDATE RECORD ---
   const updatedSBmember = await SBmember.findByIdAndUpdate(
     SbmemberID,
     updateData,
-    {
-      new: true,
-    }
+    { new: true }
   );
 
   if (!updatedSBmember) {
@@ -431,15 +499,31 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
     });
   }
 
-  console.log("Updated SBmember - isExOfficial:", updatedSBmember.isExOfficial);
-  console.log("Updated SBmember - year_from:", updatedSBmember.year_from);
-  console.log("Updated SBmember - year_to:", updatedSBmember.year_to);
+  console.log("========================================");
+  console.log("✅ UPDATE SUCCESSFUL");
+  console.log("========================================");
+  console.log("ID:", updatedSBmember._id);
+  console.log("isExOfficial:", updatedSBmember.isExOfficial);
+  console.log("year_from:", updatedSBmember.year_from);
+  console.log("year_to:", updatedSBmember.year_to);
+  console.log("subPosition:", updatedSBmember.subPosition);
+  console.log("summary:", JSON.stringify(updatedSBmember.summary, null, 2));
+  
+  // Log specificname values from saved record
+  if (updatedSBmember.summary && updatedSBmember.summary.length > 0) {
+    updatedSBmember.summary.forEach((item, idx) => {
+      console.log(`📋 Saved Summary ${idx + 1} specificname: "${item.specificname}"`);
+    });
+  }
+  console.log("========================================");
 
+  // --- SEND RESPONSE ---
   res.json({
     status: "success",
     data: updatedSBmember,
   });
 
+  // --- DELETE OLD AVATAR IN BACKGROUND ---
   if (req.file && oldAvatarUrl) {
     const params = new URLSearchParams();
     params.append("file", oldAvatarUrl);
@@ -452,19 +536,13 @@ exports.UpdateSBmember = AsyncErrorHandler(async (req, res, next) => {
       )
       .then((response) => {
         if (response.data.success) {
-          console.log("Old avatar deleted in background:", oldAvatarUrl);
+          console.log("✅ Old avatar deleted:", oldAvatarUrl);
         } else {
-          console.error(
-            "Failed to delete old avatar in background:",
-            response.data.message
-          );
+          console.error("❌ Failed to delete old avatar:", response.data.message);
         }
       })
       .catch((error) => {
-        console.error(
-          "Error deleting old avatar in background:",
-          error.message
-        );
+        console.error("❌ Error deleting old avatar:", error.message);
       });
   }
 });

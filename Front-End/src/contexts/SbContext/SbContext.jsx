@@ -164,7 +164,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const AddSbData = async (values) => {
         try {
 
-            console.log("Values",values)
+            console.log("Values", values)
             const formData = new FormData();
 
             const first_name = values.first_name?.trim() || "";
@@ -175,9 +175,21 @@ export const SbMemberDisplayProvider = ({ children }) => {
             formData.append("last_name", last_name);
             formData.append("term", values.term || "");
             formData.append("Position", values.Position || "");
-                formData.append("subPosition", values.subPosition || "");
+            formData.append("subPosition", values.subPosition || "");
             formData.append("term_from", values.term_from || "");
             formData.append("term_to", values.term_to || "");
+
+            // ✅✅✅ I-STRINGIFY ang summary para hindi maging [object Object]
+            if (values.summary) {
+                const summaryString = typeof values.summary === 'string'
+                    ? values.summary
+                    : JSON.stringify(values.summary);
+                formData.append("summary", summaryString);
+                console.log("✅ Summary appended:", summaryString);
+            } else {
+                formData.append("summary", "[]"); // Empty array as default
+                console.log("ℹ️ No summary, using empty array");
+            }
 
             const isExOfficialValue = values.Position
                 ?.trim()
@@ -232,7 +244,6 @@ export const SbMemberDisplayProvider = ({ children }) => {
                 }
             );
 
-            // ✅ SUCCESS HANDLING
             if (res.data.status === "Success") {
                 const newAdmin = res.data.data;
 
@@ -301,129 +312,126 @@ export const SbMemberDisplayProvider = ({ children }) => {
         }
     }, [authToken]);
 
-    const UpdateSbmember = async (dataID, values) => {
+const UpdateSbmember = async (dataID, values) => {
+    try {
+        const formData = new FormData();
 
-        console.log("values", values)
-        try {
-            console.log("=== UpdateSbmember Received ===");
-            console.log("values:", values);
-            console.log("Priority Number:", values.priorityNumber);
-            console.log("Position:", values.Position);
-            console.log("Selected Year From:", values.selectedYearFrom);
-            console.log("Selected Year To:", values.selectedYearTo);
-            console.log("Is Ex-Official:", values.isExOfficial);
+        // Personal Information
+        formData.append("first_name", values.first_name || "");
+        formData.append("last_name", values.last_name || "");
 
-            const formData = new FormData();
-
-            // Personal Information
-            formData.append("first_name", values.first_name || "");
-            formData.append("last_name", values.last_name || "");
-
-            if (values.middle_name) {
-                formData.append("middle_name", values.middle_name);
-            }
-
-            // Position - Use values.Position (capital P) from the form
-            let positionValue = values.Position || values.position || "";
-
-            // Ensure Position is a string, not an array
-            if (Array.isArray(positionValue)) {
-                const validValues = positionValue.filter(v => v && typeof v === 'string' && v.trim());
-                positionValue = validValues.length > 0 ? validValues[validValues.length - 1] : '';
-                console.log("Converted Position from array to string:", positionValue);
-            }
-
-            formData.append("Position", String(positionValue));
-
-            // Priority Number - CRITICAL: Add this field
-            let priorityNum = values.priorityNumber;
-            if (priorityNum !== null && priorityNum !== undefined && priorityNum !== "") {
-                formData.append("priorityNumber", String(priorityNum));
-                console.log("Adding priorityNumber to update:", priorityNum);
-            } else {
-                formData.append("priorityNumber", "");
-            }
-
-            // Ex-Official Status
-            if (values.isExOfficial !== undefined) {
-                formData.append("isExOfficial", values.isExOfficial ? "true" : "false");
-                console.log("Adding isExOfficial to update:", values.isExOfficial);
-            }
-
-            // ✅✅✅ YEAR_FROM and YEAR_TO for Ex-Official members
-            // Kung may selectedYearFrom at selectedYearTo mula sa form
-            if (values.selectedYearFrom && values.selectedYearTo) {
-                formData.append("year_from", values.selectedYearFrom.toString());
-                formData.append("year_to", values.selectedYearTo.toString());
-                console.log("✅ Adding year_from to update:", values.selectedYearFrom);
-                console.log("✅ Adding year_to to update:", values.selectedYearTo);
-            }
-            // Kung direct na year_from at year_to ang ipinasa
-            else if (values.year_from && values.year_to) {
-                formData.append("year_from", values.year_from.toString());
-                formData.append("year_to", values.year_to.toString());
-                console.log("✅ Adding year_from (direct) to update:", values.year_from);
-                console.log("✅ Adding year_to (direct) to update:", values.year_to);
-            }
-            // Kung Ex-Official pero walang year data, i-clear ang year_from at year_to
-            else if (values.isExOfficial === true) {
-                formData.append("year_from", "");
-                formData.append("year_to", "");
-                console.log("⚠️ Ex-Official but no year data, clearing year_from/year_to");
-            }
-
-            // Term Information (para sa regular members o ex-official na walang year data)
-            formData.append("term", values.term || "");
-            formData.append("role", "sbmember");
-            formData.append("district", values.district || "");
-
-            if (values.term_from) formData.append("term_from", values.term_from);
-            if (values.term_to) formData.append("term_to", values.term_to);
-            if (values.detailInfo) formData.append("detailInfo", values.detailInfo);
-
-            // Avatar
-            if (values.avatar && values.avatar instanceof File) {
-                formData.append("avatar", values.avatar);
-            }
-
-            // Debug: Log all FormData entries
-            console.log("=== FormData being sent for update ===");
-            for (let pair of formData.entries()) {
-                console.log(pair[0] + ':', pair[1]);
-            }
-
-            const response = await axiosInstance.patch(
-                `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/${dataID}`,
-                formData,
-                {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
-
-            if (response.data?.status === "success") {
-                console.log("Update successful:", response.data.data);
-                if (response.data.data.isExOfficial) {
-                    console.log("Updated year_from:", response.data.data.year_from);
-                    console.log("Updated year_to:", response.data.data.year_to);
-                }
-                return { success: true, data: response.data.data };
-            } else {
-                return { success: false, error: "Unexpected response from server." };
-            }
-        } catch (error) {
-            console.error("Error in UpdateSbmember:", error);
-            const message = error.response?.data?.message || error.response?.data?.error || error.message || "Something went wrong.";
-
-            setCustomError(message);
-            setModalStatus("failed");
-            setShowModal(true);
-
-            return { success: false, error: message };
+        if (values.middle_name) {
+            formData.append("middle_name", values.middle_name);
         }
-    };
+
+        // Position - Use values.Position (capital P) from the form
+        let positionValue = values.Position || values.position || "";
+
+        // Ensure Position is a string, not an array
+        if (Array.isArray(positionValue)) {
+            const validValues = positionValue.filter(v => v && typeof v === 'string' && v.trim());
+            positionValue = validValues.length > 0 ? validValues[validValues.length - 1] : '';
+        }
+
+        formData.append("Position", String(positionValue));
+
+        // SubPosition
+        const subPosValue = values.SubPosition || values.subPosition || "";
+        formData.append("subPosition", subPosValue);
+
+
+        // Priority Number
+        let priorityNum = values.priorityNumber;
+        if (priorityNum !== null && priorityNum !== undefined && priorityNum !== "") {
+            formData.append("priorityNumber", String(priorityNum));
+        } else {
+            formData.append("priorityNumber", "");
+        }
+
+        // Ex-Official Status
+        if (values.isExOfficial !== undefined) {
+            formData.append("isExOfficial", values.isExOfficial ? "true" : "false");
+        }
+
+        if (values.selectedYearFrom && values.selectedYearTo) {
+            formData.append("selectedYearFrom", values.selectedYearFrom.toString());
+            formData.append("selectedYearTo", values.selectedYearTo.toString());
+        } else if (values.year_from && values.year_to) {
+            formData.append("year_from", values.year_from.toString());
+            formData.append("year_to", values.year_to.toString());
+        } else if (values.isExOfficial === true) {
+            formData.append("year_from", "");
+            formData.append("year_to", "");
+        }
+
+        // Term Information
+        formData.append("term", values.term || "");
+        formData.append("role", "sbmember");
+        formData.append("district", values.district || "");
+
+        if (values.term_from) {
+            formData.append("term_from", values.term_from);
+        }
+        if (values.term_to) {
+            formData.append("term_to", values.term_to);
+        }
+        if (values.detailInfo) {
+            formData.append("detailInfo", values.detailInfo);
+        }
+
+
+        if (values.summary) {
+            const summaryString = typeof values.summary === 'string' 
+                ? values.summary 
+                : JSON.stringify(values.summary);
+            formData.append("summary", summaryString);
+        } else {
+            formData.append("summary", "[]");
+        }
+
+        // Avatar
+        if (values.avatar && values.avatar instanceof File) {
+            formData.append("avatar", values.avatar);
+        }
+
+        const response = await axiosInstance.patch(
+            `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute/${dataID}`,
+            formData,
+            {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
+
+        if (response.data?.status === "success") {
+            if (response.data.data.isExOfficial) {
+                console.log("Updated year_from:", response.data.data.year_from);
+                console.log("Updated year_to:", response.data.data.year_to);
+            }
+            
+            return { success: true, data: response.data.data };
+        } else {
+            console.error("❌ Unexpected response:", response.data);
+            return { success: false, error: "Unexpected response from server." };
+        }
+    } catch (error) {
+        console.error("❌ Error in UpdateSbmember:", error);
+        console.error("Error response:", error.response?.data);
+        
+        const message = error.response?.data?.message || 
+                       error.response?.data?.error || 
+                       error.message || 
+                       "Something went wrong.";
+
+        setCustomError(message);
+        setModalStatus("failed");
+        setShowModal(true);
+
+        return { success: false, error: message };
+    }
+};
     const DisplaySummaryTerm = useCallback(
         async (queryParams = {}) => {
             setSummaryTerm([]);

@@ -115,9 +115,6 @@ export const EventDisplayProvider = ({ children }) => {
       setShowModal(true);
     }
   };
-
-  console.log("monthEvent",monthEvent)
-
   // UPDATE EVENT
   const UpdateEvent = async (id, updatedValues) => {
     try {

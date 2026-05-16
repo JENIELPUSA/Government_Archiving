@@ -20,10 +20,10 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         selectedYearTermData: null,
     });
 
-
-    console.log("memberToEdit",memberToEdit)
-
-
+    // Separate state for summaries array
+    const [summaries, setSummaries] = useState([]);
+    // State para sa new subTitle input per summary
+    const [newSubTitles, setNewSubTitles] = useState({});
     const [isLoading, setIsLoading] = useState(false);
     const [positionInput, setPositionInput] = useState("");
     const [priorityError, setPriorityError] = useState("");
@@ -107,6 +107,12 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
             .join(" ");
     };
 
+    const extractYearFromDate = (dateString) => {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        return date.getFullYear();
+    };
+
     const validateTermDates = (termFrom, termTo) => {
         if (!termFrom || !termTo) {
             setTermError("Both Term From and Term To are required");
@@ -156,6 +162,176 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
         }
     };
 
+    // Summary management functions
+    const handleAddSummary = () => {
+        setSummaries(prev => [...prev, { title: "", subTitle: [], specificname: "" }]);
+    };
+
+    const handleRemoveSummary = (index) => {
+        setSummaries(prev => prev.filter((_, i) => i !== index));
+        // Clean up newSubTitles state
+        setNewSubTitles(prev => {
+            const updated = { ...prev };
+            delete updated[index];
+            // Re-index remaining keys
+            const reindexed = {};
+            Object.keys(updated).forEach((key) => {
+                const numKey = parseInt(key);
+                if (numKey > index) {
+                    reindexed[numKey - 1] = updated[key];
+                } else {
+                    reindexed[numKey] = updated[key];
+                }
+            });
+            return reindexed;
+        });
+    };
+
+    const handleSummaryTitleChange = (index, value) => {
+        setSummaries(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], title: value };
+            return updated;
+        });
+    };
+
+    const handleSpecificnameChange = (index, value) => {
+        setSummaries(prev => {
+            const updated = [...prev];
+            updated[index] = { ...updated[index], specificname: value };
+            return updated;
+        });
+    };
+
+    const handleAddSubTitle = (summaryIndex) => {
+        const subTitleValue = (newSubTitles[summaryIndex] || "").trim();
+        if (subTitleValue) {
+            setSummaries(prev => {
+                const updated = [...prev];
+                if (!updated[summaryIndex].subTitle.includes(subTitleValue)) {
+                    updated[summaryIndex] = {
+                        ...updated[summaryIndex],
+                        subTitle: [...updated[summaryIndex].subTitle, subTitleValue]
+                    };
+                }
+                return updated;
+            });
+            // Clear the input
+            setNewSubTitles(prev => ({ ...prev, [summaryIndex]: "" }));
+        }
+    };
+
+    const handleRemoveSubTitle = (summaryIndex, subTitleIndex) => {
+        setSummaries(prev => {
+            const updated = [...prev];
+            updated[summaryIndex] = {
+                ...updated[summaryIndex],
+                subTitle: updated[summaryIndex].subTitle.filter((_, i) => i !== subTitleIndex)
+            };
+            return updated;
+        });
+    };
+
+    const handleSubTitleInputChange = (summaryIndex, value) => {
+        setNewSubTitles(prev => ({ ...prev, [summaryIndex]: value }));
+    };
+
+    const handleSubTitleKeyPress = (summaryIndex, e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleAddSubTitle(summaryIndex);
+        }
+    };
+
+    // Parse summary from memberToEdit
+    const parseSummaryData = (rawSummary) => {
+        console.log("🔍 Parsing summary data...");
+        console.log("Type:", typeof rawSummary);
+        console.log("Is Array:", Array.isArray(rawSummary));
+        console.log("Raw:", rawSummary);
+
+        if (!rawSummary) return [];
+
+        let parsedSummaries = [];
+
+        // CASE 1: Already an array
+        if (Array.isArray(rawSummary)) {
+            // Check if first item's title is a JSON string (nested JSON bug)
+            if (rawSummary.length === 1 && 
+                typeof rawSummary[0]?.title === 'string' && 
+                rawSummary[0].title.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(rawSummary[0].title);
+                    if (Array.isArray(parsed)) {
+                        parsedSummaries = parsed.map(item => ({
+                            title: String(item.title || "").trim(),
+                            subTitle: Array.isArray(item.subTitle) ? item.subTitle.filter(s => s).map(String) : [],
+                            specificname: item.specificname || ""
+                        }));
+                        console.log("✅ Parsed nested JSON from title");
+                    }
+                } catch (e) {
+                    console.log("⚠️ Failed to parse nested JSON, using as-is");
+                    parsedSummaries = rawSummary.map(item => ({
+                        title: String(item.title || "").trim(),
+                        subTitle: Array.isArray(item.subTitle) ? item.subTitle.filter(s => s).map(String) : [],
+                        specificname: item.specificname || ""
+                    }));
+                }
+            } else {
+                // Normal array of summaries
+                parsedSummaries = rawSummary.map(item => ({
+                    title: String(item.title || "").trim(),
+                    subTitle: Array.isArray(item.subTitle) ? item.subTitle.filter(s => s).map(String) : [],
+                    specificname: item.specificname || ""
+                }));
+                console.log("✅ Using summary array directly");
+            }
+        }
+        // CASE 2: String (JSON format)
+        else if (typeof rawSummary === 'string') {
+            const trimmed = rawSummary.trim();
+            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    if (Array.isArray(parsed)) {
+                        parsedSummaries = parsed.map(item => ({
+                            title: String(item.title || "").trim(),
+                            subTitle: Array.isArray(item.subTitle) ? item.subTitle.filter(s => s).map(String) : [],
+                            specificname: item.specificname || ""
+                        }));
+                        console.log("✅ Parsed summary from JSON string");
+                    } else if (parsed && typeof parsed === 'object') {
+                        parsedSummaries = [{
+                            title: String(parsed.title || "").trim(),
+                            subTitle: Array.isArray(parsed.subTitle) ? parsed.subTitle.filter(s => s).map(String) : [],
+                            specificname: parsed.specificname || ""
+                        }];
+                        console.log("✅ Parsed single summary from JSON object string");
+                    }
+                } catch (e) {
+                    console.log("⚠️ Failed to parse JSON string:", e.message);
+                }
+            } else if (trimmed !== "" && !trimmed.includes('[object Object]')) {
+                // Plain text title
+                parsedSummaries = [{ title: trimmed, subTitle: [], specificname: "" }];
+                console.log("📝 Treated as plain text title");
+            }
+        }
+        // CASE 3: Single object with title (backward compatibility)
+        else if (typeof rawSummary === 'object' && rawSummary.title) {
+            parsedSummaries = [{
+                title: String(rawSummary.title || "").trim(),
+                subTitle: Array.isArray(rawSummary.subTitle) ? rawSummary.subTitle.filter(s => s).map(String) : [],
+                specificname: rawSummary.specificname || ""
+            }];
+            console.log("✅ Converted single summary object to array");
+        }
+
+        console.log("📋 Final parsed summaries:", parsedSummaries);
+        return parsedSummaries;
+    };
+
     useEffect(() => {
         if (memberToEdit) {
             setNewMember({
@@ -164,7 +340,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 last_name: memberToEdit.memberInfo?.last_name || memberToEdit.last_name || "",
                 detailInfo: memberToEdit.detailInfo || "",
                 position: memberToEdit.Position || "",
-                subPosition: memberToEdit.SubPosition || "",
+                subPosition: memberToEdit.SubPosition || memberToEdit.subPosition || "",
                 term: memberToEdit.memberInfo?.term || memberToEdit.term || "",
                 district: memberToEdit.district || memberToEdit.district || "",
                 term_from: memberToEdit.memberInfo?.term_from || memberToEdit.term_from || "",
@@ -173,12 +349,16 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 avatar: null,
                 preview: avatar || null,
                 isExOfficial: memberToEdit.isExOfficial || false,
-                selectedYearTermData: memberToEdit.selectedYearTermData|| memberToEdit.selectedYearTermData || null,
+                selectedYearTermData: memberToEdit.selectedYearTermData || null,
             });
 
+            // Parse and set summaries with specificname
+            const parsedSummaries = parseSummaryData(memberToEdit.summary);
+            setSummaries(parsedSummaries);
+
             if (memberToEdit.isExOfficial) {
-                const displayValue = memberToEdit.SubPosition 
-                    ? `${memberToEdit.Position || "Ex-Officio"}, ${memberToEdit.SubPosition}`
+                const displayValue = memberToEdit.SubPosition || memberToEdit.subPosition
+                    ? `${memberToEdit.Position || "Ex-Officio"}, ${memberToEdit.SubPosition || memberToEdit.subPosition}`
                     : memberToEdit.Position || "Ex-Officio";
                 setPositionInput(displayValue);
                 setPositionError("");
@@ -187,8 +367,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                     setSelectedYearTerm(termValue);
                 }
             } else {
-                const displayValue = memberToEdit.SubPosition 
-                    ? `${memberToEdit.Position || ""}, ${memberToEdit.SubPosition}`
+                const displayValue = memberToEdit.SubPosition || memberToEdit.subPosition
+                    ? `${memberToEdit.Position || ""}, ${memberToEdit.SubPosition || memberToEdit.subPosition}`
                     : memberToEdit.Position || "";
                 setPositionInput(displayValue);
                 if (memberToEdit.Position) {
@@ -217,6 +397,8 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 isExOfficial: false,
                 selectedYearTermData: null,
             });
+            setSummaries([]);
+            setNewSubTitles({});
             setPositionInput("");
             setPriorityError("");
             setTermError("");
@@ -484,6 +666,15 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 }
             }
 
+            // Filter out empty summaries and include specificname
+            const finalSummaries = summaries
+                .filter(s => s.title.trim() !== "" || s.subTitle.length > 0)
+                .map(s => ({
+                    title: s.title,
+                    subTitle: s.subTitle,
+                    specificname: s.specificname || "" // Include specificname even if empty
+                }));
+
             const finalData = {
                 first_name: newMember.first_name,
                 middle_name: newMember.middle_name,
@@ -501,8 +692,11 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 preview: newMember.preview,
                 selectedYearFrom: newMember.selectedYearTermData?.year_from || null,
                 selectedYearTo: newMember.selectedYearTermData?.year_to || null,
+                summary: finalSummaries,
                 ...(memberToEdit && { _id: memberToEdit._id }),
             };
+
+            console.log("📤 Final Data to submit:", finalData);
 
             await onAddMember(finalData);
 
@@ -521,27 +715,26 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4 backdrop-blur-sm overflow-y-auto">
             <motion.div
                 initial={{ y: -50, opacity: 0, scale: 0.95 }}
                 animate={{ y: 0, opacity: 1, scale: 1 }}
                 exit={{ y: -50, opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3, ease: "easeOut" }}
-                className="relative w-full max-w-5xl rounded-lg bg-white shadow-xl dark:bg-gray-800 overflow-hidden"
+                className="relative w-full max-w-7xl rounded-lg bg-white shadow-xl dark:bg-gray-800 overflow-hidden my-4 sm:my-8 mx-2 sm:mx-4"
             >
-                <div className="flex items-center justify-between border-b p-4 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
-                    <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
+                <div className="flex items-center justify-between border-b p-3 sm:p-4 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-800 dark:text-white">
                         {memberToEdit ? "Edit Member" : "Add New Member"}
                     </h2>
                     <button
                         onClick={onClose}
                         disabled={isLoading}
-                        className={`text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                            }`}
+                        className={`text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
-                            className="h-6 w-6"
+                            className="h-5 w-5 sm:h-6 sm:w-6"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -557,15 +750,15 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                 </div>
 
                 <div className="overflow-y-auto max-h-[calc(100vh-8rem)]">
-                    <form onSubmit={handleSubmit} className="p-6">
-                        <div className="flex flex-col gap-8 md:flex-row">
+                    <form onSubmit={handleSubmit} className="p-4 sm:p-6">
+                        {/* Mobile: Stack vertically, Desktop: Row layout */}
+                        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
                             {/* Left Column - Avatar and Sidebar Options */}
-                            <div className="flex w-full flex-col items-center md:w-1/3">
+                            <div className="flex w-full flex-col items-center lg:w-1/3">
                                 {/* Avatar Section */}
                                 <div
                                     onClick={triggerFileInput}
-                                    className={`relative mb-4 flex h-32 w-32 sm:h-40 sm:w-40 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-gray-200 dark:border-gray-500 dark:bg-gray-700 ${isLoading ? "cursor-not-allowed" : ""
-                                        }`}
+                                    className={`relative mb-4 flex h-28 w-28 sm:h-32 sm:w-32 md:h-40 md:w-40 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-gray-300 bg-gray-200 dark:border-gray-500 dark:bg-gray-700 ${isLoading ? "cursor-not-allowed" : ""}`}
                                 >
                                     {newMember.preview ? (
                                         <img
@@ -576,7 +769,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     ) : (
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
-                                            className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 dark:text-gray-300"
+                                            className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16 text-gray-400 dark:text-gray-300"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                             stroke="currentColor"
@@ -594,8 +787,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     type="button"
                                     onClick={triggerFileInput}
                                     disabled={isLoading}
-                                    className={`rounded-md border border-blue-500 px-4 py-2 text-sm font-medium text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                        }`}
+                                    className={`rounded-md border border-blue-500 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                                 >
                                     {newMember.preview ? "Change Photo" : "Upload Photo"}
                                 </button>
@@ -609,7 +801,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                 />
 
                                 {/* Ex-Official Checkbox */}
-                                <div className="mt-6 w-full">
+                                <div className="mt-4 sm:mt-6 w-full">
                                     <label className="mb-3 flex cursor-pointer items-center space-x-3">
                                         <input
                                             type="checkbox"
@@ -617,7 +809,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                             checked={newMember.isExOfficial}
                                             onChange={handleInputChange}
                                             disabled={isLoading}
-                                            className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+                                            className="h-4 w-4 sm:h-5 sm:w-5 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
                                         />
                                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Ex-Officio Member
@@ -630,9 +822,9 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                     </p>
                                 </div>
 
-                                {/* Select Year Term Section - Only shows when Ex-Official is checked */}
+                                {/* Select Year Term Section */}
                                 {newMember.isExOfficial && (
-                                    <div className="mt-6 w-full">
+                                    <div className="mt-4 sm:mt-6 w-full">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Select Year Term
                                         </label>
@@ -640,8 +832,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                             value={selectedYearTerm}
                                             onChange={(e) => handleYearTermSelect(e.target.value)}
                                             disabled={isLoading}
-                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                }`}
+                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                                         >
                                             <option value="">Select a year term...</option>
                                             {yearterm && yearterm.map((term, index) => (
@@ -662,7 +853,7 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                 )}
 
                                 {/* Term Number */}
-                                <div className="mt-6 w-full">
+                                <div className="mt-4 sm:mt-6 w-full">
                                     <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Term Number
                                     </label>
@@ -671,12 +862,9 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                                         value={newMember.term}
                                         onChange={handleInputChange}
                                         disabled={isLoading}
-                                        className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            }`}
+                                        className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                                     >
-                                        <option value="" disabled>
-                                            Select Number of Term
-                                        </option>
+                                        <option value="" disabled>Select Number of Term</option>
                                         <option value="1st_term">1st Term</option>
                                         <option value="2nd_term">2nd Term</option>
                                         <option value="3rd_term">3rd Term</option>
@@ -685,272 +873,196 @@ function AddMemberForm({ onAddMember, onClose, memberToEdit, avatar, existingMem
                             </div>
 
                             {/* Right Column */}
-                            <div className="w-full md:w-2/3">
+                            <div className="w-full lg:w-2/3">
                                 {/* Used Priorities Info */}
                                 {usedPriorities.length > 0 && (
-                                    <div className="mb-6">
+                                    <div className="mb-4 sm:mb-6">
                                         <p className="text-xs text-gray-500 dark:text-gray-400">
                                             Used priorities: {usedPriorities.sort((a, b) => a - b).join(", ")}
                                         </p>
                                     </div>
                                 )}
 
-                                {/* Personal Details Grid */}
+                                {/* Personal Details Grid - Responsive columns */}
                                 <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-                                    {/* First Name */}
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             First Name <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="first_name"
-                                            value={newMember.first_name}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                }`}
-                                            required
-                                        />
+                                        <input type="text" name="first_name" value={newMember.first_name} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`} required />
                                     </div>
-
-                                    {/* Middle Name */}
                                     <div className="col-span-1">
-                                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Middle Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="middle_name"
-                                            value={newMember.middle_name}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                }`}
-                                        />
+                                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Middle Name</label>
+                                        <input type="text" name="middle_name" value={newMember.middle_name} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`} />
                                     </div>
-
-                                    {/* Last Name */}
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Last Name <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="last_name"
-                                            value={newMember.last_name}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                }`}
-                                            required
-                                        />
+                                        <input type="text" name="last_name" value={newMember.last_name} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`} required />
                                     </div>
-
-                                    {/* Designation/District */}
                                     <div className="col-span-1">
-                                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Designation/District
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="district"
-                                            value={newMember.district}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                }`}
-                                        />
+                                        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Designation/District</label>
+                                        <input type="text" name="district" value={newMember.district} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`} />
                                     </div>
-
-                                    {/* Term From */}
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Term From <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="term_from"
-                                            value={newMember.term_from ? newMember.term_from.split('T')[0] : ""}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
-                                                ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                                                ${termError ? "border-red-500" : "border-gray-300"}`}
-                                            required
-                                        />
+                                        <input type="date" name="term_from" value={newMember.term_from ? newMember.term_from.split('T')[0] : ""} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""} ${termError ? "border-red-500" : "border-gray-300"}`} required />
                                     </div>
-
-                                    {/* Term To */}
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Term To <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="date"
-                                            name="term_to"
-                                            value={newMember.term_to ? newMember.term_to.split('T')[0] : ""}
-                                            onChange={handleInputChange}
-                                            disabled={isLoading}
-                                            className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
-                                                ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                                                ${termError ? "border-red-500" : "border-gray-300"}`}
-                                            required
-                                        />
+                                        <input type="date" name="term_to" value={newMember.term_to ? newMember.term_to.split('T')[0] : ""} onChange={handleInputChange} disabled={isLoading} className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""} ${termError ? "border-red-500" : "border-gray-300"}`} required />
                                     </div>
                                 </div>
 
-                                {/* Position and Priority Number - Side by Side */}
-                                <div className="mb-6 mt-4 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
-                                    {/* Position Input */}
+                                {/* Position and Priority Number */}
+                                <div className="mb-4 sm:mb-6 mt-4 grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                                             Position <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                            type="text"
-                                            name="position"
-                                            value={positionInput}
-                                            onChange={handleInputChange}
-                                            onKeyDown={handlePositionKeyDown}
-                                            disabled={isLoading}
-                                            placeholder={getPositionPlaceholder()}
-                                            className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white 
-                                            ${isLoading ? "cursor-not-allowed opacity-50" : ""}
-                                            ${positionError && !newMember.isExOfficial ? "border-red-500" : "border-gray-300"}
-                                            ${newMember.isExOfficial ? "bg-blue-50 dark:bg-blue-900/20" : ""}
-                                            `}
-                                            required={!newMember.isExOfficial}
-                                            ref={positionInputRef}
-                                        />
-                                        {positionError && !newMember.isExOfficial && (
-                                            <p className="mt-1 text-xs text-red-500">{positionError}</p>
-                                        )}
-                                        {newMember.subPosition && (
-                                            <p className="mt-1 text-xs text-green-500">
-                                                ✓ Main Position: {newMember.position} | SubPosition: {newMember.subPosition}
-                                            </p>
-                                        )}
-                                        {!newMember.isExOfficial && !positionError && positionInput && !newMember.subPosition && (
-                                            <p className="mt-1 text-xs text-green-500">
-                                                ✓ Position accepted
-                                            </p>
-                                        )}
-                                        {newMember.isExOfficial && (
-                                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">
-                                                ⚠️ "Ex-Officio" cannot be removed from the position field
-                                            </p>
-                                        )}
-                                        <p className="mt-1 text-xs text-gray-400">
-                                            ℹ️ Use comma (,) to separate main position and subposition (e.g., "SB ex-Officio, PCL")
-                                        </p>
+                                        <input type="text" name="position" value={positionInput} onChange={handleInputChange} onKeyDown={handlePositionKeyDown} disabled={isLoading} placeholder={getPositionPlaceholder()} className={`w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""} ${positionError && !newMember.isExOfficial ? "border-red-500" : "border-gray-300"} ${newMember.isExOfficial ? "bg-blue-50 dark:bg-blue-900/20" : ""}`} required={!newMember.isExOfficial} ref={positionInputRef} />
+                                        {positionError && !newMember.isExOfficial && <p className="mt-1 text-xs text-red-500">{positionError}</p>}
+                                        {newMember.subPosition && <p className="mt-1 text-xs text-green-500">✓ Main Position: {newMember.position} | SubPosition: {newMember.subPosition}</p>}
+                                        {!newMember.isExOfficial && !positionError && positionInput && !newMember.subPosition && <p className="mt-1 text-xs text-green-500">✓ Position accepted</p>}
+                                        {newMember.isExOfficial && <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">⚠️ "Ex-Officio" cannot be removed from the position field</p>}
+                                        <p className="mt-1 text-xs text-gray-400">ℹ️ Use comma (,) to separate main position and subposition</p>
                                     </div>
-
-                                    {/* Priority Number */}
                                     <div className="col-span-1">
                                         <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                            Priority Number
-                                            <span className="ml-2 text-xs text-gray-500">(Lower = Higher)</span>
+                                            Priority Number <span className="ml-2 text-xs text-gray-500">(Lower = Higher)</span>
                                         </label>
-                                        <div>
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="number"
-                                                    name="priorityNumber"
-                                                    value={newMember.priorityNumber === null ? "" : newMember.priorityNumber}
-                                                    onChange={handleInputChange}
-                                                    disabled={isLoading}
-                                                    min="1"
-                                                    step="1"
-                                                    placeholder="Enter priority"
-                                                    className={`w-full rounded-md border px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                                        } ${priorityError ? "border-red-500" : "border-gray-300"}`}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAutoAssignPriority}
-                                                    disabled={isLoading}
-                                                    className="whitespace-nowrap rounded-md bg-green-500 px-3 py-2 text-sm text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
-                                                >
-                                                    Auto
-                                                </button>
-                                            </div>
-                                            {priorityError && (
-                                                <p className="mt-1 text-xs text-red-500">{priorityError}</p>
-                                            )}
-                                            {!priorityError && newMember.priorityNumber && (
-                                                <p className="mt-1 text-xs text-green-500">
-                                                    Priority {newMember.priorityNumber}
-                                                </p>
-                                            )}
+                                        <div className="flex flex-col sm:flex-row gap-2">
+                                            <input type="number" name="priorityNumber" value={newMember.priorityNumber === null ? "" : newMember.priorityNumber} onChange={handleInputChange} disabled={isLoading} min="1" step="1" placeholder="Enter priority" className={`flex-1 rounded-md border px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""} ${priorityError ? "border-red-500" : "border-gray-300"}`} />
+                                            <button type="button" onClick={handleAutoAssignPriority} disabled={isLoading} className="whitespace-nowrap rounded-md bg-green-500 px-3 py-2 text-sm text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700">Auto</button>
                                         </div>
+                                        {priorityError && <p className="mt-1 text-xs text-red-500">{priorityError}</p>}
+                                        {!priorityError && newMember.priorityNumber && <p className="mt-1 text-xs text-green-500">Priority {newMember.priorityNumber}</p>}
                                     </div>
                                 </div>
 
-                                {/* Term Error */}
-                                {termError && (
-                                    <div className="mt-2">
-                                        <p className="text-sm text-red-500">{termError}</p>
+                                {termError && <div className="mt-2"><p className="text-sm text-red-500">{termError}</p></div>}
+
+                                {/* ============ MULTIPLE SUMMARY TILES WITH SPECIFICNAME ============ */}
+                                <div className="mt-6 border-t dark:border-gray-700 pt-4">
+                                    <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base sm:text-lg font-medium text-gray-700 dark:text-gray-300">Summaries</h3>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Add multiple summaries with their own sub-titles and category</p>
+                                        </div>
+                                        <button type="button" onClick={handleAddSummary} disabled={isLoading} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-md hover:from-green-600 hover:to-emerald-700 disabled:opacity-50 transition-all duration-200">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                            Add Summary
+                                        </button>
                                     </div>
-                                )}
+
+                                    {summaries.length === 0 && (
+                                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-xl border-2 border-dashed border-gray-300 p-6 sm:p-8 text-center dark:border-gray-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                            <p className="mt-3 text-sm font-medium text-gray-500 dark:text-gray-400">No summaries added yet</p>
+                                            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Click "Add Summary" to create your first summary tile</p>
+                                        </motion.div>
+                                    )}
+
+                                    {/* Responsive summary grid */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {summaries.map((summary, summaryIndex) => (
+                                            <motion.div key={summaryIndex} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }} className="relative flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md dark:border-gray-600 dark:bg-gray-800 transition-all duration-200">
+                                                <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 sm:px-4 sm:py-3 dark:border-gray-700">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <span className="flex h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600 dark:bg-blue-900/50 dark:text-blue-400">{summaryIndex + 1}</span>
+                                                        <span className="truncate text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">{summary.title || `Summary #${summaryIndex + 1}`}</span>
+                                                    </div>
+                                                    <button type="button" onClick={() => handleRemoveSummary(summaryIndex)} disabled={isLoading} className="flex-shrink-0 rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors duration-150" title="Delete Summary">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-1 flex-col p-3 sm:p-4">
+                                                    <div className="mb-3">
+                                                        <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Title</label>
+                                                        <input type="text" value={summary.title} onChange={(e) => handleSummaryTitleChange(summaryIndex, e.target.value)} disabled={isLoading} placeholder="Enter title..." className="w-full rounded-lg border border-gray-300 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 transition-colors duration-150" />
+                                                    </div>
+                                                    
+                                                    {/* SPECIFICNAME DROPDOWN - NEW */}
+                                                    <div className="mb-3">
+                                                        <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Category</label>
+                                                        <select
+                                                            value={summary.specificname || ""}
+                                                            onChange={(e) => handleSpecificnameChange(summaryIndex, e.target.value)}
+                                                            disabled={isLoading}
+                                                            className="w-full rounded-lg border border-gray-300 px-2 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 transition-colors duration-150"
+                                                        >
+                                                            <option value="">Select Category...</option>
+                                                            <option value="Education_Experience">📚 Education Experience</option>
+                                                            <option value="Work_Experience">💼 Work Experience</option>
+                                                            <option value="Others">📌 Others</option>
+                                                        </select>
+                                                        {summary.specificname && (
+                                                            <p className="mt-1 text-xs text-green-500 dark:text-green-400">
+                                                                ✓ Category: {summary.specificname.replace('_', ' ')}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <div className="mb-3 flex-1">
+                                                        <label className="mb-2 block text-xs font-medium text-gray-500 dark:text-gray-400">Sub Titles</label>
+                                                        {summary.subTitle.length > 0 ? (
+                                                            <div className="mb-3 flex flex-wrap gap-1.5">
+                                                                {summary.subTitle.map((sub, subIndex) => (
+                                                                    <motion.span key={subIndex} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }} className="group inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-medium text-blue-700 shadow-sm dark:from-blue-900/30 dark:to-indigo-900/30 dark:text-blue-300">
+                                                                        {sub}
+                                                                        <button type="button" onClick={() => handleRemoveSubTitle(summaryIndex, subIndex)} disabled={isLoading} className="ml-0.5 rounded-full p-0.5 text-blue-400 opacity-0 group-hover:opacity-100 hover:bg-blue-200 hover:text-blue-700 dark:hover:bg-blue-800 dark:hover:text-blue-200 transition-all duration-150" title="Remove">
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5 sm:h-3 sm:w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                                                        </button>
+                                                                    </motion.span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="mb-3 rounded-lg border border-dashed border-gray-300 px-3 py-2 text-center dark:border-gray-600"><p className="text-xs text-gray-400 dark:text-gray-500">No sub-titles yet</p></div>
+                                                        )}
+                                                        <div className="flex gap-1.5">
+                                                            <input type="text" value={newSubTitles[summaryIndex] || ""} onChange={(e) => handleSubTitleInputChange(summaryIndex, e.target.value)} onKeyPress={(e) => handleSubTitleKeyPress(summaryIndex, e)} disabled={isLoading} placeholder="Add sub-title..." className="flex-1 rounded-lg border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 transition-colors duration-150" />
+                                                            <button type="button" onClick={() => handleAddSubTitle(summaryIndex)} disabled={isLoading || !(newSubTitles[summaryIndex] || "").trim()} className="rounded-lg bg-blue-500 px-2 py-1.5 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-50 transition-colors duration-150" title="Add SubTitle">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="border-t border-gray-100 px-3 py-2 sm:px-4 sm:py-2 dark:border-gray-700">
+                                                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 dark:text-gray-500">
+                                                        <span>{summary.subTitle.length} sub-title{summary.subTitle.length !== 1 ? 's' : ''}</span>
+                                                        {summary.specificname && (
+                                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                                                                {summary.specificname.replace('_', ' ')}
+                                                            </span>
+                                                        )}
+                                                        {summary.title && <span className="truncate text-blue-500 dark:text-blue-400">{summary.title}</span>}
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
 
                                 {/* Additional Info */}
                                 <div className="mt-6">
-                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Additional Info
-                                    </label>
-                                    <textarea
-                                        name="detailInfo"
-                                        value={newMember.detailInfo}
-                                        onChange={handleInputChange}
-                                        rows="3"
-                                        disabled={isLoading}
-                                        className={`w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            }`}
-                                        placeholder="Enter any additional information about the member..."
-                                    />
+                                    <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">Additional Info</label>
+                                    <textarea name="detailInfo" value={newMember.detailInfo} onChange={handleInputChange} rows="3" disabled={isLoading} className={`w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white ${isLoading ? "cursor-not-allowed opacity-50" : ""}`} placeholder="Enter any additional information about the member..." />
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="mt-8 flex justify-end space-x-3 sticky bottom-0 bg-white dark:bg-gray-800 py-4 border-t dark:border-gray-700 -mx-6 px-6">
-                                    <button
-                                        type="button"
-                                        onClick={onClose}
-                                        disabled={isLoading}
-                                        className={`rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600 ${isLoading ? "cursor-not-allowed opacity-50" : ""
-                                            }`}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading || !!priorityError || !!termError || !!positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to}
-                                        className={`rounded-md bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 ${isLoading || priorityError || termError || positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to
-                                            ? "cursor-not-allowed opacity-50"
-                                            : ""
-                                            }`}
-                                    >
+                                {/* Action Buttons - Responsive */}
+                                <div className="mt-6 sm:mt-8 flex flex-col-reverse sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 sticky bottom-0 bg-white dark:bg-gray-800 py-3 sm:py-4 border-t dark:border-gray-700 -mx-4 sm:-mx-6 px-4 sm:px-6">
+                                    <button type="button" onClick={onClose} disabled={isLoading} className={`rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600 ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}>Cancel</button>
+                                    <button type="submit" disabled={isLoading || !!priorityError || !!termError || !!positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to} className={`rounded-md bg-blue-500 px-4 py-2 text-sm text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 ${isLoading || priorityError || termError || positionError || (!newMember.isExOfficial && !positionInput) || !newMember.term_from || !newMember.term_to ? "cursor-not-allowed opacity-50" : ""}`}>
                                         {isLoading ? (
-                                            <span className="flex items-center">
-                                                <svg
-                                                    className="-ml-1 mr-3 h-5 w-5 animate-spin text-white"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    fill="none"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <circle
-                                                        className="opacity-25"
-                                                        cx="12"
-                                                        cy="12"
-                                                        r="10"
-                                                        stroke="currentColor"
-                                                        strokeWidth="4"
-                                                    />
-                                                    <path
-                                                        className="opacity-75"
-                                                        fill="currentColor"
-                                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                                                    />
+                                            <span className="flex items-center justify-center">
+                                                <svg className="-ml-1 mr-2 h-4 w-4 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                                 </svg>
                                                 {memberToEdit ? "Saving..." : "Adding..."}
                                             </span>

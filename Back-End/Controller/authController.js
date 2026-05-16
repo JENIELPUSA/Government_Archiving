@@ -60,14 +60,19 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       isExOfficial,
       selectedYearFrom,
       selectedYearTo,
-      subPosition
+      subPosition,
+      summary
     } = req.body;
 
-    console.log("RequestBody", req.body);
+    console.log("========================================");
+    console.log("📦 REQUEST BODY");
+    console.log("========================================");
+    console.log("Summary type:", typeof summary);
+    console.log("Summary value:", summary);
+    console.log("========================================");
 
-    // Convert isExOfficial from string to boolean
     const isExOfficialBoolean = isExOfficial === "true" || isExOfficial === true;
-    console.log("isExOfficial converted to boolean:", isExOfficialBoolean);
+    console.log("isExOfficial:", isExOfficialBoolean);
 
     const defaultPassword = "123456789";
 
@@ -82,8 +87,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     const requiredFields = requiredFieldsByRole[role];
     if (!requiredFields) {
       return res.status(400).json({
-        message:
-          "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
+        message: "Invalid role provided. Must be 'admin', 'officer', 'approver', or 'sbmember'.",
       });
     }
 
@@ -94,7 +98,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       });
     }
 
-    // --- Check existing user (only if email is required) ---
+    // --- Check existing user ---
     if (role !== "sbmember") {
       const existingUser = await UserLogin.findOne({ username: email });
       if (existingUser) {
@@ -110,11 +114,7 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
     if (req.file) {
       const fileName = req.file.filename;
       const form = new FormData();
-      form.append(
-        "file",
-        fs.createReadStream(req.file.path),
-        req.file.originalname,
-      );
+      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
 
       try {
         const response = await axios.post(process.env.UPLOAD_URL, form, {
@@ -137,12 +137,9 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
           if (err) console.error("Failed to delete temp file:", err);
         });
 
-        console.log("✅ Avatar uploaded to Hostinger:", avatar.url);
+        console.log("✅ Avatar uploaded:", avatar.url);
       } catch (err) {
-        console.error(
-          "❌ Hostinger upload failed:",
-          err.response?.data || err.message,
-        );
+        console.error("❌ Upload failed:", err.response?.data || err.message);
         return res.status(500).json({ error: "Failed to upload avatar image" });
       }
     }
@@ -170,44 +167,114 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       term,
       priorityNumber,
       isExOfficial: isExOfficialBoolean,
-      subPosition  // ✅ Added subPosition here
+      subPosition,
     };
 
-    // ✅✅✅ KAPAG ang isExOfficial ay TRUE, i-save ang year_from at year_to (tama sa schema)
-    if (isExOfficialBoolean === true) {
-      if (selectedYearFrom && selectedYearTo) {
-        profileData.year_from = selectedYearFrom;  // ✅ gamitin ang year_from (tulad sa schema)
-        profileData.year_to = selectedYearTo;      // ✅ gamitin ang year_to (tulad sa schema)
-        console.log("✅ Saving year_from:", selectedYearFrom);
-        console.log("✅ Saving year_to:", selectedYearTo);
-      } else if (req.body.year_from && req.body.year_to) {
-        // Backup: kung direct na year_from/year_to ang ipinasa
-        profileData.year_from = req.body.year_from;
-        profileData.year_to = req.body.year_to;
-        console.log("✅ Saving year_from (from body):", req.body.year_from);
-        console.log("✅ Saving year_to (from body):", req.body.year_to);
-      } else {
-        console.log("⚠️ isExOfficial is true but year_from/year_to are missing");
+    // ========================================
+    // ✅✅✅ UPDATED SUMMARY PROCESSING WITH SPECIFICNAME
+    // ========================================
+    let processedSummary = [];
+
+    if (summary) {
+      console.log("🔍 Processing summary...");
+      console.log("Type:", typeof summary);
+
+      // CASE 1: String - try to parse as JSON
+      if (typeof summary === 'string') {
+        const trimmed = summary.trim();
+        
+        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            console.log("✅ Parsed JSON:", Array.isArray(parsed) ? `Array(${parsed.length})` : 'Object');
+            
+            if (Array.isArray(parsed)) {
+              processedSummary = parsed
+                .filter(item => item && typeof item === 'object')
+                .map(item => ({
+                  title: String(item.title || "").trim(),
+                  subTitle: Array.isArray(item.subTitle) 
+                    ? item.subTitle.filter(s => s).map(s => String(s).trim())
+                    : [],
+                  specificname: item.specificname || "" // ✅ Added specificname
+                }));
+            } else if (parsed && typeof parsed === 'object') {
+              processedSummary = [{
+                title: String(parsed.title || "").trim(),
+                subTitle: Array.isArray(parsed.subTitle) 
+                  ? parsed.subTitle.filter(s => s).map(s => String(s).trim())
+                  : [],
+                specificname: parsed.specificname || "" // ✅ Added specificname
+              }];
+            }
+          } catch (e) {
+            console.log("⚠️ Parse failed:", e.message);
+            if (!trimmed.includes('[object Object]')) {
+              processedSummary = [{ 
+                title: trimmed, 
+                subTitle: [],
+                specificname: "" // ✅ Added specificname
+              }];
+            }
+          }
+        } else if (!trimmed.includes('[object Object]')) {
+          processedSummary = [{ 
+            title: trimmed, 
+            subTitle: [],
+            specificname: "" // ✅ Added specificname
+          }];
+        }
+      }
+      // CASE 2: Already an array
+      else if (Array.isArray(summary)) {
+        processedSummary = summary
+          .filter(item => item && typeof item === 'object')
+          .map(item => ({
+            title: String(item.title || "").trim(),
+            subTitle: Array.isArray(item.subTitle) 
+              ? item.subTitle.filter(s => s).map(s => String(s).trim())
+              : [],
+            specificname: item.specificname || "" // ✅ Added specificname
+          }));
+      }
+      // CASE 3: Single object
+      else if (typeof summary === 'object' && summary.title) {
+        processedSummary = [{
+          title: String(summary.title || "").trim(),
+          subTitle: Array.isArray(summary.subTitle) 
+            ? summary.subTitle.filter(s => s).map(s => String(s).trim())
+            : [],
+          specificname: summary.specificname || "" // ✅ Added specificname
+        }];
       }
     }
 
-    console.log("Profile data to save:", profileData);
+    profileData.summary = processedSummary;
+    console.log("📋 Final summary count:", profileData.summary.length);
+    console.log("📋 Final summary:", JSON.stringify(profileData.summary, null, 2));
+    console.log("========================================");
+
+    // ✅ Ex-Official year_from/year_to
+    if (isExOfficialBoolean === true) {
+      if (selectedYearFrom && selectedYearTo) {
+        profileData.year_from = selectedYearFrom;
+        profileData.year_to = selectedYearTo;
+      } else if (req.body.year_from && req.body.year_to) {
+        profileData.year_from = req.body.year_from;
+        profileData.year_to = req.body.year_to;
+      }
+    }
 
     if (email && role !== "sbmember") profileData.email = email;
     if (gender) profileData.gender = gender;
-    if (Position)
-      profileData.Position = Array.isArray(Position) ? Position[0] : Position;
+    if (Position) profileData.Position = Array.isArray(Position) ? Position[0] : Position;
 
     const linkedRecord = await profileModel.create(profileData);
-    console.log("✅ Member saved with isExOfficial:", linkedRecord.isExOfficial);
-    if (linkedRecord.isExOfficial) {
-      console.log("✅ Year from saved:", linkedRecord.year_from);
-      console.log("✅ Year to saved:", linkedRecord.year_to);
-    }
+    console.log("✅ Member saved!");
+    console.log("✅ Summary in DB:", JSON.stringify(linkedRecord.summary, null, 2));
 
     let newUserLogin = null;
 
-    // --- Create login record ONLY if not sbmember ---
     if (role !== "sbmember") {
       newUserLogin = await UserLogin.create({
         avatar,
@@ -224,50 +291,28 @@ exports.signup = AsyncErrorHandler(async (req, res) => {
       sendEmail({
         email,
         subject: "Your Account Credentials",
-        text: `Welcome to the system!\n\nYour account has been created successfully.\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
-      }).catch((err) =>
-        console.error("❌ Failed to send signup email:", err.message),
-      );
+        text: `Welcome!\n\nDefault Password: ${defaultPassword}\n\nPlease change your password after logging in.`,
+      }).catch((err) => console.error("❌ Email failed:", err.message));
     }
 
-    // --- Send response ---
     res.status(201).json({
       status: "Success",
       user: newUserLogin,
       profile: linkedRecord,
     });
 
-    // --- Emit socket event ONLY for officer and admin ---
     if (role === "officer" || role === "admin") {
       const io = req.app.get("io");
       io.emit("newUserSignup", {
         role,
-        user: newUserLogin
-          ? {
-            id: newUserLogin._id,
-            first_name,
-            last_name,
-            email,
-            role,
-          }
-          : null,
-        profile: {
-          id: linkedRecord._id,
-          first_name: linkedRecord.first_name,
-          last_name: linkedRecord.last_name,
-          Position: linkedRecord.Position || null,
-        },
+        user: newUserLogin ? { id: newUserLogin._id, first_name, last_name, email, role } : null,
+        profile: { id: linkedRecord._id, first_name, last_name, Position: linkedRecord.Position || null },
         createdAt: new Date(),
       });
-
-      console.log(`📢 Socket emitted for new ${role} signup`);
     }
   } catch (error) {
     console.error("❌ Signup failed:", error);
-    res.status(500).json({
-      message: "Internal Server Error",
-      error: error.message,
-    });
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 });
 

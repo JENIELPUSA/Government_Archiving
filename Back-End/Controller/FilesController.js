@@ -1223,7 +1223,8 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
           district: "$district",
           detailInfo: "$detailInfo",
           Position: "$Position",
-          subPosition: "$subPosition", // Added subPosition here
+          subPosition: "$subPosition",
+          summary: "$summary", // ✅ Added summary here
           priorityNumber: "$priorityNumber",
           memberInfo: "$memberInfo",
           memberType: "$memberType",
@@ -1292,13 +1293,13 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
   let AuthorsWithFiles = await SBmember.aggregate(aggregationPipeline).allowDiskUse(true);
 
   // ==================== GET EX-OFFICIAL MEMBERS ====================
-  
+
   // Query para sa ex-official members
   const exOfficialMatchStage = { isExOfficial: true };
-  
+
   if (district) exOfficialMatchStage.district = district;
   if (detailInfo) exOfficialMatchStage.detailInfo = detailInfo;
-  
+
   if (search) {
     const s = search.trim();
     exOfficialMatchStage.$or = [
@@ -1307,12 +1308,12 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
       { last_name: { $regex: s, $options: "i" } }
     ];
   }
-  
+
   // Term filter para sa ex-official members
   if (term_from && term_to) {
     const fromYear = new Date(term_from).getFullYear();
     const toYear = new Date(term_to).getFullYear();
-    
+
     exOfficialMatchStage.$or = [
       // Kung may year_from/year_to, gamitin yun
       {
@@ -1335,15 +1336,15 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
       }
     ];
   }
-  
+
   const exOfficialMembers = await SBmember.find(exOfficialMatchStage)
     .sort({ priorityNumber: 1 })
     .lean();
-  
+
   // I-format ang ex-official members
   const formattedExOfficials = exOfficialMembers.map(exMember => {
     const hasYearData = exMember.year_from && exMember.year_to;
-    
+
     // Para sa grouping, kung may year_from/year_to, gamitin yun. Kung wala, gamitin ang term_from/term_to
     let groupFrom, groupTo;
     if (hasYearData) {
@@ -1357,47 +1358,48 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
       groupFrom = new Date(currentYear, 0, 1);
       groupTo = new Date(currentYear, 11, 31);
     }
-    
+
     return {
       ...exMember,
       memberType: "ex-official",
       isExOfficial: true,
       groupTermFrom: groupFrom,
       groupTermTo: groupTo,
-      displayTerm: hasYearData 
+      displayTerm: hasYearData
         ? `${exMember.year_from} - ${exMember.year_to}`
         : `${new Date(groupFrom).getFullYear()} - ${new Date(groupTo).getFullYear()}`,
       fullName: exMember.fullName || `${exMember.first_name} ${exMember.middle_name ? exMember.middle_name.charAt(0) + '. ' : ''}${exMember.last_name}`,
-      subPosition: exMember.subPosition, // Added subPosition here
+      subPosition: exMember.subPosition || "",
+      summary: exMember.summary || [], // ✅ Added summary for ex-official members
       files: [] // Ex-official members walang files initially
     };
   });
-  
+
   // I-merge ang ex-official members sa existing term groups
   if (formattedExOfficials.length > 0) {
     console.log("🔄 Merging ex-official members into term groups...");
-    
+
     // I-process ang bawat term group at i-merge ang ex-official members
     AuthorsWithFiles = AuthorsWithFiles.map(termGroup => {
       const termFromYear = termGroup.term_from ? new Date(termGroup.term_from).getFullYear() : null;
       const termToYear = termGroup.term_to ? new Date(termGroup.term_to).getFullYear() : null;
-      
+
       if (!termFromYear || !termToYear) return termGroup;
-      
+
       const matchingExOfficials = formattedExOfficials.filter(exMember => {
         const exFromYear = new Date(exMember.groupTermFrom).getFullYear();
         const exToYear = new Date(exMember.groupTermTo).getFullYear();
         return exFromYear === termFromYear && exToYear === termToYear;
       });
-      
+
       const allMembers = [...termGroup.members, ...matchingExOfficials];
-      
+
       const sortedMembers = allMembers.sort((a, b) => {
         const priorityA = Number(a.priorityNumber) || 9999;
         const priorityB = Number(b.priorityNumber) || 9999;
         return priorityA - priorityB;
       });
-      
+
       return {
         ...termGroup,
         members: sortedMembers,
@@ -1406,7 +1408,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         exOfficialCount: matchingExOfficials.length
       };
     });
-    
+
     // Gumawa ng bagong term groups para sa unmatched ex-official members
     const matchedExOfficialIds = new Set();
     AuthorsWithFiles.forEach(termGroup => {
@@ -1416,17 +1418,17 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
         }
       });
     });
-    
+
     const unmatchedExOfficials = formattedExOfficials.filter(
       exMember => !matchedExOfficialIds.has(exMember._id.toString())
     );
-    
+
     if (unmatchedExOfficials.length > 0) {
       console.log("Creating new term groups for unmatched ex-official members:", unmatchedExOfficials.length);
-      
+
       const newTermGroups = unmatchedExOfficials.map(exMember => {
         const hasYearData = exMember.year_from && exMember.year_to;
-        
+
         return {
           term_from: exMember.groupTermFrom,
           term_to: exMember.groupTermTo,
@@ -1436,9 +1438,9 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
           hasYearData: hasYearData
         };
       });
-      
+
       AuthorsWithFiles = [...AuthorsWithFiles, ...newTermGroups];
-      
+
       AuthorsWithFiles.sort((a, b) => {
         const yearA = a.term_to ? new Date(a.term_to).getFullYear() : 0;
         const yearB = b.term_to ? new Date(b.term_to).getFullYear() : 0;
@@ -1446,7 +1448,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
       });
     }
   }
-  
+
   // I-remove ang term_from/term_to para sa ex-official groups na may year data
   AuthorsWithFiles = AuthorsWithFiles.map(group => {
     if (group.isFromExOfficial && group.hasYearData) {
@@ -1456,7 +1458,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
     return group;
   });
 
-  // --- PINAGBAGO: I-return ang lahat ng members ng walang pagination ---
+  // --- I-return ang lahat ng members ng walang pagination ---
   const allTermsWithFullMembers = AuthorsWithFiles.map((term) => {
     const membersWithCounts = (term.members || []).map((member) => {
       const files = member.files || [];
@@ -1474,7 +1476,7 @@ exports.getAllAuthorsWithFiles = AsyncErrorHandler(async (req, res, next) => {
       year_from: term.year_from,
       year_to: term.year_to,
       totalCount: membersWithCounts.length,
-      members: membersWithCounts, // Lahat ng members, hindi na sliced
+      members: membersWithCounts,
     };
   });
 
@@ -1501,7 +1503,7 @@ exports.getFileCloud = AsyncErrorHandler(async (req, res) => {
     });
 
     res.setHeader("Accept-Ranges", "bytes");
-    
+
     // For range requests, we need the full size first
     if (req.headers.range) {
       // Get content length from response headers
@@ -1565,7 +1567,7 @@ exports.getFileForPubliCloud = AsyncErrorHandler(async (req, res) => {
     });
 
     res.setHeader("Accept-Ranges", "bytes");
-    
+
     // For range requests, we need the full size first
     if (req.headers.range) {
       // Get content length from response headers
@@ -3115,6 +3117,44 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   const currentPage = parseInt(page) || 1;
   const skip = (currentPage - 1) * limitNumber;
 
+  // ✅✅✅ HELPER: Clean summary data with specificname
+  const cleanSummary = (summary) => {
+    if (!summary) return [];
+    
+    if (Array.isArray(summary)) {
+      return summary
+        .filter(item => item && typeof item === 'object')
+        .map(item => ({
+          title: String(item.title || "").trim(),
+          subTitle: Array.isArray(item.subTitle) 
+            ? item.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
+            : [],
+          specificname: item.specificname || "" // ✅ ADDED: Include specificname
+        }));
+    }
+    
+    if (typeof summary === 'string') {
+      const trimmed = summary.trim();
+      if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) return cleanSummary(parsed);
+          if (parsed && typeof parsed === 'object') {
+            return [{
+              title: String(parsed.title || "").trim(),
+              subTitle: Array.isArray(parsed.subTitle) 
+                ? parsed.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
+                : [],
+              specificname: parsed.specificname || "" // ✅ ADDED: Include specificname
+            }];
+          }
+        } catch (e) {}
+      }
+    }
+    
+    return [];
+  };
+
   const matchStage = {};
 
   if (district) matchStage.district = district;
@@ -3133,10 +3173,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     ];
   }
 
-  // ✅ TERM FILTER (by YEAR only) - para sa regular members at ex-official na walang year_from/year_to
+  // ✅ TERM FILTER (by YEAR only)
   if (term) {
     const [fromYear, toYear] = term.split("-");
-
     matchStage.$expr = {
       $and: [
         { $eq: [{ $year: "$term_from" }, parseInt(fromYear)] },
@@ -3147,12 +3186,12 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
 
   const pipeline = [];
 
-  // ✅ Apply match for regular members (hindi ex-official)
+  // ✅ Apply match for regular members
   const regularMatchStage = {
     ...matchStage,
     isExOfficial: { $ne: true }
   };
-  
+
   if (Object.keys(regularMatchStage).length > 0) {
     pipeline.push({ $match: regularMatchStage });
   }
@@ -3210,18 +3249,14 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   });
 
-  // ✅ SORT REGULAR MEMBERS BY priorityNumber
+  // ✅ SORT by priorityNumber
   pipeline.push({
     $sort: { "priorityNumber": 1 }
   });
 
-  // ✅ GET EX-OFFICIAL MEMBERS (isExOfficial = true)
-  // Kasama lahat ng ex-official members (may year_from/year_to man o wala)
-  const exOfficialMatchStage = { 
-    isExOfficial: true
-  };
-  
-  // Apply search filters for ex-official
+  // ✅ GET EX-OFFICIAL MEMBERS
+  const exOfficialMatchStage = { isExOfficial: true };
+
   if (search) {
     const s = search.trim();
     exOfficialMatchStage.$or = [
@@ -3230,18 +3265,16 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
       { last_name: { $regex: `^${s}`, $options: "i" } }
     ];
   }
-  
+
   if (district) exOfficialMatchStage.district = district;
   if (detailInfo) exOfficialMatchStage.detailInfo = detailInfo;
   if (Position) {
     exOfficialMatchStage.Position = { $regex: `^${Position}$`, $options: "i" };
   }
 
-  // Apply term filter sa ex-official members kung wala silang year_from/year_to
   if (term && !exOfficialMatchStage.$expr) {
     const [fromYear, toYear] = term.split("-");
     exOfficialMatchStage.$or = [
-      // Kung may year_from/year_to, gamitin yun
       {
         $and: [
           { year_from: { $exists: true, $ne: null } },
@@ -3250,11 +3283,11 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           { year_to: parseInt(toYear) }
         ]
       },
-      // Kung walang year_from/year_to, gamitin ang term_from/term_to
       {
         $and: [
           { $or: [{ year_from: { $exists: false } }, { year_from: null }] },
-          { $expr: {
+          {
+            $expr: {
               $and: [
                 { $eq: [{ $year: "$term_from" }, parseInt(fromYear)] },
                 { $eq: [{ $year: "$term_to" }, parseInt(toYear)] }
@@ -3270,11 +3303,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     .sort({ priorityNumber: 1 })
     .lean();
 
-  console.log("Ex-Official Members found:", exOfficialMembers.length);
-  console.log("With year_from/year_to:", exOfficialMembers.filter(m => m.year_from && m.year_to).length);
-  console.log("Without year_from/year_to:", exOfficialMembers.filter(m => !m.year_from || !m.year_to).length);
-
-  // ✅ GROUP BY YEAR ONLY (from regular members using term_from/term_to)
+  // ✅ GROUP BY YEAR
   pipeline.push({
     $group: {
       _id: {
@@ -3285,7 +3314,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   });
 
-  // ✅ FORMAT + PAGINATION for regular members
+  // ✅ FORMAT + PAGINATION
   pipeline.push({
     $project: {
       term: {
@@ -3296,94 +3325,83 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         ]
       },
       term_from: {
-        $dateFromParts: {
-          year: "$_id.fromYear",
-          month: 1,
-          day: 1
-        }
+        $dateFromParts: { year: "$_id.fromYear", month: 1, day: 1 }
       },
       term_to: {
-        $dateFromParts: {
-          year: "$_id.toYear",
-          month: 12,
-          day: 31
-        }
+        $dateFromParts: { year: "$_id.toYear", month: 12, day: 31 }
       },
       totalMembers: { $size: "$members" },
-      members: {
-        $slice: ["$members", skip, limitNumber]
-      },
+      members: { $slice: ["$members", skip, limitNumber] },
       currentPage: { $literal: currentPage },
-      totalPages: {
-        $ceil: {
-          $divide: [{ $size: "$members" }, limitNumber]
-        }
-      }
+      totalPages: { $ceil: { $divide: [{ $size: "$members" }, limitNumber] } }
     }
   });
 
   // ✅ Sort latest term first
-  pipeline.push({
-    $sort: { "_id.toYear": -1 }
-  });
+  pipeline.push({ $sort: { "_id.toYear": -1 } });
 
   let result = await SBmember.aggregate(pipeline).allowDiskUse(true);
 
   // ✅✅✅ MERGE EX-OFFICIAL MEMBERS
   if (exOfficialMembers.length > 0) {
     console.log("🔄 Merging ex-official members into term groups...");
-    
-    // I-process ang bawat term group at i-merge ang ex-official members
+
     result = result.map(termGroup => {
-      // Extract term years from the group
       const termFromYear = termGroup.term_from ? new Date(termGroup.term_from).getFullYear() : null;
       const termToYear = termGroup.term_to ? new Date(termGroup.term_to).getFullYear() : null;
-      
+
       if (!termFromYear || !termToYear) return termGroup;
-      
-      // Hanapin ang ex-official members na tugma sa term na ito
+
       const matchingExOfficials = exOfficialMembers.filter(exMember => {
-        // Kung may year_from/year_to ang ex-official, gamitin yun
         if (exMember.year_from && exMember.year_to) {
           return exMember.year_from >= termFromYear && exMember.year_to <= termToYear;
-        }
-        // Kung walang year_from/year_to, gamitin ang term_from/term_to
-        else if (exMember.term_from && exMember.term_to) {
+        } else if (exMember.term_from && exMember.term_to) {
           const exFromYear = new Date(exMember.term_from).getFullYear();
           const exToYear = new Date(exMember.term_to).getFullYear();
           return exFromYear === termFromYear && exToYear === termToYear;
         }
         return false;
       });
-      
-      // I-format ang ex-official members (kasama na ang subPosition)
+
+      // ✅ Format ex-official with cleanSummary (now includes specificname)
       const formattedExOfficials = matchingExOfficials.map(exMember => {
-        // Kung may year_from/year_to, gamitin yun. Kung wala, gamitin ang term_from/term_to
         const hasYearData = exMember.year_from && exMember.year_to;
-        
+
         return {
-          ...exMember,
-          memberType: "ex-official",
+          _id: exMember._id,
+          first_name: exMember.first_name,
+          middle_name: exMember.middle_name || "",
+          last_name: exMember.last_name,
+          Position: exMember.Position || "",
+          subPosition: exMember.subPosition || "",
+          summary: cleanSummary(exMember.summary), // ✅ NOW INCLUDES specificname
+          priorityNumber: exMember.priorityNumber,
+          district: exMember.district || "",
+          detailInfo: exMember.detailInfo || "",
+          term: exMember.term || "",
+          term_from: exMember.term_from,
+          term_to: exMember.term_to,
+          year_from: exMember.year_from,
+          year_to: exMember.year_to,
           isExOfficial: true,
-          subPosition: exMember.subPosition, // ✅ Added subPosition
-          // Para sa display: gamitin ang year_from/year_to kung meron, kung wala gamitin ang term_from/term_to
-          displayTerm: hasYearData 
+          memberType: "ex-official",
+          avatar: exMember.avatar || null,
+          files: [],
+          displayTerm: hasYearData
             ? `${exMember.year_from} - ${exMember.year_to}`
             : `${new Date(exMember.term_from).getFullYear()} - ${new Date(exMember.term_to).getFullYear()}`,
           fullName: exMember.fullName || `${exMember.first_name} ${exMember.middle_name ? exMember.middle_name.charAt(0) + '. ' : ''}${exMember.last_name}`
         };
       });
-      
-      // Pagsamahin ang regular members at ex-official members
+
       const allMembers = [...termGroup.members, ...formattedExOfficials];
-      
-      // I-sort muli ang lahat ng members by priorityNumber
+
       const sortedMembers = allMembers.sort((a, b) => {
         const priorityA = Number(a.priorityNumber) || 9999;
         const priorityB = Number(b.priorityNumber) || 9999;
         return priorityA - priorityB;
       });
-      
+
       return {
         ...termGroup,
         members: sortedMembers,
@@ -3393,8 +3411,8 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         totalPages: Math.ceil(sortedMembers.length / limitNumber)
       };
     });
-    
-    // ✅ Handle Ex-Official members na walang matching term group
+
+    // Handle unmatched ex-official members
     const matchedExOfficialIds = new Set();
     result.forEach(termGroup => {
       termGroup.members.forEach(member => {
@@ -3403,19 +3421,17 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         }
       });
     });
-    
+
     const unmatchedExOfficials = exOfficialMembers.filter(
       exMember => !matchedExOfficialIds.has(exMember._id.toString())
     );
-    
-    // Gumawa ng bagong term groups para sa unmatched ex-official members
+
     if (unmatchedExOfficials.length > 0) {
       console.log("Creating new term groups for unmatched ex-official members:", unmatchedExOfficials.length);
-      
+
       const newTermGroups = unmatchedExOfficials.map(exMember => {
-        // Kung may year_from/year_to, gamitin yun. Kung wala, gamitin ang term_from/term_to
         const hasYearData = exMember.year_from && exMember.year_to;
-        
+
         let fromYear, toYear;
         if (hasYearData) {
           fromYear = exMember.year_from;
@@ -3424,27 +3440,39 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           fromYear = new Date(exMember.term_from).getFullYear();
           toYear = new Date(exMember.term_to).getFullYear();
         } else {
-          // Fallback: use current year
           const currentYear = new Date().getFullYear();
           fromYear = currentYear;
           toYear = currentYear;
         }
-        
+
         const formattedExMember = {
-          ...exMember,
-          memberType: "ex-official",
+          _id: exMember._id,
+          first_name: exMember.first_name,
+          middle_name: exMember.middle_name || "",
+          last_name: exMember.last_name,
+          Position: exMember.Position || "",
+          subPosition: exMember.subPosition || "",
+          summary: cleanSummary(exMember.summary), // ✅ NOW INCLUDES specificname
+          priorityNumber: exMember.priorityNumber,
+          district: exMember.district || "",
+          detailInfo: exMember.detailInfo || "",
+          term: exMember.term || "",
+          term_from: exMember.term_from,
+          term_to: exMember.term_to,
+          year_from: exMember.year_from,
+          year_to: exMember.year_to,
           isExOfficial: true,
-          subPosition: exMember.subPosition, // ✅ Added subPosition
-          displayTerm: hasYearData 
+          memberType: "ex-official",
+          avatar: exMember.avatar || null,
+          files: [],
+          displayTerm: hasYearData
             ? `${exMember.year_from} - ${exMember.year_to}`
             : `${fromYear} - ${toYear}`,
           fullName: exMember.fullName || `${exMember.first_name} ${exMember.middle_name ? exMember.middle_name.charAt(0) + '. ' : ''}${exMember.last_name}`
         };
-        
-        // Gumawa ng term group
+
         return {
           term: `${fromYear}-${toYear}`,
-          // Kung may year data, huwag isama ang term_from/term_to filters
           ...(hasYearData ? {
             year_from: fromYear,
             year_to: toYear,
@@ -3464,13 +3492,10 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           hasYearData: hasYearData
         };
       });
-      
-      // Pagsamahin ang result at newTermGroups
+
       result = [...result, ...newTermGroups];
-      
-      // I-sort ang lahat ng term groups
+
       result.sort((a, b) => {
-        // Para sa groups na may year_to, gamitin yun. Kung wala, gamitin ang term_to
         const yearA = a.year_to || (a.term_to ? new Date(a.term_to).getFullYear() : 0);
         const yearB = b.year_to || (b.term_to ? new Date(b.term_to).getFullYear() : 0);
         return yearB - yearA;
@@ -3478,10 +3503,9 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
   }
 
-  // ✅ I-remove ang term_from/term_to fields sa response para sa mga ex-official groups na may year data
+  // Remove term_from/term_to for ex-official groups with year data
   result = result.map(group => {
     if (group.isFromExOfficial && group.hasYearData) {
-      // Para sa ex-official groups na may year_from/year_to, huwag isama ang term_from/term_to
       const { term_from, term_to, ...restOfGroup } = group;
       return restOfGroup;
     }

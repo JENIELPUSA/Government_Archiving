@@ -25,6 +25,8 @@ const getDisplayPosition = (member) => {
 };
 
 
+
+
 const MemberCard = ({ member, onClick }) => {
     const getFullName = () => {
         if (member.fullName) return member.fullName;
@@ -148,7 +150,6 @@ const MemberCard = ({ member, onClick }) => {
 const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm }) => {
     const [members, setMembers] = useState(group.members || []);
     const [innerLoading, setInnerLoading] = useState(false);
-
     // Filter at Sorting Logic
     const sortedAll = [...members].sort((a, b) => (parseInt(a.priorityNumber) || 99) - (parseInt(b.priorityNumber) || 99));
     

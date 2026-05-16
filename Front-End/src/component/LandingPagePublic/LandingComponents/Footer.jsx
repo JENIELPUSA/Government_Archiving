@@ -59,7 +59,7 @@ const FooterQuickAccess = ({
 
     // Handler for Legislative Tracking System button - Opens in new tab
     const handleOpenLegislativeTracker = () => {
-        window.open('https://script.google.com/macros/s/AKfycbxZ7FLZOh4L3iOX3Q9-DQh0zk_B7B8YFDl3YFNXpMEQU_3eSoamtz67XEYeiRInXOWu/exec', '_blank');
+        window.open('https://script.google.com/macros/s/AKfycbyEFF8gVrAiLcg2DDvjf3Wc1YPGgsAnRIAPICxNbmd0rEMhHsY8uEfultzfF9rjeyPW/exec?page=Dashboard', '_blank');
     };
 
     return (

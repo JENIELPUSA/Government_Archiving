@@ -393,6 +393,7 @@ function SBmember() {
                     selectedYearFrom: newMemberData.selectedYearFrom,
                     selectedYearTo: newMemberData.selectedYearTo,
                     isExOfficial: newMemberData.isExOfficial || false,
+                    summary:newMemberData.summary
                 };
                 result = await AddSbData(memberToAdd);
             }
