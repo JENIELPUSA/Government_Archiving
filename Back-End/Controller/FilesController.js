@@ -3117,7 +3117,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
   const currentPage = parseInt(page) || 1;
   const skip = (currentPage - 1) * limitNumber;
 
-  // ✅✅✅ HELPER: Clean summary data with specificname
+  // ✅ HELPER: Clean summary data with specificname
   const cleanSummary = (summary) => {
     if (!summary) return [];
     
@@ -3129,7 +3129,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           subTitle: Array.isArray(item.subTitle) 
             ? item.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
             : [],
-          specificname: item.specificname || "" // ✅ ADDED: Include specificname
+          specificname: item.specificname || ""
         }));
     }
     
@@ -3145,7 +3145,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
               subTitle: Array.isArray(parsed.subTitle) 
                 ? parsed.subTitle.filter(s => s && String(s).trim() !== "").map(s => String(s).trim())
                 : [],
-              specificname: parsed.specificname || "" // ✅ ADDED: Include specificname
+              specificname: parsed.specificname || ""
             }];
           }
         } catch (e) {}
@@ -3153,6 +3153,21 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     }
     
     return [];
+  };
+
+  // ✅ NEW HELPER: Get full name key for deduplication
+  const getFullNameKey = (member) => {
+    const firstName = (member.first_name || "").trim().toLowerCase();
+    const middleName = (member.middle_name || "").trim().toLowerCase();
+    const lastName = (member.last_name || "").trim().toLowerCase();
+    const suffix = (member.suffix || member.extension || "").trim().toLowerCase();
+    return `${firstName}|${middleName}|${lastName}|${suffix}`;
+  };
+
+  // ✅ NEW HELPER: Get summary as string for comparison
+  const getSummaryString = (summary) => {
+    if (!summary || summary.length === 0) return "";
+    return JSON.stringify(summary);
   };
 
   const matchStage = {};
@@ -3363,7 +3378,7 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
         return false;
       });
 
-      // ✅ Format ex-official with cleanSummary (now includes specificname)
+      // ✅ Format ex-official with cleanSummary
       const formattedExOfficials = matchingExOfficials.map(exMember => {
         const hasYearData = exMember.year_from && exMember.year_to;
 
@@ -3372,12 +3387,13 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           first_name: exMember.first_name,
           middle_name: exMember.middle_name || "",
           last_name: exMember.last_name,
+          suffix: exMember.suffix || exMember.extension || "",
           Position: exMember.Position || "",
           subPosition: exMember.subPosition || "",
-          summary: cleanSummary(exMember.summary), // ✅ NOW INCLUDES specificname
+          summary: cleanSummary(exMember.summary),
+          detailInfo: exMember.detailInfo || "", // ✅ Include detailInfo
           priorityNumber: exMember.priorityNumber,
           district: exMember.district || "",
-          detailInfo: exMember.detailInfo || "",
           term: exMember.term || "",
           term_from: exMember.term_from,
           term_to: exMember.term_to,
@@ -3450,12 +3466,13 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
           first_name: exMember.first_name,
           middle_name: exMember.middle_name || "",
           last_name: exMember.last_name,
+          suffix: exMember.suffix || exMember.extension || "",
           Position: exMember.Position || "",
           subPosition: exMember.subPosition || "",
-          summary: cleanSummary(exMember.summary), // ✅ NOW INCLUDES specificname
+          summary: cleanSummary(exMember.summary),
+          detailInfo: exMember.detailInfo || "", // ✅ Include detailInfo
           priorityNumber: exMember.priorityNumber,
           district: exMember.district || "",
-          detailInfo: exMember.detailInfo || "",
           term: exMember.term || "",
           term_from: exMember.term_from,
           term_to: exMember.term_to,
@@ -3512,7 +3529,123 @@ exports.PublicGetAuthorwithFiles = AsyncErrorHandler(async (req, res, next) => {
     return group;
   });
 
-  console.log(`✅ Final result: ${result.length} term groups with ex-official members merged`);
+  // ✅✅✅ CRITICAL: ENSURE SAME NAME HAS SAME SUMMARY AND DETAILINFO ACROSS ALL TERMS ✅✅✅
+  console.log("🔄 Ensuring same name has same summary and detailInfo across all terms...");
+  
+  // Step 1: Collect all members from all term groups
+  const allMembersFlat = [];
+  result.forEach(termGroup => {
+    if (termGroup.members && Array.isArray(termGroup.members)) {
+      allMembersFlat.push(...termGroup.members);
+    }
+  });
+  
+  // Step 2: Create a map of nameKey -> selected data (summary and detailInfo)
+  const nameToDataMap = new Map(); // nameKey -> { summaries: Map, detailInfos: Set, selectedSummary: null, selectedDetailInfo: null }
+  
+  // Collect all unique summaries and detailInfos per name
+  allMembersFlat.forEach(member => {
+    const nameKey = getFullNameKey(member);
+    const summary = member.summary || [];
+    const summaryStr = getSummaryString(summary);
+    const detailInfoValue = member.detailInfo || "";
+    
+    if (!nameToDataMap.has(nameKey)) {
+      nameToDataMap.set(nameKey, {
+        summaries: new Map(), // summaryStr -> summary object
+        detailInfos: new Set(), // Set of unique detailInfo values
+        selectedSummary: null,
+        selectedDetailInfo: null
+      });
+    }
+    
+    const nameData = nameToDataMap.get(nameKey);
+    
+    // Collect unique summaries
+    if (summaryStr && !nameData.summaries.has(summaryStr)) {
+      nameData.summaries.set(summaryStr, summary);
+    }
+    
+    // Collect unique detailInfo values (non-empty only)
+    if (detailInfoValue && detailInfoValue.trim()) {
+      nameData.detailInfos.add(detailInfoValue.trim());
+    }
+  });
+  
+  // Step 3: Select one summary and one detailInfo per name
+  for (const [nameKey, nameData] of nameToDataMap) {
+    // Select best summary (prioritize non-empty summaries with most content)
+    if (nameData.summaries.size > 0) {
+      let bestSummary = null;
+      let bestScore = -1;
+      
+      for (const summary of nameData.summaries.values()) {
+        let score = 0;
+        if (summary && Array.isArray(summary)) {
+          summary.forEach(item => {
+            if (item.title && item.title.trim()) score += 10;
+            if (item.subTitle && item.subTitle.length > 0) score += 5;
+            if (item.specificname && item.specificname.trim()) score += 3;
+          });
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          bestSummary = summary;
+        }
+      }
+      
+      nameData.selectedSummary = bestSummary || [];
+    } else {
+      nameData.selectedSummary = [];
+    }
+    
+    // ✅ Select detailInfo (prioritize non-empty, then longest string)
+    if (nameData.detailInfos.size > 0) {
+      // Convert Set to Array and find the best detailInfo
+      const detailInfoArray = Array.from(nameData.detailInfos);
+      // Prioritize non-empty and longest string
+      let bestDetailInfo = detailInfoArray[0] || "";
+      for (const detail of detailInfoArray) {
+        if (detail.length > bestDetailInfo.length) {
+          bestDetailInfo = detail;
+        }
+      }
+      nameData.selectedDetailInfo = bestDetailInfo;
+    } else {
+      nameData.selectedDetailInfo = "";
+    }
+  }
+  
+  // Step 4: Apply the selected summary and detailInfo to ALL members with the same name
+  result = result.map(termGroup => {
+    if (!termGroup.members || !Array.isArray(termGroup.members)) {
+      return termGroup;
+    }
+    
+    const updatedMembers = termGroup.members.map(member => {
+      const nameKey = getFullNameKey(member);
+      const nameData = nameToDataMap.get(nameKey);
+      
+      if (nameData) {
+        return {
+          ...member,
+          summary: nameData.selectedSummary, // ✅ SAME SUMMARY FOR SAME NAME
+          detailInfo: nameData.selectedDetailInfo // ✅ SAME DETAILINFO FOR SAME NAME
+        };
+      }
+      return member;
+    });
+    
+    return {
+      ...termGroup,
+      members: updatedMembers
+    };
+  });
+  
+  console.log(`✅ Data consistency applied: ${nameToDataMap.size} unique names processed`);
+  console.log(`   - Each name now has same summary and detailInfo across all terms`);
+
+  console.log(`✅ Final result: ${result.length} term groups with consistent data across same names`);
 
   res.status(200).json({
     status: "success",
