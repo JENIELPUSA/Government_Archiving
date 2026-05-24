@@ -9,7 +9,7 @@ const StorageSettings = () => {
 
     const [isOptimizationEnabled, setIsOptimizationEnabled] = useState(false);
     const [fileData, setFileData] = useState([]);
-    const [optimizationSettings, setOptimizationSettings] = useState({
+    const [optimizationSettings, setOptimizationSettings,] = useState({
         "auto-delete-notification": false,
         "auto-delete-temp": false,
     });

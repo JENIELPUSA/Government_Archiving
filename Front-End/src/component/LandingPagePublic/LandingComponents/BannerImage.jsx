@@ -3,18 +3,35 @@ import React from "react";
 const BannerImage = ({ selection }) => {
   // Mapping ng selection para sa display
   const displayText = {
-    Board_Member: "Board Member",
-    Vice_Governor: "Vice Governor",
-  }[selection] || selection || ""; // default sa original o empty string
+    Board_Member: "BOARD MEMBER",
+    Vice_Governor: "VICE GOVERNOR",
+  }[selection]?.toUpperCase() || selection?.toUpperCase() || "";
 
   return (
     <div
-      className="relative w-full h-64 sm:h-[500px] bg-cover bg-center"
+      className="relative w-full h-72 sm:h-[550px] bg-cover bg-center"
       style={{ backgroundImage: "url('/images/banner2.jpg')" }}
     >
       {displayText && (
         <div
-          className="absolute bottom-8 sm:bottom-12 left-1/4 transform -translate-x-1/2 text-center text-white font-extrabold rounded px-4 py-2 sm:px-8 sm:py-6 w-full max-w-3xl text-xl sm:text-4xl first-letter:text-5xl sm:first-letter:text-8xl first-letter:uppercase"
+          className="
+            absolute 
+            bottom-10 sm:bottom-14
+            left-1/2 
+            transform -translate-x-1/2 
+            text-center 
+            text-white 
+            font-black 
+            uppercase
+            tracking-wide
+            drop-shadow-[0_4px_10px_rgba(0,0,0,0.8)]
+            px-6 py-3 sm:px-8 sm:py-5
+            w-full
+            text-3xl
+            sm:text-5xl
+            md:text-6xl
+            lg:text-7xl
+          "
         >
           {displayText}
         </div>

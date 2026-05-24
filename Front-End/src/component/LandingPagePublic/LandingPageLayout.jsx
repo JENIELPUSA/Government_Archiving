@@ -21,6 +21,7 @@ import BiliranLegislativeHistory from "./LandingComponents/BiliranLegislativeHis
 import LogoCarousel from "./LandingComponents/LogoCarousel";
 import { LandingPageContext } from "../../contexts/LandingPageContext/LandingPageContext";
 import CalendarEvent from "./LandingComponents/CalendarEvent";
+import { SuggestionContext } from "../../contexts/SuggestionContext/SuggestionContext";
 
 // Pulse Skeleton Loading Component
 const PulseSkeletonLoader = () => (
@@ -105,7 +106,8 @@ function LandingPageLayout() {
     const [currentVisibleSection, setCurrentVisibleSection] = useState("hero");
     const [refreshKey, setRefreshKey] = useState(0); // For forcing component remount/reintegration
     const { landingData, loading, refetchLandingData } = useContext(LandingPageContext);
-    
+    const { createSuggestion } = useContext(SuggestionContext);
+
     // State para sa Images (Existing + New)
     const [previews, setPreviews] = useState([]);
     // Initial State para sa Form
@@ -168,11 +170,9 @@ function LandingPageLayout() {
 
     // Function to force reintegration of current section
     const forceReintegration = useCallback((section, role = null, docType = null) => {
-        console.log("FORCE REINTEGRATION CALLED:", { section, role, docType });
-        
         // Increment refresh key to force component remount
         setRefreshKey(prev => prev + 1);
-        
+
         // For officials - refresh data
         if (section === "officials" && role) {
             setSelectedOfficialRole("");
@@ -180,7 +180,7 @@ function LandingPageLayout() {
                 setSelectedOfficialRole(role);
             }, 50);
         }
-        
+
         // For legislative - refresh documents
         if (section === "legislative" && docType) {
             setSelectedDocumentType("");
@@ -188,7 +188,7 @@ function LandingPageLayout() {
                 setSelectedDocumentType(docType);
             }, 50);
         }
-        
+
         // For hero section with specific subsections
         if (section !== "hero" && !role && !docType && !heroSectionIds.includes(section)) {
             setActiveSection("");
@@ -196,7 +196,7 @@ function LandingPageLayout() {
                 setActiveSection(section);
             }, 50);
         }
-        
+
         // For hero main page or subsections - refresh landing data
         if (heroSectionIds.includes(section) || section === "hero") {
             if (typeof refetchLandingData === 'function') {
@@ -244,7 +244,7 @@ function LandingPageLayout() {
         setSelectedNews(null);
         setActiveSection(previousSection);
     };
-    
+
     // Function to go back to home/hero section
     const handleBackToHome = useCallback(() => {
         setActiveSection("hero");
@@ -469,7 +469,7 @@ function LandingPageLayout() {
         if (role) {
             handleSetOfficial(role);
         }
-        
+
         // Immediate scroll to top
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
@@ -525,6 +525,7 @@ function LandingPageLayout() {
                                     searchKeyword={searchKeyword}
                                     setSearchKeyword={setSearchKeyword}
                                     setOfficial={handleSetOfficial}
+                                    createSuggestion={createSuggestion}
                                 />
                             )}
                         </div>

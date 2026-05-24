@@ -5,7 +5,7 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ["Poppins"],
+                poppins: ['Poppins', 'sans-serif'],
             },
             screens: {
                 "2xs": { max: "320px" },

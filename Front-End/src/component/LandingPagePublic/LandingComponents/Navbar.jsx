@@ -85,14 +85,10 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
 
         // Check if clicking the SAME page/section
         const isSamePage = lastClickedPageRef.current === pageId && currentPage === pageId;
-        
-        console.log("Click detected:", { pageId, currentPage, isSamePage, lastClicked: lastClickedPageRef.current });
 
         // For hero sections (mission, news, transparency, etc.)
         if (onNavigateToSection && heroSectionIds.includes(pageId)) {
             if (isSamePage) {
-                // CALL REINTEGRATION FUNCTION
-                console.log("REINTEGRATING same hero section:", pageId);
                 if (typeof onReintegrate === 'function') {
                     onReintegrate(pageId);
                 }
@@ -109,9 +105,6 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
 
         // For regular pages and subpages
         if (isSamePage) {
-            // CALL REINTEGRATION FUNCTION
-            console.log("REINTEGRATING same page:", pageId, "parent:", parentId);
-            
             if (typeof onReintegrate === 'function') {
                 // Pass the page type and identifier for proper reintegration
                 if (parentId === "officials") {

@@ -43,54 +43,6 @@ const NewsSection = ({ onNewsView }) => {
     }
   }, [pictures]);
 
-  // Fetch News
-  const fetchNews = useCallback(async () => {
-    if (hasFetched) return;
-
-    setLoading(true);
-    setFetchError(null);
-
-    try {
-      const url = `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/News/provincial`;
-      const response = await axios.get(url);
-
-      if (response.data && response.data.status === "success" && Array.isArray(response.data.data)) {
-        const processedProvincialNews = response.data.data.map((item, index) => ({
-          id: item._id || `provincial-${index}-${Date.now()}`,
-          title: item.title || "No title available",
-          summary: item.excerpt || "No summary available.",
-          date: item.date || new Date().toISOString(),
-          image: (item.avatar && item.avatar.url) || "https://images.unsplash.com/photo-1476242906366-d8eb64c2f661?auto=format&fit=crop&q=80&w=800",
-          source: "Provincial",
-          link: item.link || "#",
-          priority: 1,
-          fullContent: item.fullContent || item.content || item.excerpt || "This is the full content of the provincial news.",
-          category: item.category || "Provincial News",
-          author: item.author || "Provincial Government",
-          readTime: "3 min read"
-        }));
-        
-        // Sort by date (newest first) and limit to 3 latest news
-        const sortedAndLimitedProvincialNews = processedProvincialNews
-          .sort((a, b) => new Date(b.date) - new Date(a.date))
-          .slice(0, 3);
-        
-        setProvincialNews(prevNews => [...prevNews, ...sortedAndLimitedProvincialNews]);
-      }
-    } catch (error) {
-      console.error("Error fetching news:", error);
-      setFetchError(`Failed to load news: ${error.message}`);
-    } finally {
-      setLoading(false);
-      setHasFetched(true);
-    }
-  }, [hasFetched, setLoading]);
-
-  useEffect(() => {
-    if (!hasFetched) {
-      fetchNews();
-    }
-  }, [hasFetched, fetchNews]);
 
   const handleReadMore = (news) => {
     if (onNewsView) {

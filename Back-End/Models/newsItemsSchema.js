@@ -13,6 +13,9 @@ const newsSchema = new mongoose.Schema({
   excerpt: {
     type: String,
   },
+  priorityNumber: {
+    type: Number,
+  },
   category: {
     type: String,
     required: true,

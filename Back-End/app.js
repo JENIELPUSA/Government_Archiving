@@ -42,6 +42,8 @@ const FolderRoute = require("./Routes/FolderRoute");
 
 const EventRoute = require("./Routes/EventRoute");
 
+const SuggestionRoute = require("./Routes/SuggestionRoute");
+
 let app = express();
 
 const logger = function (req, res, next) {
@@ -104,7 +106,7 @@ app.use("/api/v1/News", NewsRoute);
 app.use("/api/v1/Folder", FolderRoute);
 app.use("/api/v1/Officer", Officer);
 app.use("/api/v1/Events", EventRoute);
-
+app.use("/api/v1/Suggestions", SuggestionRoute);
 
 app.use("/api/v1/landing", landing);
 app.use(ErrorController);

@@ -1,12 +1,12 @@
 const express = require("express");
-const router = express.Router(); 
+const router = express.Router();
 const NewsController = require("../Controller/newsController");
 const authController = require("./../Controller/authController");
 const upload = require("../middleware/fileUploader");
 router
   .route("/")
   .get(NewsController.DisplayNews)
-  .post(authController.protect,upload.single("avatar"), NewsController.AddNews);
+  .post(authController.protect, upload.single("avatar"), NewsController.AddNews);
 router
   .route("/:id")
   .delete(authController.protect, NewsController.deleteNews)
@@ -17,8 +17,16 @@ router
   );
 
 router
+  .route("/updateprioritynum/:id")
+  .patch(
+    authController.protect,
+    upload.single("avatar"),
+    NewsController.UpdatePriorityNumber
+  );
+
+router
   .route("/national")
-   .get(NewsController.DisplayNationalNews)
+  .get(NewsController.DisplayNationalNews)
 
 
 module.exports = router;

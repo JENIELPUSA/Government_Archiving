@@ -3,6 +3,7 @@ import axiosInstance from "../../ReusableFolder/axioxInstance";
 import { AuthContext } from "../AuthContext";
 import axios from "axios";
 import SuccessFailed from "../../ReusableFolder/SuccessandField";
+import AxiosInterceptor from "../../component/AxiosInterceptor";
 
 export const SbMemberDisplayContext = createContext();
 
@@ -37,7 +38,7 @@ export const SbMemberDisplayProvider = ({ children }) => {
     const FetchDisplaySbMember = useCallback(async () => {
         if (!authToken) return;
         try {
-            const res = await axios.get(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute`, {
+            const res = await AxiosInterceptor(`${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/SbmemberRoute`, {
                 withCredentials: true,
                 headers: { Authorization: `Bearer ${authToken}` },
             });

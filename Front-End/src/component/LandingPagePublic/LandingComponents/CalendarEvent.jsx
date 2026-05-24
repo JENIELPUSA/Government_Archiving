@@ -14,9 +14,6 @@ const CalendarEvent = () => {
     const [selectedEvents, setSelectedEvents] = useState([]);
     const [selectedMonthName, setSelectedMonthName] = useState('');
     const [selectedColor, setSelectedColor] = useState('');
-
-    console.log("monthEvent", monthEvent)
-    
     // Kunin ang current month index (0-11) at current year
     const currentDate = new Date();
     const currentMonthIndex = currentDate.getMonth();

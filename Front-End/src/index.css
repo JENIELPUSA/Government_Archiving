@@ -1,3 +1,6 @@
+/* 1. Ang Google Font import ay DAPAT nasa pinakataas */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +8,16 @@
 @layer base {
     body {
         @apply [scrollbar-color:_#cbd5e1_transparent] dark:[scrollbar-color:_#334155_transparent];
+    }
+
+    /* Pilitin ang lahat ng pangunahing elements na sumunod sa font-sans */
+    h1, h2, h3, h4, h5, h6, p, span, a, label {
+        @apply font-sans;
+    }
+
+    /* Solusyon para sa mga form elements at buttons na matigas ang ulo sa browser default fonts */
+    input, textarea, select, button {
+        @apply font-sans;
     }
 }
 
@@ -17,27 +30,25 @@
         @apply overflow-hidden text-ellipsis text-sm font-medium text-slate-600 dark:text-slate-400;
     }
 
-.sidebar-item {
-    @apply flex h-[40px] w-full flex-shrink-0 items-center gap-x-3 
-           rounded-xl p-3 text-base font-medium text-slate-900 
-           bg-[#f0f0f3] shadow-[inset_1px_1px_2px_#ffffff,_2px_2px_5px_#d1d9e6]
-           transition duration-200 ease-in-out 
-           border border-slate-200 
-           dark:bg-[#1e1e22] dark:text-slate-200 dark:border-slate-700 
-           dark:shadow-[inset_1px_1px_2px_#2a2a2e,_2px_2px_5px_#131316];
-    
-    &:hover {
-        @apply shadow-[inset_2px_2px_5px_#d1d9e6,_inset_-2px_-2px_5px_#ffffff] 
-               dark:shadow-[inset_2px_2px_4px_#131316,_inset_-2px_-2px_4px_#2a2a2e];
+    .sidebar-item {
+        @apply flex h-[40px] w-full flex-shrink-0 items-center gap-x-3 
+               rounded-xl p-3 text-base font-medium text-slate-900 
+               bg-[#f0f0f3] shadow-[inset_1px_1px_2px_#ffffff,_2px_2px_5px_#d1d9e6]
+               transition duration-200 ease-in-out 
+               border border-slate-200 
+               dark:bg-[#1e1e22] dark:text-slate-200 dark:border-slate-700 
+               dark:shadow-[inset_1px_1px_2px_#2a2a2e,_2px_2px_5px_#131316];
+        
+        &:hover {
+            @apply shadow-[inset_2px_2px_5px_#d1d9e6,_inset_-2px_-2px_5px_#ffffff] 
+                   dark:shadow-[inset_2px_2px_4px_#131316,_inset_-2px_-2px_4px_#2a2a2e];
+        }
+
+        &.active {
+            @apply bg-blue-500 text-white border-blue-600 
+                   shadow-inner dark:bg-blue-600 dark:border-blue-500;
+        }
     }
-
-    &.active {
-        @apply bg-blue-500 text-white border-blue-600 
-               shadow-inner dark:bg-blue-600 dark:border-blue-500;
-    }
-}
-
-
 
     .title {
         @apply text-3xl font-semibold text-slate-900 transition-colors dark:text-slate-50;
@@ -104,48 +115,36 @@
     @apply text-base font-medium !text-blue-500 dark:!text-blue-600;
 }
 
-
 :root {
-  color-scheme: light;
+    color-scheme: light;
 }
 
 body {
-  @apply bg-[#f2f4f6] text-slate-900 antialiased font-sans min-h-screen;
+    /* Dahil ang font-sans ay Poppins na sa config mo, awtomatiko na itong magiging Poppins */
+    @apply bg-[#f2f4f6] text-slate-900 antialiased font-sans min-h-screen;
 }
 
 html {
-  scroll-behavior: smooth;
+    scroll-behavior: smooth;
 }
 
 ::selection {
-  @apply bg-slate-800 text-slate-100;
+    @apply bg-slate-800 text-slate-100;
 }
 
 @layer utilities {
-  .neutral-gradient {
-    background: radial-gradient(circle at 0% 0%, rgba(171, 196, 255, 0.35) 0%, rgba(195, 203, 220, 0.2) 30%, rgba(226, 229, 235, 0.6) 65%, rgba(241, 244, 247, 0.9) 100%);
-  }
+    .neutral-gradient {
+        background: radial-gradient(circle at 0% 0%, rgba(171, 196, 255, 0.35) 0%, rgba(195, 203, 220, 0.2) 30%, rgba(226, 229, 235, 0.6) 65%, rgba(241, 244, 247, 0.9) 100%);
+    }
 
-  .ambient-shape {
-    background: radial-gradient(circle, rgba(167, 184, 210, 0.5) 0%, rgba(167, 184, 210, 0.15) 45%, transparent 70%);
-  }
+    .ambient-shape {
+        background: radial-gradient(circle, rgba(167, 184, 210, 0.5) 0%, rgba(167, 184, 210, 0.15) 45%, transparent 70%);
+    }
 
-  .logo-marquee {
-    display: flex;
-    width: max-content;
-    animation: marquee 26s linear infinite;
-  }
+    .logo-marquee {
+        @apply flex w-max;
+        /* Gagamitin na nito ang marquee animation na galing sa tailwind config mo */
+        animation: marquee 30s linear infinite; 
+    }
 }
-
-@keyframes marquee {
-  0% {
-    transform: translateX(0%);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.animate-marquee {
-  animation: marquee 30s linear infinite;
-}
+/* Inalis na natin ang manual @keyframes marquee at .animate-marquee sa ilalim dahil hawak na ito ng bagong tailwind.config.js mo gamit ang class name na `animate-marquee` */

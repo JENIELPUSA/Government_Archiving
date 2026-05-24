@@ -24,12 +24,15 @@ import UserManagement from "./component/UserManagement/UserManagement";
 import LatestNews from "./component/LandingPagePublic/LandingComponents/NewsContent.jsx";
 import NotFoundPage from "./component/404/404Component.jsx";
 import EventCalendar from "./component/EventCalendar/eventcalendar.jsx";
+import ConnectionIssue from "./component/ConnectionIssue/connectionIssue.jsx";
 
 function App() {
     const router = createBrowserRouter([
         {
             element: <PublicRoute />,
             children: [
+
+                {path:"/connection-issue", element:<ConnectionIssue/>},
                 { path: "/", element: <PublicAccessLayout /> },
                 { path: "/login", element: <Login /> },
                 { path: "/public-access", element: <PublicAccessLayout /> },

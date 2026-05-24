@@ -8,6 +8,7 @@ const fs = require("fs");
 exports.AddNews = AsyncErrorHandler(async (req, res) => {
   const requiredFields = ["title", "date", "excerpt", "category"];
   const missingFields = requiredFields.filter((field) => !req.body[field]);
+
   if (missingFields.length > 0) {
     return res.status(400).json({
       message: `Missing required fields: ${missingFields.join(", ")}`,
@@ -18,20 +19,10 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 
   if (typeof date === "string") {
     date = new Date(date);
-    if (isNaN(date.getTime())) {
-      return res.status(400).json({ message: "Invalid date format." });
-    }
-  }
-  const categoryLimits = {
-    Carousel: 5,
-    Documentation: 10,
-  };
 
-  if (categoryLimits[category]) {
-    const currentCount = await News.countDocuments({ category });
-    if (currentCount >= categoryLimits[category]) {
+    if (isNaN(date.getTime())) {
       return res.status(400).json({
-        message: `Cannot add more than ${categoryLimits[category]} items in category ${category}.`,
+        message: "Invalid date format.",
       });
     }
   }
@@ -40,15 +31,29 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 
   if (req.file) {
     // Validate file type
-    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+
     if (!allowedTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ error: "Invalid image type" });
+      return res.status(400).json({
+        error: "Invalid image type",
+      });
     }
 
-    const fileName = req.file.filename; // filename sa disk
+    const fileName = req.file.filename;
+
     try {
       const form = new FormData();
-      form.append("file", fs.createReadStream(req.file.path), req.file.originalname);
+
+      form.append(
+        "file",
+        fs.createReadStream(req.file.path),
+        req.file.originalname
+      );
 
       const response = await axios.post(
         process.env.UPLOAD_URL,
@@ -66,25 +71,31 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
       }
 
       avatar = {
-        url: response.data.url, // Public URL returned by Hostinger
+        url: response.data.url,
         public_id: fileName,
       };
+
       console.log("News image uploaded to Hostinger:", avatar.url);
 
       // Optional: Delete temp file after upload
       fs.unlink(req.file.path, (err) => {
-        if (err) console.error("Failed to delete temp file:", err);
+        if (err) {
+          console.error("Failed to delete temp file:", err);
+        }
       });
     } catch (err) {
       console.error(
         "Hostinger upload failed:",
         err.response?.data || err.message
       );
-      return res.status(500).json({ error: "Failed to upload news image" });
+
+      return res.status(500).json({
+        error: "Failed to upload news image",
+      });
     }
   }
 
-  // --- 5Save News in DB ---
+  // Save News in DB
   const newNews = await News.create({
     title,
     date,
@@ -93,7 +104,7 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
     avatar,
   });
 
-  // --- 6Response ---
+  // Response
   return res.status(201).json({
     status: "Success",
     news: newNews,
@@ -101,63 +112,72 @@ exports.AddNews = AsyncErrorHandler(async (req, res) => {
 });
 
 exports.DisplayNews = AsyncErrorHandler(async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 5;
-    const skip = (page - 1) * limit;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 5;
+  const skip = (page - 1) * limit;
 
-    const { search = "", dateFrom, dateTo } = req.query;
+  const { search = "" } = req.query;
 
-    const filter = {};
+  const filter = {};
 
-    if (search.trim()) {
-      filter.$or = [
-        { title: { $regex: search.trim(), $options: "i" } },
-        { excerpt: { $regex: search.trim(), $options: "i" } },
-      ];
-    }
-
-    if (dateFrom || dateTo) {
-      filter.date = {};
-      if (dateFrom) {
-        filter.date.$gte = new Date(dateFrom);
-      }
-      if (dateTo) {
-        const endDate = new Date(dateTo);
-        endDate.setDate(endDate.getDate() + 1);
-        filter.date.$lt = endDate;
-      }
-    }
-
-    const totalNews = await News.countDocuments(filter);
-
-    let data = await News.find(filter)
-      .sort({ date: -1 })
-      .skip(skip)
-      .limit(limit)
-      .select("_id avatar title date excerpt category source")
-      .lean();
-
-    data = data.map((item) => ({
-      ...item,
-      date: new Date(item.date).toLocaleDateString("en-US"), 
-    }));
-
-    res.status(200).json({
-      status: "success",
-      data,
-      totalNews,
-      currentPage: page,
-      totalPages: Math.ceil(totalNews / limit),
-    });
-  } catch (error) {
-    console.error("Error fetching news:", error);
-    res.status(500).json({
-      status: "fail",
-      message: "Something went wrong while fetching news.",
-      error: error.message,
-    });
+  if (search.trim()) {
+    filter.$or = [
+      { title: { $regex: search.trim(), $options: "i" } },
+      { excerpt: { $regex: search.trim(), $options: "i" } },
+    ];
   }
+
+  const totalNews = await News.countDocuments(filter);
+
+  const data = await News.aggregate([
+    { $match: filter },
+
+    // 🔥 create flag: may priority ba or wala
+    {
+      $addFields: {
+        hasPriority: {
+          $cond: [
+            { $ifNull: ["$priorityNumber", false] },
+            0, // may priority → mauna
+            1  // wala priority → huli
+          ]
+        }
+      }
+    },
+
+    // 🔥 sorting logic
+    {
+      $sort: {
+        hasPriority: 1,
+        priorityNumber: 1,
+        date: -1
+      }
+    },
+
+    { $skip: skip },
+    { $limit: limit },
+
+    {
+      $project: {
+        _id: 1,
+        avatar: 1,
+        title: 1,
+        date: 1,
+        excerpt: 1,
+        category: 1,
+        source: 1,
+        priorityNumber: 1
+      }
+    }
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data,
+    totalNews,
+    currentPage: page,
+    totalPages: Math.ceil(totalNews / limit),
+  });
 });
 
 exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
@@ -244,10 +264,10 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
       params.append("file", oldAvatarUrl);
 
       axios.post(
-          process.env.REMOVE_URL,
-          params.toString(),
-          { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
-        )
+        process.env.REMOVE_URL,
+        params.toString(),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+      )
         .then(response => {
           if (response.data.success) {
             console.log("Old news image deleted in background:", oldAvatarUrl);
@@ -259,6 +279,51 @@ exports.UpdateNews = AsyncErrorHandler(async (req, res) => {
           console.error("Error deleting old news image in background:", error.message);
         });
     }
+
+  } catch (error) {
+    console.error("UpdateNews Error:", error);
+    res.status(500).json({ error: "Something went wrong." });
+  }
+});
+
+exports.UpdatePriorityNumber = AsyncErrorHandler(async (req, res) => {
+  const NewsID = req.params.id;
+  const { priorityNumber } = req.body;
+
+  try {
+    // Validate if priorityNumber is provided
+    if (priorityNumber === undefined) {
+      return res.status(400).json({ error: "priorityNumber is required" });
+    }
+
+    // Validate priorityNumber is a number between 1 and 10
+    const parsedPriority = parseInt(priorityNumber);
+    if (isNaN(parsedPriority) || parsedPriority < 1 || parsedPriority > 10) {
+      return res.status(400).json({ error: "priorityNumber must be a number between 1 and 10" });
+    }
+
+    // Check if news exists
+    const oldRecord = await News.findById(NewsID);
+    if (!oldRecord) {
+      return res.status(404).json({ error: "News not found" });
+    }
+
+    // Update only the priorityNumber
+    const updatedNews = await News.findByIdAndUpdate(
+      NewsID,
+      { priorityNumber: parsedPriority },
+      { new: true }
+    );
+
+    if (!updatedNews) {
+      return res.status(404).json({ error: "News not found after update" });
+    }
+
+    res.json({
+      status: "success",
+      message: "Priority updated successfully",
+      data: updatedNews
+    });
 
   } catch (error) {
     console.error("UpdateNews Error:", error);

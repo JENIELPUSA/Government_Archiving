@@ -5,22 +5,22 @@ const crypto = require("crypto");
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
-role: {
-  type: String,
-  enum: {
-    values: ["Admin", "BHW", "Guest"],
-    message: "Please select a valid role: Admin, BHW, or Guest.",
+  role: {
+    type: String,
+    enum: {
+      values: ["Admin", "BHW", "Guest"],
+      message: "Please select a valid role: Admin, BHW, or Guest.",
+    },
+    required: [true, "Please select a role."],
   },
-  required: [true, "Please select a role."],
-},
 
-  password: { type: String, required: [true, "Don't forget to Input Password"],},
+  password: { type: String, required: [true, "Don't forget to Input Password"], },
   avatar: { type: String },
 
   FirstName: { type: String, required: [true, "Please Enter FirstName."], }, // First name of the user
   LastName: { type: String, required: [true, "Please Enter LastName."], }, // Last name of the user
   address: { type: String, required: [true, "Please Enter Address!"], }, // Home address of the user
-  phoneNumber: { type: String}, // Contact number of the user
+  phoneNumber: { type: String }, // Contact number of the user
   dateOfBirth: { type: Date, required: [true, "Please select a Date of Birth"], }, // Date of birth of the user
   gender: { type: String, enum: ["Male", "Female"], required: [true, "Please select Gender."], }, // Gender of the user
   zone: { type: String },
