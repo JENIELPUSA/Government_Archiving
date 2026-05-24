@@ -8,14 +8,15 @@ import {
 
 import axios from "axios";
 import { AuthContext } from "../AuthContext";
-
+import SuccessFailed from "../../ReusableFolder/SuccessandField";
 export const SuggestionContext = createContext();
 
 export const useSuggestion = () => useContext(SuggestionContext);
 
 export const SuggestionProvider = ({ children }) => {
     const { authToken } = useContext(AuthContext);
-
+    const [showModal, setShowModal] = useState(false);
+    const [modalStatus, setModalStatus] = useState("success");
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -131,7 +132,16 @@ export const SuggestionProvider = ({ children }) => {
                     data
                 );
 
-                return res.data;
+                if (res.data.status === "Success") {
+                    setModalStatus("success");
+                    setShowModal(true);
+                    return { success: true };
+                } else {
+                    setModalStatus("failed");
+                    setShowModal(true);
+                    return { success: false, error: "Unexpected response from server." };
+                }
+
             } catch (err) {
                 console.error("Error creating suggestion:", err);
 
@@ -270,6 +280,12 @@ export const SuggestionProvider = ({ children }) => {
             }}
         >
             {children}
+            <SuccessFailed
+                isOpen={showModal}
+                onClose={() => setShowModal(false)}
+                status={modalStatus}
+                errorMessage={error}
+            />
         </SuggestionContext.Provider>
     );
 };

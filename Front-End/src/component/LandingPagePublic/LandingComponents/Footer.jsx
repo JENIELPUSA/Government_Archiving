@@ -118,7 +118,7 @@ const FooterQuickAccess = ({
     // Function to create payload object
     const createPayloadObject = () => {
         const timestamp = new Date().toISOString();
-        
+
         return {
             id: `suggestion_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             timestamp: timestamp,
@@ -154,7 +154,7 @@ const FooterQuickAccess = ({
     // Modified suggestion submit handler using createSuggestion
     const handleSuggestionSubmit = async (e) => {
         e.preventDefault();
-        
+
         // Validate message is not empty
         if (!formData.message.trim()) {
             alert("Please enter your suggestion or message.");
@@ -163,57 +163,54 @@ const FooterQuickAccess = ({
 
         setIsSubmitting(true);
 
-        try {
-            // Create payload object
-            const payload = createPayloadObject();
-            
-            console.log('=== SENDING PAYLOAD VIA CREATESUGGESTION ===');
-            console.log('Payload:', JSON.stringify(payload, null, 2));
-            console.log('=============================================');
+        // Create payload object
+        const payload = createPayloadObject();
 
-            // Use createSuggestion prop to send payload to main
-            if (createSuggestion && typeof createSuggestion === 'function') {
-                const result = await createSuggestion(payload);
-                
-                if (result && result.success) {
-                    console.log('✅ Suggestion payload sent successfully:', result);
-                    
-                    // Optional: Still send email as backup
-                    sendEmailBackup(payload);
-                    
-                    // Show success message
-                    alert(`✅ Suggestion sent successfully!\n\nReference ID: ${payload.id}\nThank you for your feedback!`);
-                    
-                    // Reset form
-                    setFormData({ name: "", email: "", message: "", sendCopy: false });
-                } else {
-                    throw new Error(result?.error || 'Failed to send suggestion');
-                }
+        // Use createSuggestion prop to send payload to main
+        if (createSuggestion && typeof createSuggestion === "function") {
+            const result = await createSuggestion(payload);
+
+            if (result && result.success) {
+                // Reset form
+                setFormData({
+                    name: "",
+                    email: "",
+                    message: "",
+                    sendCopy: false,
+                });
             } else {
-                console.warn('createSuggestion prop is not provided or not a function');
-                // Fallback to email only
-                sendEmailBackup(payload);
-                alert('Suggestion sent via email. Thank you for your feedback!');
-                setFormData({ name: "", email: "", message: "", sendCopy: false });
+                console.error("❌ Failed to send suggestion:", result);
+
+                alert(
+                    result?.error || "Failed to send suggestion. Please try again."
+                );
             }
-        } catch (error) {
-            console.error('Error sending suggestion:', error);
-            alert(`Error sending suggestion: ${error.message}\n\nYour suggestion has been saved locally and will be sent when connection is restored.`);
-            
-            // Store failed suggestion in localStorage
-            const failedSuggestions = JSON.parse(localStorage.getItem('failed_suggestions') || '[]');
-            failedSuggestions.push(createPayloadObject());
-            localStorage.setItem('failed_suggestions', JSON.stringify(failedSuggestions));
-        } finally {
-            setIsSubmitting(false);
+        } else {
+            console.warn(
+                "createSuggestion prop is not provided or not a function"
+            );
+
+            // Fallback to email only
+            sendEmailBackup(payload);
+
+            alert("Suggestion sent via email. Thank you for your feedback!");
+
+            setFormData({
+                name: "",
+                email: "",
+                message: "",
+                sendCopy: false,
+            });
         }
+
+        setIsSubmitting(false);
     };
 
     // Backup email function
     const sendEmailBackup = (payload) => {
         const targetAdminEmail = getTargetAdminEmail();
         const subject = encodeURIComponent(`File Archiving Suggestion from ${payload.suggestion.name}`);
-        
+
         let bodyText = `=== SUGGESTION PAYLOAD ===\n`;
         bodyText += `Reference ID: ${payload.id}\n`;
         bodyText += `Timestamp: ${payload.timestamp}\n`;
@@ -241,14 +238,14 @@ const FooterQuickAccess = ({
         bodyText += `Cookies Enabled: ${payload.systemInfo.cookiesEnabled}\n`;
         bodyText += `-----------------------------------\n`;
         bodyText += `Submitted via Footer Suggestion Box with Payload System.`;
-        
+
         const body = encodeURIComponent(bodyText);
         let mailtoUrl = `mailto:${targetAdminEmail}?subject=${subject}&body=${body}`;
-        
+
         if (payload.suggestion.sendCopy && payload.suggestion.email) {
             mailtoUrl += `&cc=${encodeURIComponent(payload.suggestion.email)}`;
         }
-        
+
         // Open email in new window as backup
         window.open(mailtoUrl, "_blank");
     };
@@ -272,7 +269,7 @@ const FooterQuickAccess = ({
                 localStorage.removeItem('failed_suggestions');
             }
         };
-        
+
         retryFailedSuggestions();
     }, []); // ✅ Empty dependency array - runs only once on mount
 

@@ -143,11 +143,15 @@ const PictureUploadSettings = () => {
     };
 
     const handlePriorityChange = async (pictureId, newPriority) => {
+        // Prevent selecting N/A (empty string)
+        if (newPriority === "") {
+            return; // Do nothing if N/A is selected
+        }
+        
         setUpdatingPriority(pictureId); // Show loading state for this specific row
         
         try {
-            // Convert "N/A" (empty string) to null or 0 based on your API requirement
-            const priorityValue = newPriority === "" ? null : parseInt(newPriority);
+            const priorityValue = parseInt(newPriority);
             const result = await updatePriorityNumber(pictureId, priorityValue);
         
         } catch (error) {
@@ -248,7 +252,7 @@ const PictureUploadSettings = () => {
                                                             }`}
                                                             disabled={loading || updatingPriority === picture._id}
                                                         >
-                                                            <option value="">N/A</option>
+                                                            <option value="" disabled>N/A</option>
                                                             {priorityOptions.map(priority => (
                                                                 <option key={priority} value={priority}>
                                                                     {priority}
@@ -334,4 +338,3 @@ const PictureUploadSettings = () => {
 };
 
 export default PictureUploadSettings;
-

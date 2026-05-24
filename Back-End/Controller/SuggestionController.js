@@ -6,9 +6,6 @@ import Notification from "../Models/NotificationSchema.js";
 export const createSuggestion = async (req, res) => {
     try {
         const { suggestion } = req.body;
-        console.log("🔥 CREATE SUGGESTION HIT");
-        console.log("Suggestion", suggestion)
-
         const email = suggestion?.email;
         const message = suggestion?.message;
 
@@ -44,6 +41,7 @@ export const createSuggestion = async (req, res) => {
         });
 
         return res.status(201).json({
+            status:"Success",
             message: "Suggestion created successfully",
             data: newSuggestion,
             notification,
