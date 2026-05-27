@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { FileText, UploadCloud, UserCheck, HardDrive } from "lucide-react";
+import { FileText, UploadCloud, UserCheck, HardDrive, User } from "lucide-react";
 import StatisticsCard from "../AdminDashboard/dashboardcard";
 import LineGraph from "./LineGraph";
 import PieGraph from "./PieGraph";
+import VisitorGraph from "./GraphVisit/graphvisit";
 import { FilesDisplayContext } from "../../contexts/FileContext/FileContext";
 import { AdminDisplayContext } from "../../contexts/AdminContext/AdminContext";
 import { OfficerDisplayContext } from "../../contexts/OfficerContext/OfficerContext";
 import useAutoLogout from "../../../../Back-End/Utils/useAutoLogout";
 import { useNavigate } from "react-router-dom";
+import { VisitorContext } from "../../contexts/VisitorContext/VisitorContext";
 
 // AnimatedValue - ILABAS SA LABAS NG DashboardLayout
 const AnimatedValue = ({ targetValue, duration = 1500, suffix = "", precision = 2 }) => {
@@ -108,6 +110,7 @@ const AnimatedStorage = ({ totalBytes, duration = 1500 }) => {
     );
 };
 
+
 // Main Dashboard Component
 function DashboardLayout() {
     const navigate = useNavigate();
@@ -118,6 +121,7 @@ function DashboardLayout() {
     const documents = isFile;
     const totalDocuments = isTotaDocuments;
     const activeUsers = isTotalAdmin + (isTotalOfficer || 0); // Kasama ang officers sa active users
+    const { visitorGraph, fetchVisitorGraph, graphLoading, visitorCount } = useContext(VisitorContext);
 
     // Gamitin ang useRef para i-track kung initial render na ba
     const hasFetchedRef = useRef(false);
@@ -133,6 +137,23 @@ function DashboardLayout() {
         if (!Array.isArray(isMonthlyFile)) return 0;
 
         return isMonthlyFile.reduce((sum, month) => sum + (typeof month.totalFileSize === "number" ? month.totalFileSize : 0), 0);
+    };
+
+    // Prepare data para sa bottom graph
+    const getBottomGraphData = () => {
+        if (!categorySummary || !Array.isArray(categorySummary) || categorySummary.length === 0) {
+            return [
+                { label: 'No Data', value: 0, color: '#9ca3af' }
+            ];
+        }
+
+        const colors = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec489a', '#06b6d4', '#84cc16'];
+
+        return categorySummary.map((category, index) => ({
+            label: category.category_name || `Category ${index + 1}`,
+            value: category.document_count || 0,
+            color: colors[index % colors.length]
+        }));
     };
 
     // Eto ang useEffect para sa fetchCategorySummary na may useRef
@@ -154,7 +175,7 @@ function DashboardLayout() {
 
     // Optional: Maaari ring gumamit ng interval para mag-refresh ng data periodically
     const refreshIntervalRef = useRef(null);
-    
+
     useEffect(() => {
         // Setup para sa periodic refresh (every 30 seconds)
         const setupRefresh = () => {
@@ -167,7 +188,7 @@ function DashboardLayout() {
                     console.log("Refreshing category summary data...");
                     fetchCategorySummary();
                 }
-            }, 30000); // 30 seconds
+            }, 300000); // 30 seconds
         };
 
         setupRefresh();
@@ -182,7 +203,7 @@ function DashboardLayout() {
 
     // Alternative approach: Gamit ang useRef para i-track ang previous values
     const prevCategorySummaryRef = useRef(categorySummary);
-    
+
     useEffect(() => {
         // Compare current at previous categorySummary
         if (JSON.stringify(categorySummary) !== JSON.stringify(prevCategorySummaryRef.current)) {
@@ -215,6 +236,12 @@ function DashboardLayout() {
             label: "Total Storage Used",
             trend: "Calculated",
         },
+        {
+            icon: <User size={26} />,
+            value: visitorCount|| 0,
+            label: "Total Visitors",
+            trend: "All Time",
+        }
     ];
 
     const [activeModal, setActiveModal] = useState(null);
@@ -230,16 +257,16 @@ function DashboardLayout() {
 
     // Gamit ang useRef para sa debouncing ng search
     const searchTimeoutRef = useRef(null);
-    
+
     const handleSearchChange = (e) => {
         const value = e.target.value;
         setSearchQuery(value);
-        
+
         // Debouncing: hintayin muna mag-stop ang user bago i-filter
         if (searchTimeoutRef.current) {
             clearTimeout(searchTimeoutRef.current);
         }
-        
+
         searchTimeoutRef.current = setTimeout(() => {
             if (isMountedRef.current) {
                 let currentDocs = isFile || [];
@@ -295,18 +322,18 @@ function DashboardLayout() {
     // Gamit ang useRef para i-track kung naka-mount pa ang component bago mag-setState
     const generateReport = () => {
         if (!isMountedRef.current) return;
-        
+
         setReportMessage("Generating comprehensive archive report... (Simulated)");
-        
+
         const timeoutId = setTimeout(() => {
             if (isMountedRef.current) {
                 setReportMessage("Report generated successfully! (Simulated)");
             }
         }, 2000);
-        
+
         // Store timeout ID sa ref para ma-clear sa cleanup
         const reportTimeoutRef = useRef(timeoutId);
-        
+
         return () => {
             if (reportTimeoutRef.current) {
                 clearTimeout(reportTimeoutRef.current);
@@ -318,7 +345,7 @@ function DashboardLayout() {
         <div className="font-inter flex min-h-screen flex-col items-center justify-center overflow-hidden transition-colors duration-300">
             <main className="mx-auto flex w-full flex-1 flex-col space-y-10 rounded-3xl bg-white/60 p-6 text-gray-900 shadow-inner backdrop-blur-md transition-colors duration-300 dark:bg-slate-800/50 dark:text-gray-100 dark:backdrop-blur-md">
                 <section>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                         {statisticsData.map((stat, index) => (
                             <StatisticsCard
                                 key={index}
@@ -335,6 +362,11 @@ function DashboardLayout() {
                     <div className="min-h-[300px] w-full overflow-hidden lg:w-1/2">
                         <PieGraph categorySummary={categorySummary} />
                     </div>
+                </div>
+
+                {/* Bagong Graph Component sa baba */}
+                <div className="w-full">
+                    <VisitorGraph visitorGraph={visitorGraph} fetchVisitorGraph={fetchVisitorGraph} graphLoading={graphLoading} />
                 </div>
             </main>
 

@@ -26,61 +26,61 @@ import { FolderDisplayProvider } from "./contexts/FolderContext/FolderContext.js
 import { LandingPageProvider } from "./contexts/LandingPageContext/LandingPageContext.jsx";
 import { EventDisplayProvider } from "./contexts/EventContext/EventContext.jsx";
 import { SuggestionProvider } from "./contexts/SuggestionContext/SuggestionContext.jsx";
+import { VisitorProvider } from "./contexts/VisitorContext/VisitorContext.jsx";
 createRoot(document.getElementById("root")).render(
     // <StrictMode>
     <AuthProvider>
-        <SuggestionProvider>
-            <EventDisplayProvider>
-                <LandingPageProvider>
-                    <FolderDisplayProvider>
-                        <NewsDisplayProvider>
-                            <ApproverDisplayProvider>
-                                <SbMemberDisplayProvider>
-                                    <StorageOptimizationProvider>
-                                        <UpdateDisplayProvider>
-                                            <RetentionDisplayProvider>
-                                                <AdminDisplayProvider>
-                                                    <NotificationDisplayProvider>
-                                                        <LogsDisplayProvider>
-                                                            <CategoryDisplayProvider>
-                                                                <RatingDisplayProvider>
-                                                                    <CommentDisplayProvider>
-                                                                        <OfficerDisplayProvider>
-                                                                            <FilesDisplayProvider>
-                                                                                <SocketListener />
-                                                                                <App />
-                                                                                <AxiosInterceptor />
-                                                                                <ToastContainer
-                                                                                    position="top-right"
-                                                                                    autoClose={3000}
-                                                                                    hideProgressBar={false}
-                                                                                    newestOnTop
-                                                                                    closeOnClick
-                                                                                    pauseOnHover
-                                                                                    draggable
-                                                                                    theme="light"
-                                                                                />
-                                                                            </FilesDisplayProvider>
-                                                                        </OfficerDisplayProvider>
-                                                                    </CommentDisplayProvider>
-                                                                </RatingDisplayProvider>
-                                                            </CategoryDisplayProvider>
-                                                        </LogsDisplayProvider>
-                                                    </NotificationDisplayProvider>
-                                                </AdminDisplayProvider>
-                                            </RetentionDisplayProvider>
-                                        </UpdateDisplayProvider>
-                                    </StorageOptimizationProvider>
-                                </SbMemberDisplayProvider>
-                            </ApproverDisplayProvider>
-                        </NewsDisplayProvider>
-                    </FolderDisplayProvider>
-                </LandingPageProvider>
-
-            </EventDisplayProvider>
-        </SuggestionProvider>
-
-
+        <VisitorProvider>
+            <SuggestionProvider>
+                <EventDisplayProvider>
+                    <LandingPageProvider>
+                        <FolderDisplayProvider>
+                            <NewsDisplayProvider>
+                                <ApproverDisplayProvider>
+                                    <SbMemberDisplayProvider>
+                                        <StorageOptimizationProvider>
+                                            <UpdateDisplayProvider>
+                                                <RetentionDisplayProvider>
+                                                    <AdminDisplayProvider>
+                                                        <NotificationDisplayProvider>
+                                                            <LogsDisplayProvider>
+                                                                <CategoryDisplayProvider>
+                                                                    <RatingDisplayProvider>
+                                                                        <CommentDisplayProvider>
+                                                                            <OfficerDisplayProvider>
+                                                                                <FilesDisplayProvider>
+                                                                                    <SocketListener />
+                                                                                    <App />
+                                                                                    <AxiosInterceptor />
+                                                                                    <ToastContainer
+                                                                                        position="top-right"
+                                                                                        autoClose={3000}
+                                                                                        hideProgressBar={false}
+                                                                                        newestOnTop
+                                                                                        closeOnClick
+                                                                                        pauseOnHover
+                                                                                        draggable
+                                                                                        theme="light"
+                                                                                    />
+                                                                                </FilesDisplayProvider>
+                                                                            </OfficerDisplayProvider>
+                                                                        </CommentDisplayProvider>
+                                                                    </RatingDisplayProvider>
+                                                                </CategoryDisplayProvider>
+                                                            </LogsDisplayProvider>
+                                                        </NotificationDisplayProvider>
+                                                    </AdminDisplayProvider>
+                                                </RetentionDisplayProvider>
+                                            </UpdateDisplayProvider>
+                                        </StorageOptimizationProvider>
+                                    </SbMemberDisplayProvider>
+                                </ApproverDisplayProvider>
+                            </NewsDisplayProvider>
+                        </FolderDisplayProvider>
+                    </LandingPageProvider>
+                </EventDisplayProvider>
+            </SuggestionProvider>
+        </VisitorProvider>
     </AuthProvider>,
     // </StrictMode>
 );

@@ -22,6 +22,8 @@ import LogoCarousel from "./LandingComponents/LogoCarousel";
 import { LandingPageContext } from "../../contexts/LandingPageContext/LandingPageContext";
 import CalendarEvent from "./LandingComponents/CalendarEvent";
 import { SuggestionContext } from "../../contexts/SuggestionContext/SuggestionContext";
+// IMPORT VISITOR CONTEXT
+import { VisitorContext } from "../../contexts/VisitorContext/VisitorContext";
 
 // Pulse Skeleton Loading Component
 const PulseSkeletonLoader = () => (
@@ -107,6 +109,15 @@ function LandingPageLayout() {
     const [refreshKey, setRefreshKey] = useState(0); // For forcing component remount/reintegration
     const { landingData, loading, refetchLandingData } = useContext(LandingPageContext);
     const { createSuggestion } = useContext(SuggestionContext);
+    
+    // GET VISITOR CONTEXT
+    const { 
+        visitorCount, 
+        loading: visitorLoading, 
+        error: visitorError,
+        fetchVisitorCounts,
+        trackPageView
+    } = useContext(VisitorContext);
 
     // State para sa Images (Existing + New)
     const [previews, setPreviews] = useState([]);
@@ -119,8 +130,32 @@ function LandingPageLayout() {
     });
 
     const scrollContainerRef = useRef(null);
+    const hasTrackedInitialVisit = useRef(false); // Para iwas duplicate tracking
 
     const heroSectionIds = ["hero", "mission", "news", "transparency", "gallery", "map", "contact", "about", "legislative-history"];
+
+    // TRACK VISITOR ON INITIAL LOAD
+    useEffect(() => {
+        // Track visitor only once when component mounts
+        if (!hasTrackedInitialVisit.current && fetchVisitorCounts) {
+            hasTrackedInitialVisit.current = true;
+            
+            // Fetch visitor counts immediately
+            fetchVisitorCounts();
+            
+            // Track page view for initial load
+            if (trackPageView) {
+                trackPageView('landing-page');
+            }
+        }
+    }, [fetchVisitorCounts, trackPageView]);
+
+    // Track page views when active section changes
+    useEffect(() => {
+        if (trackPageView && activeSection && hasTrackedInitialVisit.current) {
+            trackPageView(activeSection);
+        }
+    }, [activeSection, trackPageView]);
 
     // Sync context data to local state
     useEffect(() => {
@@ -203,7 +238,14 @@ function LandingPageLayout() {
                 refetchLandingData();
             }
         }
-    }, [refetchLandingData, heroSectionIds]);
+        
+        // Refresh visitor count when reintegrating
+        if (fetchVisitorCounts && (section === "hero" || heroSectionIds.includes(section))) {
+            setTimeout(() => {
+                fetchVisitorCounts();
+            }, 100);
+        }
+    }, [refetchLandingData, heroSectionIds, fetchVisitorCounts]);
 
     const handleViewFile = (fileId, fileData, fileName) => {
         setPreviousSection(activeSection);
@@ -470,11 +512,16 @@ function LandingPageLayout() {
             handleSetOfficial(role);
         }
 
+        // Track page view for navigation
+        if (trackPageView) {
+            trackPageView(section);
+        }
+
         // Immediate scroll to top
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
         }
-    }, [handleSetOfficial]);
+    }, [handleSetOfficial, trackPageView]);
 
     // Handle navigation to hero subsections
     const handleNavigateToSection = useCallback((sectionId) => {
@@ -526,6 +573,8 @@ function LandingPageLayout() {
                                     setSearchKeyword={setSearchKeyword}
                                     setOfficial={handleSetOfficial}
                                     createSuggestion={createSuggestion}
+                                    visitorCount={visitorCount}
+                                    visitorLoading={visitorLoading}
                                 />
                             )}
                         </div>

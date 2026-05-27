@@ -137,9 +137,6 @@ const NavbarWithScroll = ({ currentPage, setCurrentPage, searchKeyword, setSearc
             setOpenSubmenu(null);
             return;
         }
-
-        // NOT the same page - normal navigation
-        console.log("Navigating to new page:", pageId);
         setCurrentPage(pageId);
         lastClickedPageRef.current = pageId;
 

@@ -44,6 +44,8 @@ const EventRoute = require("./Routes/EventRoute");
 
 const SuggestionRoute = require("./Routes/SuggestionRoute");
 
+const VisitorRoute = require("./Routes/VisitorRoute")
+
 let app = express();
 
 const logger = function (req, res, next) {
@@ -64,7 +66,7 @@ app.use(
       ttl: 12 * 60 * 60, // 12 hours in seconds
     }),
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: process.env.NODE_ENV === "development",
       httpOnly: true,
       sameSite: "none",
       maxAge: 12 * 60 * 60 * 1000,
@@ -107,6 +109,7 @@ app.use("/api/v1/Folder", FolderRoute);
 app.use("/api/v1/Officer", Officer);
 app.use("/api/v1/Events", EventRoute);
 app.use("/api/v1/Suggestions", SuggestionRoute);
+app.use("/api/v1/Visitor", VisitorRoute)
 
 app.use("/api/v1/landing", landing);
 app.use(ErrorController);

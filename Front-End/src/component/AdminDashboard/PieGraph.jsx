@@ -140,11 +140,6 @@ function PieGraph({ categorySummary }) { // Bagong prop name
             </div>
           </div>
         )}
-
-        <div className="mt-6 text-center text-gray-600 dark:text-gray-400 text-sm">
-          <p>This pie chart shows the distribution of documents across different categories.</p>
-          <p>Each slice represents a category with its corresponding number of files.</p>
-        </div>
       </div>
     </div>
   );

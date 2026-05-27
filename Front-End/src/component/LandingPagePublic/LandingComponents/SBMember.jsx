@@ -14,12 +14,12 @@ import OfficialProfileLayout from "../LandingComponents/MayorLayout";
 const getDisplayPosition = (member) => {
     const originalPos = member.Position || member.position || member.role || "Member";
     const trimmedPos = originalPos.trim();
-    
+
     // ONLY replace if member is Ex-Official
     if (member.isExOfficial === true) {
         return "ExOfficial"; // Change to "Ex-Official" if preferred
     }
-    
+
     // Regular Sangguniang Members - keep original position
     return originalPos;
 };
@@ -32,26 +32,26 @@ const MemberCard = ({ member, onClick }) => {
         if (member.fullName) return member.fullName;
         if (member.full_name) return member.full_name;
         if (member.first_name && member.last_name) {
-            const middleInitial = member.middle_name && member.middle_name !== "" 
-                ? ` ${member.middle_name.charAt(0)}.` 
+            const middleInitial = member.middle_name && member.middle_name !== ""
+                ? ` ${member.middle_name.charAt(0)}.`
                 : "";
             return `${member.first_name}${middleInitial} ${member.last_name}`;
         }
         return "Unknown Member";
     };
-    
+
     // Helper function para makuha ang display position na may subPosition
     const getDisplayPosition = () => {
         let basePosition = member.Position || member.position || "Board Member";
         let subPosition = member.subPosition;
-        
+
         // Kung may subPosition at hindi empty, i-concatenate
         if (subPosition && subPosition.trim() !== "") {
             return `${basePosition} - ${subPosition}`;
         }
         return basePosition;
     };
-    
+
     // Helper function para makuha ang district/district info
     const getDistrictInfo = () => {
         if (member.district) return `District ${member.district}`;
@@ -59,7 +59,7 @@ const MemberCard = ({ member, onClick }) => {
         if (member.detailInfo) return member.detailInfo;
         return "";
     };
-    
+
     // Helper function para makuha ang term display
     const getTermDisplay = () => {
         if (member.displayTerm) return member.displayTerm;
@@ -74,7 +74,7 @@ const MemberCard = ({ member, onClick }) => {
         if (member.term) return member.term;
         return "";
     };
-    
+
     // Helper function para makuha ang avatar URL
     const getAvatarUrl = () => {
         if (member.avatar?.url) return member.avatar.url;
@@ -113,27 +113,27 @@ const MemberCard = ({ member, onClick }) => {
                     </div>
                 )}
             </div>
-            
+
             {/* Member Info Section - Centered Text */}
             <div className="text-center space-y-1.5">
                 {/* Name */}
                 <h3 className="text-xs font-bold text-gray-800 line-clamp-2 min-h-[2rem] group-hover:text-blue-700 uppercase">
                     Hon. {fullName}
                 </h3>
-                
+
                 {/* Position with SubPosition */}
                 <p className="text-[10px] font-black uppercase tracking-wider text-gray-700">
                     {displayPosition}
                 </p>
 
-                
+
                 {/* Term Display */}
                 {termDisplay && (
                     <p className="text-[8px] text-gray-400 font-medium">
                         Term: {termDisplay}
                     </p>
                 )}
-                
+
                 {/* SubPosition highlight (if available and not already shown in position) */}
                 {member.subPosition && !displayPosition.includes(member.subPosition) && (
                     <div className="mt-1 pt-1 border-t border-gray-100">
@@ -152,10 +152,10 @@ const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm })
     const [innerLoading, setInnerLoading] = useState(false);
     // Filter at Sorting Logic
     const sortedAll = [...members].sort((a, b) => (parseInt(a.priorityNumber) || 99) - (parseInt(b.priorityNumber) || 99));
-    
+
     // Kunin ang mga Ex-Officials (isExOfficial === true)
     const exOfficials = sortedAll.filter(m => m.isExOfficial === true);
-    
+
     // Kunin ang mga regular members (hindi Ex-Official)
     const regularMembers = sortedAll.filter(m => m.isExOfficial !== true);
 
@@ -165,7 +165,7 @@ const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm })
             const response = await axios.get(`/api/v1/Files/PublicGetAuthorwithFiles?term=${group.term}`);
             if (response.data) {
                 let fetchedMembers = response.data.members || response.data.data || [];
-                
+
                 // ONLY modify Ex-Officials, leave regular members as is
                 fetchedMembers = fetchedMembers.map(member => {
                     if (member.isExOfficial === true) {
@@ -177,7 +177,7 @@ const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm })
                     // Regular members - no changes
                     return member;
                 });
-                
+
                 setMembers(fetchedMembers);
             }
         } catch (error) {
@@ -218,7 +218,7 @@ const TermGroup = ({ group, isExpanded, onToggle, onMemberClick, isLatestTerm })
                     <div className="text-center py-10 text-[10px] font-black text-gray-400 uppercase animate-pulse">Loading Officials...</div>
                 ) : (
                     <div className="space-y-12">
-                        
+
                         {/* REGULAR MEMBERS SECTION - No changes, display as is */}
                         {regularMembers.length > 0 && (
                             <section>
@@ -267,9 +267,9 @@ const SBmember = ({ onBack }) => {
     const { isGroupPublicAuthor, DisplayPublicAuthor, loading, setLoading } = useContext(SbMemberDisplayContext);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedMember, setSelectedMember] = useState(null);
-    const [activeTermIndex, setActiveTermIndex] = useState(0); 
+    const [activeTermIndex, setActiveTermIndex] = useState(0);
     const [showBackToTop, setShowBackToTop] = useState(false);
-    
+
     useEffect(() => {
         const fetch = async () => {
             setLoading(true);
@@ -280,7 +280,6 @@ const SBmember = ({ onBack }) => {
         return () => clearTimeout(debounce);
     }, [searchTerm, DisplayPublicAuthor, setLoading]);
 
-    console.log("isGroupPublicAuthor", isGroupPublicAuthor);
 
     useEffect(() => {
         const handleScroll = () => setShowBackToTop(window.scrollY > 400);
@@ -298,14 +297,14 @@ const SBmember = ({ onBack }) => {
             <div className="mx-auto mt-12 max-w-7xl px-6">
                 <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
-    <h1 className="text-3xl font-bold text-gray-400 uppercase tracking-tight">
-        Legislative <span className="text-gray-400">Profiles</span>
-    </h1>
+                        <h1 className="text-3xl font-bold text-gray-400 uppercase tracking-tight">
+                            Legislative <span className="text-gray-400">Profiles</span>
+                        </h1>
 
-    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
-        Official Registry of Board Members
-    </p>
-</div>
+                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mt-1">
+                            Official Registry of Board Members
+                        </p>
+                    </div>
                     <div className="relative w-full md:w-80">
                         <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
                         <input
@@ -338,8 +337,8 @@ const SBmember = ({ onBack }) => {
                 </div>
             </div>
 
-            <button 
-                onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})} 
+            <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
                 className={`fixed bottom-10 right-10 p-4 bg-blue-600 text-white rounded-full shadow-2xl transition-all duration-500 z-50 hover:bg-blue-700 ${showBackToTop ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 pointer-events-none"}`}
             >
                 <FaArrowUp />
