@@ -18,7 +18,6 @@ function VisitorGraph({ visitorGraph, fetchVisitorGraph, graphLoading }) {
     // Local filtering para instant response
     const chartData = useMemo(() => {
         if (!visitorGraph || !Array.isArray(visitorGraph)) {
-            console.log("No visitor data or not an array");
             return [];
         }
 
@@ -38,17 +37,11 @@ function VisitorGraph({ visitorGraph, fetchVisitorGraph, graphLoading }) {
         }));
 
         formattedData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        console.log("Filtered chart data:", formattedData);
         return formattedData;
 
     }, [visitorGraph, localFrom, localTo]);
 
     const handleFilter = () => {
-        console.log("=== FILTER BUTTON CLICKED ===");
-        console.log("From date:", from);
-        console.log("To date:", to);
-
         if (!fetchVisitorGraph) {
             console.error("fetchVisitorGraph is not defined!");
             return;
@@ -56,7 +49,6 @@ function VisitorGraph({ visitorGraph, fetchVisitorGraph, graphLoading }) {
 
         // Check kung walang laman ang dates
         if (!from && !to) {
-            console.log("No dates selected, fetching all data");
             setLocalFrom("");
             setLocalTo("");
             fetchVisitorGraph(); // Fetch all data
@@ -84,7 +76,6 @@ function VisitorGraph({ visitorGraph, fetchVisitorGraph, graphLoading }) {
     };
 
     const handleClearFilter = () => {
-        console.log("Clearing filters");
         setFrom("");
         setTo("");
         setLocalFrom("");
@@ -97,7 +88,6 @@ function VisitorGraph({ visitorGraph, fetchVisitorGraph, graphLoading }) {
     // Auto-fetch pag walang data
     useEffect(() => {
         if (fetchVisitorGraph && (!visitorGraph || visitorGraph.length === 0)) {
-            console.log("Auto-fetching visitor data...");
             fetchVisitorGraph();
         }
     }, [fetchVisitorGraph, visitorGraph]);

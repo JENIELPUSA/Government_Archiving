@@ -11,7 +11,6 @@ import AboutContactSection from "./LandingComponents/AboutContactSection";
 import Footer from "./LandingComponents/Footer";
 import HotlineCarousel from "./LandingComponents/HotlineCarousel";
 import NewsContent from "./LandingComponents/NewsContent";
-// Import your components for Officials and Legislative
 import SBMembers from "./LandingComponents/SBMember";
 import BoardMemberLayout from "./LandingComponents/BoardMemberLayout";
 import MayorLayout from "./LandingComponents/MayorLayout";
@@ -22,17 +21,13 @@ import LogoCarousel from "./LandingComponents/LogoCarousel";
 import { LandingPageContext } from "../../contexts/LandingPageContext/LandingPageContext";
 import CalendarEvent from "./LandingComponents/CalendarEvent";
 import { SuggestionContext } from "../../contexts/SuggestionContext/SuggestionContext";
-// IMPORT VISITOR CONTEXT
 import { VisitorContext } from "../../contexts/VisitorContext/VisitorContext";
 
 // Pulse Skeleton Loading Component
 const PulseSkeletonLoader = () => (
     <div className="min-h-screen bg-white">
         <div className="container mx-auto px-4 py-8">
-            {/* Hero Section Skeleton */}
             <div className="mb-12 h-[500px] w-full animate-pulse rounded-2xl bg-gray-200"></div>
-
-            {/* Mission Vision Section Skeleton */}
             <div className="mb-12 grid grid-cols-1 gap-8 md:grid-cols-2">
                 <div className="space-y-4">
                     <div className="h-8 w-1/3 animate-pulse rounded-lg bg-gray-200"></div>
@@ -43,8 +38,6 @@ const PulseSkeletonLoader = () => (
                     <div className="h-32 w-full animate-pulse rounded-lg bg-gray-200"></div>
                 </div>
             </div>
-
-            {/* News Section Skeleton */}
             <div className="mb-12">
                 <div className="mb-6 h-10 w-1/4 animate-pulse rounded-lg bg-gray-200"></div>
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -58,8 +51,6 @@ const PulseSkeletonLoader = () => (
                     ))}
                 </div>
             </div>
-
-            {/* Transparency Section Skeleton */}
             <div className="mb-12">
                 <div className="mb-6 h-10 w-1/4 animate-pulse rounded-lg bg-gray-200"></div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -68,8 +59,6 @@ const PulseSkeletonLoader = () => (
                     ))}
                 </div>
             </div>
-
-            {/* Gallery Section Skeleton */}
             <div className="mb-12">
                 <div className="mb-6 h-10 w-1/4 animate-pulse rounded-lg bg-gray-200"></div>
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -78,14 +67,10 @@ const PulseSkeletonLoader = () => (
                     ))}
                 </div>
             </div>
-
-            {/* Map Section Skeleton */}
             <div className="mb-12">
                 <div className="mb-6 h-10 w-1/4 animate-pulse rounded-lg bg-gray-200"></div>
                 <div className="h-96 w-full animate-pulse rounded-xl bg-gray-200"></div>
             </div>
-
-            {/* Contact Section Skeleton */}
             <div className="mb-12">
                 <div className="mb-6 h-10 w-1/4 animate-pulse rounded-lg bg-gray-200"></div>
                 <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
@@ -106,22 +91,20 @@ function LandingPageLayout() {
     const [previousSection, setPreviousSection] = useState("hero");
     const [selectedNews, setSelectedNews] = useState(null);
     const [currentVisibleSection, setCurrentVisibleSection] = useState("hero");
-    const [refreshKey, setRefreshKey] = useState(0); // For forcing component remount/reintegration
+    const [refreshKey, setRefreshKey] = useState(0);
     const { landingData, loading, refetchLandingData } = useContext(LandingPageContext);
     const { createSuggestion } = useContext(SuggestionContext);
     
-    // GET VISITOR CONTEXT
     const { 
         visitorCount, 
         loading: visitorLoading, 
         error: visitorError,
+        isNewSession,
         fetchVisitorCounts,
         trackPageView
     } = useContext(VisitorContext);
 
-    // State para sa Images (Existing + New)
     const [previews, setPreviews] = useState([]);
-    // Initial State para sa Form
     const [formData, setFormData] = useState({
         title: '',
         subtitle: '',
@@ -130,20 +113,16 @@ function LandingPageLayout() {
     });
 
     const scrollContainerRef = useRef(null);
-    const hasTrackedInitialVisit = useRef(false); // Para iwas duplicate tracking
+    const hasTrackedInitialVisit = useRef(false);
 
     const heroSectionIds = ["hero", "mission", "news", "transparency", "gallery", "map", "contact", "about", "legislative-history"];
 
     // TRACK VISITOR ON INITIAL LOAD
     useEffect(() => {
-        // Track visitor only once when component mounts
         if (!hasTrackedInitialVisit.current && fetchVisitorCounts) {
             hasTrackedInitialVisit.current = true;
-            
-            // Fetch visitor counts immediately
             fetchVisitorCounts();
             
-            // Track page view for initial load
             if (trackPageView) {
                 trackPageView('landing-page');
             }
@@ -179,36 +158,27 @@ function LandingPageLayout() {
         }
     }, [landingData]);
 
-    // IMPROVED: Force scroll to top with multiple strategies
     const scrollToTop = useCallback(() => {
         if (scrollContainerRef.current) {
-            // Immediate scroll
             scrollContainerRef.current.scrollTop = 0;
-            // Smooth scroll as backup
             scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-            // Double-check scroll after a tiny delay (for any async rendering)
             setTimeout(() => {
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTop = 0;
                 }
             }, 50);
-            // Third check after render cycle
             setTimeout(() => {
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTop = 0;
                 }
             }, 150);
         }
-        // Also try to scroll window as fallback
         window.scrollTo(0, 0);
     }, []);
 
-    // Function to force reintegration of current section
     const forceReintegration = useCallback((section, role = null, docType = null) => {
-        // Increment refresh key to force component remount
         setRefreshKey(prev => prev + 1);
 
-        // For officials - refresh data
         if (section === "officials" && role) {
             setSelectedOfficialRole("");
             setTimeout(() => {
@@ -216,7 +186,6 @@ function LandingPageLayout() {
             }, 50);
         }
 
-        // For legislative - refresh documents
         if (section === "legislative" && docType) {
             setSelectedDocumentType("");
             setTimeout(() => {
@@ -224,7 +193,6 @@ function LandingPageLayout() {
             }, 50);
         }
 
-        // For hero section with specific subsections
         if (section !== "hero" && !role && !docType && !heroSectionIds.includes(section)) {
             setActiveSection("");
             setTimeout(() => {
@@ -232,14 +200,12 @@ function LandingPageLayout() {
             }, 50);
         }
 
-        // For hero main page or subsections - refresh landing data
         if (heroSectionIds.includes(section) || section === "hero") {
             if (typeof refetchLandingData === 'function') {
                 refetchLandingData();
             }
         }
         
-        // Refresh visitor count when reintegrating
         if (fetchVisitorCounts && (section === "hero" || heroSectionIds.includes(section))) {
             setTimeout(() => {
                 fetchVisitorCounts();
@@ -253,13 +219,11 @@ function LandingPageLayout() {
         setActiveSection("pdf-view");
     };
 
-    // Function to handle closing PDF view
     const handleClosePDF = () => {
         setSelectedFile(null);
         setActiveSection(previousSection);
     };
 
-    // Function to handle setting officials or legislative
     const handleSetOfficial = (role) => {
         const legislativeTypes = ["resolution", "ordinance", "executive-order"];
 
@@ -274,20 +238,17 @@ function LandingPageLayout() {
         }
     };
 
-    // Function to handle viewing news content
     const handleViewNews = (news) => {
         setPreviousSection(activeSection);
         setSelectedNews(news);
         setActiveSection("news-content");
     };
 
-    // Function to handle closing news content view
     const handleCloseNews = () => {
         setSelectedNews(null);
         setActiveSection(previousSection);
     };
 
-    // Function to go back to home/hero section
     const handleBackToHome = useCallback(() => {
         setActiveSection("hero");
         setSelectedOfficialRole("");
@@ -296,7 +257,6 @@ function LandingPageLayout() {
         setSelectedNews(null);
     }, []);
 
-    // Track which section is currently visible (for Footer highlighting)
     useEffect(() => {
         if (activeSection !== "hero") return;
 
@@ -339,7 +299,6 @@ function LandingPageLayout() {
         }
     }, [activeSection]);
 
-    // CRITICAL FIX: Scroll to top whenever activeSection changes
     useEffect(() => {
         const timeoutId = setTimeout(() => {
             scrollToTop();
@@ -347,7 +306,6 @@ function LandingPageLayout() {
         return () => clearTimeout(timeoutId);
     }, [activeSection, scrollToTop, refreshKey]);
 
-    // Animation variants
     const pageVariants = {
         initial: { opacity: 0, y: 20 },
         in: { opacity: 1, y: 0 },
@@ -359,7 +317,6 @@ function LandingPageLayout() {
         ease: "easeInOut"
     };
 
-    // Reusable LogoCarousel component with sticky behavior
     const StickyLogoCarousel = () => (
         <div className="sticky top-[70px] z-30 w-full border-b border-t border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm transition-all duration-300">
             <LogoCarousel />
@@ -367,7 +324,6 @@ function LandingPageLayout() {
     );
 
     const renderContent = () => {
-        // Show skeleton loader while loading
         if (loading) {
             return <PulseSkeletonLoader key={`skeleton-${refreshKey}`} />;
         }
@@ -409,7 +365,6 @@ function LandingPageLayout() {
                         <NewsSection onNewsView={handleViewNews} key={`news-section-${refreshKey}`} />
                     </div>
                     <CalendarEvent />
-
                     <div id="transparency-section">
                         <TransparencySection onViewFile={handleViewFile} key={`transparency-${refreshKey}`} />
                     </div>
@@ -505,25 +460,21 @@ function LandingPageLayout() {
         }
     };
 
-    // Function to handle navigation from Navbar/Footer
     const handleNavigation = useCallback((section, role = null) => {
         setActiveSection(section);
         if (role) {
             handleSetOfficial(role);
         }
 
-        // Track page view for navigation
         if (trackPageView) {
             trackPageView(section);
         }
 
-        // Immediate scroll to top
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
         }
     }, [handleSetOfficial, trackPageView]);
 
-    // Handle navigation to hero subsections
     const handleNavigateToSection = useCallback((sectionId) => {
         if (activeSection === sectionId) {
             forceReintegration(sectionId);
@@ -575,6 +526,7 @@ function LandingPageLayout() {
                                     createSuggestion={createSuggestion}
                                     visitorCount={visitorCount}
                                     visitorLoading={visitorLoading}
+                                    isNewSession={isNewSession}
                                 />
                             )}
                         </div>
