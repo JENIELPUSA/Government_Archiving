@@ -138,7 +138,7 @@ const TermFolder = ({
                             <div className="mb-3 flex items-center gap-2 border-b border-gray-200 pb-2 dark:border-gray-700">
                                 <UserCheck size={20} className="text-green-500" />
                                 <h4 className="text-md font-semibold dark:text-white">
-                                    Ex-Official Members ({exOfficialMembers.length})
+                                    Ex-Officio Members ({exOfficialMembers.length})
                                 </h4>
                             </div>
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">

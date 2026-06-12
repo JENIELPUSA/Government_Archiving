@@ -10,17 +10,6 @@ const Pagination = ({ totalItems, itemsPerPage, currentPage, onPageChange, loadi
     const safeTotalItems = parseInt(totalItems) || 0;
     const safeItemsPerPage = parseInt(itemsPerPage) || 5;
     const totalPages = Math.ceil(safeTotalItems / safeItemsPerPage);
-
-    // Debug logs
-    console.log("Pagination Debug:", {
-        originalTotalItems: totalItems,
-        safeTotalItems,
-        originalItemsPerPage: itemsPerPage,
-        safeItemsPerPage,
-        totalPages,
-        currentPage
-    });
-
     // Huwag mag-render kung walang pages
     if (totalPages <= 1) return null;
 

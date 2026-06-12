@@ -18,7 +18,7 @@ export const ApproverDisplayProvider = ({ children }) => {
     }, [authToken]);
 
     const fetchApproverData = async () => {
-        try {
+
             const res = await axios.get(
                 `${import.meta.env.VITE_REACT_APP_BACKEND_BASEURL}/api/v1/Approver`, // lowercase para safe
                 {
@@ -31,15 +31,8 @@ export const ApproverDisplayProvider = ({ children }) => {
             );
 
             setApprover(res.data.data || null);
-        } catch (error) {
-            if (error.response?.status === 404) {
-                console.warn("No approver found");
-            } else {
-                console.error("Error fetching approver:", error);
-                handleError(error);
-            }
-        }
-    };
+        } 
+    ;
 
     const AddAprover = async (values) => {
         try {

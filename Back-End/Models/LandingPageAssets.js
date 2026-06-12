@@ -17,6 +17,7 @@ const LandingPage = new mongoose.Schema({
         {
             url: String,
             public_id: String,
+            priorityNumber: Number,
         }
     ],
     timestamp: {

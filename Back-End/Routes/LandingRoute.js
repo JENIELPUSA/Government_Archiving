@@ -7,7 +7,7 @@ router.get("/", LandingPageController.DisplayLandingPage);
 router.post(
     "/",
     authController.protect,
-    upload.array("avatar", 10), // multiple files, max 10
+    upload.array("image", 10),
     LandingPageController.saveLandingPage
 );
 
